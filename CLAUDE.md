@@ -10,7 +10,7 @@ It is built on the `anatomy` skill. It reuses anatomy's card, page, iso camera, 
 
 - **Repo:** `~/personal_projects/claude-skills/unfold/` (this folder).
 - **Install:** `~/.claude/skills/unfold` is a symlink to this folder. Edits here are live in Claude Code at once. Do not copy the folder back into `~/.claude/skills`.
-- **Git:** initialised, with no commits and no remote yet. Decide the GitHub account before the first push.
+- **Git:** remote `origin` is `github.com/xafold/unfold` (public), owned by the `xafold` account. The active `gh` account on this machine is `utsavpaudellf`, so push with the `xafold` token (`GH_TOKEN=$(gh auth token --user xafold)`).
 
 ## Layout
 
