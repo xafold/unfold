@@ -195,4 +195,4 @@ Not every test is a win. Fourier and DNS lost. The full table, with losses, is i
 
 ## License
 
-MIT, as declared in `SKILL.md`.
+MIT. See [LICENSE](LICENSE).
