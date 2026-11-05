@@ -1,0 +1,12 @@
+{
+  "name": "unfold",
+  "description": "The unfold skill for Claude Code",
+  "owner": { "name": "xafold", "url": "https://github.com/xafold" },
+  "plugins": [
+    {
+      "name": "unfold",
+      "source": "./",
+      "description": "Interactive explainer figures for software and math ideas, with real numbers and narrated scenes."
+    }
+  ]
+}

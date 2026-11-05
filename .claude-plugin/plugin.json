@@ -1,0 +1,11 @@
+{
+  "name": "unfold",
+  "displayName": "Unfold",
+  "description": "Interactive explainer figures for software and math ideas, in a 3Blue1Brown and Welch Labs style: the real structure, real computed numbers, one colour per concept, and scenes that morph.",
+  "author": { "name": "xafold", "url": "https://github.com/xafold" },
+  "homepage": "https://github.com/xafold/unfold",
+  "repository": "https://github.com/xafold/unfold",
+  "license": "MIT",
+  "keywords": ["explainer", "visualization", "diagram", "svg", "animation", "education", "3blue1brown"],
+  "icon": "./brand/unfold-icon.png"
+}

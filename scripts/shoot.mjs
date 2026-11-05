@@ -1,6 +1,6 @@
 // Capture the finished state of every scene: dark, light (if page-light.html exists), 390 px and reduced motion.
 //   node shoot.mjs page.html --scenes 6 --out shots [--wait 4000] [--only dark,phone]
-// Runs anatomy's drive.mjs once per variant. Files are <out>/<variant>-<scene>.png, scenes counted from 1.
+// Runs drive.mjs (next to this file) once per variant. Files are <out>/<variant>-<scene>.png, scenes counted from 1.
 // After the wait it also waits (up to 60 s) until the stage has no data-busy: a sweep made with
 // UNFOLD.beat(scene, ms, fn, wait, count) is then finished. A sweep without a count loops and is shot as it stands.
 // Each run also prints whether the page scrolls sideways, and each shot lists visible SVG text that overlaps
@@ -8,11 +8,10 @@
 // when the scene's equation is wider than the equation bar: the bar scrolls by itself, so the page does not.
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
-import { homedir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const ANATOMY_DIR = process.env.ANATOMY_DIR ?? join(homedir(), ".claude", "skills", "anatomy");
-const DRIVE = join(ANATOMY_DIR, "scripts", "drive.mjs");
+const DRIVE = join(dirname(fileURLToPath(import.meta.url)), "drive.mjs");
 const args = process.argv.slice(2);
 const opt = (name, fallback) => (args.includes(name) ? args[args.indexOf(name) + 1] : fallback);
 const page = args.find((a) => a.endsWith(".html"));

@@ -6,10 +6,12 @@ This file guides Codex when it works in this repository.
 
 `unfold` is a Codex skill. It builds interactive explainer figures for abstract software and math topics (attention, B-trees, the event loop, gradient descent, git, protocols). The style combines 3Blue1Brown and Welch Labs: the real structure of the idea, real computed numbers, one colour per concept, MathML, and scenes that morph.
 
-It is built on the `anatomy` skill. It reuses anatomy's card, page, iso camera, theme tokens and screenshot scripts. It does not use anatomy's "invent a physical machine" rule.
+It was inspired by the `anatomy` skill. A small part of anatomy's code is adapted into this repo (`kit/iso.mjs`, `scripts/drive.mjs`, `scripts/chrome-port.mjs`, `scripts/line-ends.mjs`), and `THIRD_PARTY_NOTICES.md` keeps anatomy's MIT notice. unfold does not need anatomy installed. It does not use anatomy's "invent a physical machine" rule.
 
-- **Repo:** `~/personal_projects/Codex-skills/unfold/` (this folder).
-- **Install:** `~/.Codex/skills/unfold` is a symlink to this folder. Edits here are live in Codex at once. Do not copy the folder back into `~/.Codex/skills`.
+- **Repo:** `~/personal_projects/claude-skills/unfold/` (this folder).
+- **Install (users):** this repo is a Claude Code plugin and its own marketplace (`.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json` with `source: "./"`). Users run `/plugin install unfold --marketplace xafold/unfold`. The plugin has `SKILL.md` at its root and no `skills/` folder, so it loads as one skill in Claude Code, `/unfold:unfold`. `plugin.json` has no `version`, so users get each new commit with `claude plugin update unfold@unfold`.
+- **Install (this machine):** `~/.claude/skills/unfold` is a symlink to this folder. Edits here are live in Codex at once. Do not also install the plugin here: the skill would load twice. Do not copy the folder back into `~/.claude/skills`.
+- **Check the plugin:** `claude plugin validate .` must pass. Its one warning (CLAUDE.md at the plugin root is not loaded) is expected. To test an install without touching your settings, set `CLAUDE_CONFIG_DIR` to a scratch folder, then run `claude plugin marketplace add ./` and `claude plugin install unfold@unfold`.
 - **Git:** remote `origin` is `github.com/xafold/unfold` (public), owned by the `xafold` account. The active `gh` account on this machine is `utsavpaudellf`, so push with the `xafold` token (`GH_TOKEN=$(gh auth token --user xafold)`).
 
 ## Layout
@@ -21,7 +23,11 @@ It is built on the `anatomy` skill. It reuses anatomy's card, page, iso camera, 
 | `references/vocabulary.md` | 8 concept shapes and how to draw each one. It also says when to route to anatomy. |
 | `references/scenes.md` | Storyboard, `placeCss`, the transpose, the page runtime, animation and checks. |
 | `kit/concept-kit.mjs` | The only kit file. Forms, scenes, runtime, CSS, `pageHtml` and `artifactHtml`. |
-| `scripts/shoot.mjs` | Captures every scene's finished state in dark, light, 390 px and reduced motion. It fails on console errors, sideways scroll, and visible text in the drawing that overlaps other text. |
+| `kit/iso.mjs` | The card, page, iso camera, solids and the `--u-*` theme tokens. Adapted from anatomy's `iso-kit.mjs`. API in `references/iso.md`. |
+| `scripts/shoot.mjs` | Captures every scene's finished state in dark, light, 390 px and reduced motion. It fails on console errors, sideways scroll, visible text in the drawing that overlaps other text, and an equation wider than the equation bar. |
+| `scripts/record.mjs` | Records a page's narrated tour: an MP4 with the voice and a 6x silent GIF. Needs ffmpeg. About 2.5 min for `attention-head`. |
+| `scripts/drive.mjs` | Headless Chrome driver used by `shoot.mjs` and `record.mjs` (from anatomy). |
+| `brand/` | Logo, icon, social card (`node brand/logo.mjs` builds them with Chrome) and the README demo (`attention-head-demo.gif`, `.mp4`). |
 | `scripts/words.mjs` | Checks the reader text of a built page against its budget (sentences per scene, sentence length, semicolons, notes prose, and reader text that names `model.mjs` or `build.mjs`). `--text` prints plain text for the explain-clear linter. |
 | `examples/<name>/` | `model.mjs` (the truth model, with asserts), `build.mjs`, and the built pages `<name>.html` and `<name>-light.html`. |
 | `evals/evals.json` | 8 test prompts: one per concept shape, one routing check, and one breadth request. |
@@ -35,12 +41,14 @@ Run these from the example folder, for example `examples/btree-insert/`:
 
 ```bash
 node model.mjs                                   # truth model asserts; prints "model ok"
-node build.mjs                                   # dark page: <name>.html
+node build.mjs                                   # the shipped page: <name>.html (dark, or auto for a blog/docs page)
 node build.mjs --light                           # light page: <name>-light.html
-node build.mjs --artifact /path/to/out.html      # Codex.ai Artifact page (follows the viewer's theme)
+node build.mjs --artifact /path/to/out.html      # claude.ai Artifact page (follows the viewer's theme)
 node ../../scripts/shoot.mjs <name>.html --scenes N --out /tmp/some-dir
 node ../../scripts/words.mjs <name>.html          # text budget; prints "words ok"
 ```
+
+`/unfold --no-voice <topic>` makes a figure with no narration (a short `say` text per scene); `--voice` is the default. `node build.mjs` records each scene's narration with the TTS provider pinned in its `narrate` call (`gemini`, `openai` or `elevenlabs`; keys `GEMINI_API_KEY`, `OPENAI_API_KEY`, `ELEVENLABS_API_KEY`) when that key is set, and caches the MP3 clips in the example's `voice/` folder. The clips are checked in, so a rebuild needs no key. Without a key or a clip, the page uses the browser's voice. `UNFOLD_TTS_PROVIDER`, `UNFOLD_TTS_MODEL` and `UNFOLD_TTS_VOICE` set the defaults for a build that pins nothing. The voiced examples pin `gemini` and `Kore`. OpenAI and ElevenLabs were tested only with a fake key on 2026-11-04 (the request and the 401 error), not with a real recording. A change to a scene's `voice` text records a new clip. Delete the old clip by hand. `btree-insert` and `attention-head` keep their narration in `script.md` (read by `readScript`); the other examples still keep it in `build.mjs`. In `attention-head`, each script line has a `[cue]`, and `CUES` in `build.mjs` lights the part of the figure that the voice talks about. The new `btree-insert` script is not recorded yet, so its checked-in page still has the old narration: build it after recording. The free tier allows 10 TTS requests a day per model. `node kit/concept-kit.mjs --check` tests `cleanEnds`, which removes the click before the first word and the burst after the last word.
 
 Scene counts: `attention-head` 6, `backprop` 7, `btree-insert` 7, `dijkstra` 6, `event-loop` 5, `function-call` 7, `regex-nfa` 6, `tcp-handshake` 7.
 
@@ -51,20 +59,27 @@ Scene counts: `attention-head` 6, `backprop` 7, `btree-insert` 7, `dijkstra` 6, 
 To check everything after a kit change, run this from the repo root:
 
 ```bash
-for e in attention-head backprop btree-insert dijkstra event-loop function-call regex-nfa tcp-handshake; do
+for e in attention-head backprop btree-insert dijkstra event-loop function-call google-search regex-nfa tcp-handshake; do
   (cd examples/$e && node model.mjs | tail -1 && node build.mjs && node build.mjs --light)
 done
 ```
 
-Then run `shoot.mjs` and `words.mjs` on each example and read the PNGs. `shoot.mjs` must exit 0: a clean console, no sideways scroll and `text ok` for every shot. `words.mjs` must print `words ok`.
+Warning: this loop also rebuilds `btree-insert`, whose new script is not recorded yet. Its rebuilt page loses the old narration. Restore its two pages from git after the loop (and apply only your kit change), until the script is recorded.
+
+Then run `shoot.mjs` and `words.mjs` on each example and read the PNGs. `shoot.mjs` must exit 0: a clean console, no sideways scroll, and `text ok` with no `EQUATION CUT` for every shot. `words.mjs` must print `words ok`.
 
 There is no package.json and there are no dependencies. You need Node 20.10+ and Google Chrome (`/usr/bin/google-chrome`) for the screenshot scripts.
 
-## Dependency on anatomy
+## Relation to anatomy
 
-- The kit loads `~/.Codex/skills/anatomy/kit/iso-kit.mjs` by its install path, not by a relative path. This skill is a symlink, and Node resolves imports from the real path. Set `ANATOMY_DIR` to use another anatomy checkout. `scripts/shoot.mjs` uses anatomy's `scripts/drive.mjs` the same way.
-- anatomy is a clone of `github.com/wheresryan22/anatomy`. Do not edit it from here. The skill was tested at anatomy commit `689dcf9`. After an anatomy `git pull`, run the full check above.
-- Routing between the two skills works in one direction only. unfold's description sends machine and capacity topics (a queue, a pool, a rate limiter) to anatomy. anatomy's description still claims "algorithm", so a plain request may pick anatomy. This is an open decision for the user.
+- unfold does not import anything from `~/.claude/skills/anatomy`. The adapted files are listed in `THIRD_PARTY_NOTICES.md`, taken at anatomy commit `689dcf9`. To take a later anatomy fix, copy the change by hand, keep the `--u-` token names, and run the full check above.
+- The theme tokens are `--u-*` (they were `--anatomy-*`). The concept hues stay `--unfold-*`.
+- Routing between the two skills works in one direction only. unfold's description sends machine and capacity topics (a queue, a pool, a rate limiter) to anatomy, if it is installed. anatomy's description still claims "algorithm", so a plain request may pick anatomy. This is an open decision for the user.
+
+## README demo and GitHub Pages
+
+- GitHub Pages serves this repo from `main` at https://xafold.github.io/unfold/ (`.nojekyll` keeps files as they are). The README links the live `attention-head` page and the MP4 there.
+- After a change to `attention-head`, record the demo again from `examples/attention-head/`: `node ../../scripts/record.mjs attention-head.html --out ../../brand/attention-head-demo`.
 
 ## Rules for kit and example code
 
@@ -84,7 +99,7 @@ There is no package.json and there are no dependencies. You need Node 20.10+ and
 
 ## Testing the skill (blind test)
 
-To check that a change still generalizes, start a fresh general-purpose agent with one prompt from `evals/evals.json`. Tell it to load the `unfold` skill, build in a scratch folder, edit nothing under `~/.Codex/skills/`, and report friction points. The 2026-10-15 run (gradient descent, git rebase) passed, and its 28 friction points were fixed.
+To check that a change still generalizes, start a fresh general-purpose agent with one prompt from `evals/evals.json`. Tell it to load the `unfold` skill, build in a scratch folder, edit nothing under `~/.claude/skills/`, and report friction points. The 2026-10-15 run (gradient descent, git rebase) passed, and its 28 friction points were fixed.
 
 ## Known limits
 

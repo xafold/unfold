@@ -116,7 +116,7 @@ const css = [
   u.placeCss("#gSum", at6({ 5: { x: 600, y: 196 } })),
   u.placeCss("#gSumArrow", at6({ 5: { x: 600, y: 216 } })),
   u.placeCss("#gO", at6({ 5: { x: 400, y: 246 } })),
-  ".u-weight{font:500 10px var(--anatomy-mono);fill:var(--unfold-green);dominant-baseline:central;text-anchor:middle}",
+  ".u-weight{font:500 10px var(--u-mono);fill:var(--unfold-green);dominant-baseline:central;text-anchor:middle}",
   ".u-sum-arrow{opacity:0;transition:opacity .4s}.u-sum-arrow[data-on]{opacity:1}",
   "#gS .u-cell,#gA .u-cell{cursor:crosshair}",
   // Entrances: each scene builds its result in the order it is computed.
@@ -138,14 +138,14 @@ const css = [
   u.revealCss(5, "#gSumArrow .u-arrow-line", { kind: "draw", delay: 2700, dur: 500 }),
   u.revealCss(5, "#gSumArrow .u-arrow-head", { kind: "fade", delay: 3100 }),
   u.revealCss(5, "#gO .u-mark", { kind: "fade", delay: 3100 }),
-  "#gV .u-cell{transition:transform .9s var(--anatomy-ease),opacity .4s}.u-stage[data-scene=\"5\"] #gV .u-cell{opacity:var(--w,1)}",
+  "#gV .u-cell{transition:transform .9s var(--u-ease),opacity .4s}.u-stage[data-scene=\"5\"] #gV .u-cell{opacity:var(--w,1)}",
 ].join("\n");
 
 // Beats: what each cue in script.md lights while the voice says that line. A rule applies only in its scene and
 // only while the voice speaks (data-speaking), so the full scene shows when the narration ends or the voice is off.
 const DIM = "opacity:.15";
 const QUIET = "opacity:.3";
-const LIT = "stroke:var(--anatomy-strong);stroke-width:2;stroke-opacity:1";
+const LIT = "stroke:var(--u-strong);stroke-width:2;stroke-opacity:1";
 const MASK = "stroke:var(--unfold-red);stroke-width:1.6;stroke-dasharray:none;stroke-opacity:1";
 const cellAt = (g, r, c) => `${g} .u-cell[data-r="${r}"][data-c="${c}"]`;
 const notCell = (g, r, c) => `${g} .u-cell:not([data-r="${r}"][data-c="${c}"])`;
@@ -154,7 +154,7 @@ const upper = (g) => pairs((r, c) => c > r).map(([r, c]) => `${cellAt(g, r, c)}>
 const lower = (g) => pairs((r, c) => c <= r).map(([r, c]) => cellAt(g, r, c)).join(",");
 const CUES = {
   0: {
-    words: [["#gIso .u-word text", "fill:var(--anatomy-strong)"], ["#gIso [data-block]:not([data-block='X'])", QUIET]],
+    words: [["#gIso .u-word text", "fill:var(--u-strong)"], ["#gIso [data-block]:not([data-block='X'])", QUIET]],
     sat: [["#gIso .u-word[data-i='2'] text", "fill:var(--unfold-blue);font-weight:700"], ["#gIso .u-word:not([data-i='2'])", QUIET], ["#gIso [data-block]:not([data-block='X'])", QUIET]],
     flow: [["#gIso .u-arrow", "--w:2.4"]],
   },

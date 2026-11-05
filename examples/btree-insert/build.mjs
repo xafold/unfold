@@ -117,13 +117,13 @@ SNAPS.forEach((s, i) => {
   if (s.overflow) css.push(`${scene} #node-${s.overflow}{--over:1;--hue:var(--unfold-${HUE.overflow})}`);
 });
 css.push(
-  `.u-node-box{fill:var(--anatomy-card);stroke:var(--hue,var(--anatomy-mid));stroke-width:1;transition:stroke .3s}`,
-  `.u-node-rule{stroke:var(--anatomy-faint);stroke-width:.8}`,
+  `.u-node-box{fill:var(--u-card);stroke:var(--hue,var(--u-mid));stroke-width:1;transition:stroke .3s}`,
+  `.u-node-rule{stroke:var(--u-faint);stroke-width:.8}`,
   `.u-node-over{fill:none;stroke:var(--unfold-red);stroke-width:1;stroke-dasharray:3 2;opacity:var(--over,0);transition:opacity .4s}`,
   `.u-node[data-on] .u-node-box{stroke:var(--unfold-${HUE.path});stroke-width:1.8}`,
-  `.u-node[data-on][data-hit] .u-node-box{fill:color-mix(in srgb,var(--unfold-${HUE.path}) 14%,var(--anatomy-card))}`,
-  `.u-keycell rect{fill:color-mix(in srgb,var(--hue,var(--anatomy-hi)) 18%,var(--anatomy-card));stroke:var(--hue,var(--anatomy-lo));stroke-width:1;transition:fill .3s,stroke .3s}`,
-  `.u-keycell text{font-size:14px;fill:var(--anatomy-strong)}`,
+  `.u-node[data-on][data-hit] .u-node-box{fill:color-mix(in srgb,var(--unfold-${HUE.path}) 14%,var(--u-card))}`,
+  `.u-keycell rect{fill:color-mix(in srgb,var(--hue,var(--u-hi)) 18%,var(--u-card));stroke:var(--hue,var(--u-lo));stroke-width:1;transition:fill .3s,stroke .3s}`,
+  `.u-keycell text{font-size:14px;fill:var(--u-strong)}`,
   `.u-keycell{cursor:pointer}`,
 );
 

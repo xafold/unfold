@@ -115,17 +115,17 @@ const scenes = [
 
 const emphasis = { 1: ["code", "stack"], 2: ["webapi", "tasks", "micro"], 3: ["micro", "stack"], 4: ["tasks", "stack"] };
 const css = [
-  `.el-place{fill:var(--anatomy-faint);fill-opacity:.12;stroke:var(--anatomy-lo);stroke-width:.8;transition:stroke .4s}`,
-  ...Object.entries(emphasis).map(([s, names]) => `.u-stage[data-scene="${s}"] :is(${names.map((n) => `#box-${n}`).join(",")}) .el-place{stroke:var(--anatomy-strong)}`),
-  ...Object.entries(emphasis).map(([s, names]) => `.u-stage[data-scene="${s}"] :is(${names.map((n) => `#box-${n}`).join(",")}) .el-label{fill:var(--anatomy-strong)}`),
-  `.el-label{font:10.5px var(--anatomy-mono);fill:var(--anatomy-muted);letter-spacing:.06em;text-transform:uppercase;transition:fill .4s}`,
-  `.el-num{font:11px var(--anatomy-mono);fill:var(--anatomy-lo);dominant-baseline:central}`,
-  `.el-code{font:11px var(--anatomy-mono);fill:var(--anatomy-text);dominant-baseline:central;white-space:pre}`,
-  `.el-item{transition:transform .65s var(--anatomy-ease),opacity .4s var(--anatomy-ease)}`,
-  `.el-item .u-chip rect{fill:color-mix(in srgb,var(--hue,var(--anatomy-mid)) 16%,var(--anatomy-card))}`,
-  `.el-item .u-chip text{fill:var(--anatomy-strong);font-size:10.5px}`,
-  `.el-cursor{transition:transform .5s var(--anatomy-ease),opacity .3s}`,
-  `.el-cursor rect{fill:var(--hue,var(--anatomy-hi));fill-opacity:.16;stroke:var(--hue,var(--anatomy-hi));stroke-width:1;transition:fill .3s,stroke .3s}`,
+  `.el-place{fill:var(--u-faint);fill-opacity:.12;stroke:var(--u-lo);stroke-width:.8;transition:stroke .4s}`,
+  ...Object.entries(emphasis).map(([s, names]) => `.u-stage[data-scene="${s}"] :is(${names.map((n) => `#box-${n}`).join(",")}) .el-place{stroke:var(--u-strong)}`),
+  ...Object.entries(emphasis).map(([s, names]) => `.u-stage[data-scene="${s}"] :is(${names.map((n) => `#box-${n}`).join(",")}) .el-label{fill:var(--u-strong)}`),
+  `.el-label{font:10.5px var(--u-mono);fill:var(--u-muted);letter-spacing:.06em;text-transform:uppercase;transition:fill .4s}`,
+  `.el-num{font:11px var(--u-mono);fill:var(--u-lo);dominant-baseline:central}`,
+  `.el-code{font:11px var(--u-mono);fill:var(--u-text);dominant-baseline:central;white-space:pre}`,
+  `.el-item{transition:transform .65s var(--u-ease),opacity .4s var(--u-ease)}`,
+  `.el-item .u-chip rect{fill:color-mix(in srgb,var(--hue,var(--u-mid)) 16%,var(--u-card))}`,
+  `.el-item .u-chip text{fill:var(--u-strong);font-size:10.5px}`,
+  `.el-cursor{transition:transform .5s var(--u-ease),opacity .3s}`,
+  `.el-cursor rect{fill:var(--hue,var(--u-hi));fill-opacity:.16;stroke:var(--hue,var(--u-hi));stroke-width:1;transition:fill .3s,stroke .3s}`,
   `#timeline{cursor:pointer}`,
 ].join("\n");
 

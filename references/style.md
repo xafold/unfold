@@ -9,14 +9,14 @@ Use both in one figure. A typical figure opens on a Welch Labs overview (iso blo
 
 ## 1. Ground and themes
 
-- Dark and light both come from the anatomy tokens (`--anatomy-page`, `--anatomy-card`, `--anatomy-text`, `--anatomy-strong`, `--anatomy-muted`, `--anatomy-faint`). Build both (`node build.mjs` and `--light`) for the checks.
+- Dark and light both come from the base tokens in `kit/iso.mjs` (`--u-page`, `--u-card`, `--u-text`, `--u-strong`, `--u-muted`, `--u-faint`). Build both (`node build.mjs` and `--light`) for the checks.
 - Pick the shipped theme from the request. A blog post, an article, docs or a wiki gets `pageHtml({ theme: "auto" })`: it follows the reader's system setting, and most readers see light. Use dark only when the request asks for a dark or video look, or the host site is dark. A claude.ai Artifact (`artifactHtml`) always follows the viewer.
-- The card is the anatomy card. Do not restyle it.
+- The card is the `iso.plateHtml` card. Do not restyle it.
 
 ## 2. Colour is identity
 
 - Each concept gets one hue, and keeps it everywhere: in the drawing, in the MathML, in the scene sentence (`<b data-hue="blue">query</b>`) and in the key.
-- The palette is `--unfold-blue`, `yellow`, `red`, `green`, `teal`, `purple`, `gold`, plus `ink` (the anatomy `hi` tone) for inputs and plain structure. Each hue has a dark-theme and a light-theme value.
+- The palette is `--unfold-blue`, `yellow`, `red`, `green`, `teal`, `purple`, `gold`, plus `ink` (the base `hi` tone, `--u-hi`) for inputs and plain structure. Each hue has a dark-theme and a light-theme value.
 - At most 7 hues in one figure. If you need more, two things are probably one concept.
 - A derived thing takes the hue of what it is, not of where it came from. In the example, W_Q is blue because it makes Q.
 - Value strength is the opacity of the hue: `0.1 + 0.8 * |v| / max`. Filled = positive, hollow (outline) = negative, dashed outline = masked or missing. This keeps the hue as identity and still shows sign.
@@ -58,7 +58,7 @@ Use both in one figure. A typical figure opens on a Welch Labs overview (iso blo
 
 ## 7. Motion (3Blue1Brown)
 
-- Scene changes are CSS transitions: `transform` 0.9 s on the anatomy ease curve. Opacity is sequenced: what leaves fades out in 0.22 s, and what arrives fades in over 0.5 s after it. Never let two scenes show on top of each other: a double exposure of old and new shapes, or two sentences at once, looks muddy. Cells stagger by about 18 ms each (`--i`).
+- Scene changes are CSS transitions: `transform` 0.9 s on the `--u-ease` curve. Opacity is sequenced: what leaves fades out in 0.22 s, and what arrives fades in over 0.5 s after it. Never let two scenes show on top of each other: a double exposure of old and new shapes, or two sentences at once, looks muddy. Cells stagger by about 18 ms each (`--i`).
 - An object in two scenes moves. A transpose moves each cell to `(c, r)`. Nothing cuts, and nothing appears from nowhere: a new object fades in where it will stay.
 - Each scene builds its result in the order it is computed (`revealCss`). A scene with a step-by-step operation shows it as a sweep (`UNFOLD.beat`): the example visits each key for the selected query, lights the key column and the score cell, and shows that dot product in the readout. The overview carries values along its links (`pulseSvg`), stage by stage.
 - Entrances only start from hidden; the resting state is always complete, so a still frame, a thumbnail and reduced motion all show the full scene.

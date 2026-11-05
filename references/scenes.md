@@ -29,7 +29,7 @@ u.placeCss("#gQ", [null, null, { x: 350, y: 202 }, { x: 276, y: 222 }, { x: 216,
 
 - A state is `{ x, y, s, o }` (translate, scale, opacity). `null` hides the element, faded where it last stood, with pointer events off.
 - **Leave first, then arrive.** An element that leaves (`null` or `o: 0`) fades out in 0.22 s at once. An element that arrives fades in over 0.5 s, after 0.22 s. So the old and the new scene never show on top of each other. The scene sentence and the equation change the same way.
-- An element you show and hide with your own scene CSS (not `placeCss`) uses the same timing: write `transition: opacity var(--u-fade) var(--anatomy-ease) var(--u-fade-at)`, and add `--u-fade:.22s;--u-fade-at:0s` to the rule that hides it. `examples/function-call/` does this for its panels.
+- An element you show and hide with your own scene CSS (not `placeCss`) uses the same timing: write `transition: opacity var(--u-fade) var(--u-ease) var(--u-fade-at)`, and add `--u-fade:.22s;--u-fade-at:0s` to the rule that hides it. `examples/function-call/` does this for its panels.
 - The stage carries `data-scene="i"`, so a scene change is a native CSS transition. There is no animation code to write.
 - `states(n, { 2: {…}, 3: {…} })` from the kit turns a sparse map into the full array.
 - A state with `o > 0` stays clickable, so a dimmed item (o: 0.3) can still be picked. Only `null` or `o: 0` turns pointer events off.
@@ -151,11 +151,11 @@ Presets alone leave the reader's first question open: "what if I start somewhere
   [["key", "ArrowRight"], ["wait", 2000], ["key", "ArrowRight"], ["sheet", "shots/morph.png", 150, 8]]
   ```
 
-  Run it with `node ~/.claude/skills/anatomy/scripts/drive.mjs page.html --actions morph.json`. Nothing should jump, and no object should pass through text.
+  Run it with `node ../../scripts/drive.mjs page.html --actions morph.json`. Nothing should jump, and no object should pass through text.
 - Capture with `--reduced`: every scene must still be correct with no transitions.
 - `shoot.mjs` also lists visible text in the drawing that overlaps other visible text, per shot, and fails on it. It skips text on a slanted plane (iso floor labels). It does not see text that touches a curve or a line: check those in the PNGs.
 
-**The reader test.** Drive the live part once like a reader, with an actions file for `~/.claude/skills/anatomy/scripts/drive.mjs`:
+**The reader test.** Drive the live part once like a reader, with an actions file for `scripts/drive.mjs`:
 
 ```json
 [["key", "End"], ["wait", 3000],

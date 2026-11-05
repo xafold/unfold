@@ -1,9 +1,9 @@
 ---
 name: unfold
-description: Build interactive explainer figures for abstract software and math concepts, in a combined 3Blue1Brown and Welch Labs style. The figure draws the real structure of the idea (vectors, matrices, trees, graphs, timelines, spaces, memory) with real computed numbers, one colour per concept, math next to the shapes, and scenes that morph from the big picture down to single values. Use it when someone wants a figure, diagram, animation or interactive explainer for how an algorithm, data structure, protocol, model or math idea works - for example attention, embeddings, gradient descent, B-trees, hashing, git internals, the event loop, consensus, compilers, encodings - even if they never say "3Blue1Brown". It reuses the anatomy kit for the card, iso camera, motion and checks. For a concept that is a physical machine, or that is about things flowing through something with capacity (a queue, a pool, a rate limiter, a cache), use the anatomy skill instead.
+description: Build interactive explainer figures for abstract software and math concepts, in a combined 3Blue1Brown and Welch Labs style. The figure draws the real structure of the idea (vectors, matrices, trees, graphs, timelines, spaces, memory) with real computed numbers, one colour per concept, math next to the shapes, and scenes that morph from the big picture down to single values. Use it when someone wants a figure, diagram, animation or interactive explainer for how an algorithm, data structure, protocol, model or math idea works - for example attention, embeddings, gradient descent, B-trees, hashing, git internals, the event loop, consensus, compilers, encodings - even if they never say "3Blue1Brown". It ships its own card, iso camera, motion and checks. For a concept that is a physical machine, or that is about things flowing through something with capacity (a queue, a pool, a rate limiter, a cache), use the anatomy skill instead if it is installed.
 argument-hint: "[--voice | --no-voice] <topic>"
 license: MIT
-compatibility: Written for Claude Code. Needs Node.js 20.10+, Chrome or Chromium for the checks, and the anatomy skill installed beside this one (~/.claude/skills/anatomy, tested at commit 689dcf9).
+compatibility: Written for Claude Code. Needs Node.js 20.10+ and Chrome or Chromium for the checks. No other skill is needed.
 ---
 
 # Unfold
@@ -44,7 +44,7 @@ The Gemini models were listed by the API on 2026-11-04. The OpenAI and ElevenLab
 
 This skill makes explainer figures for ideas that have no physical body. The reader understands the idea because they see its real structure change, one step at a time, with true numbers they can check by hand.
 
-It is built on the anatomy skill. It reuses anatomy's card, page, iso camera, solids, theme tokens, motion rules and screenshot scripts. It does not use anatomy's main rule ("invent a physical machine"), because a machine metaphor hides an abstract idea behind a second layer that the reader must decode.
+It was inspired by the anatomy skill, and its card, page, iso camera, solids, theme tokens and Chrome driver are adapted from anatomy (`THIRD_PARTY_NOTICES.md`). It does not use anatomy's main rule ("invent a physical machine"), because a machine metaphor hides an abstract idea behind a second layer that the reader must decode.
 
 Eight complete examples ship with the skill. Open the closest one before you start. The last four won their blind tests and show the rules in "What wins a blind test" at work.
 
@@ -122,7 +122,7 @@ Work in this order. Write the truth model and the storyboard before any geometry
 8. **Build.** One `build.mjs` per figure: geometry with the kit, positions per scene with `placeCss`, the page with `stageHtml`, `plateHtml` and `pageHtml`. See `references/scenes.md`.
 9. **Deliver it.** By default write a standalone page. `node build.mjs` writes the page you ship, in the theme from the request (`auto` or `dark`). `node build.mjs --light` writes the light page for the checks. `shoot.mjs` shows an `auto` page dark in its dark run, so one build covers both checks. Do not ship a fixed dark page only because a brief calls `node build.mjs` "the dark page".
    - **Pick the theme from the request.** For a blog post, an article, docs or a wiki, ship `pageHtml({ theme: "auto" })`: it follows the reader's system setting, so most readers get a light page. Ship dark only when the request asks for a dark or video look, or the host site is dark. In the 2026-10-16 test the judge marked a dark-only page down for a blog post. Still build the dark and the `--light` page for the checks. When the user wants to view or share it in claude.ai (a team wiki, a link, "show me"), write `node build.mjs --artifact <file>` (`artifactHtml`: no page skeleton, follows the viewer's theme) and publish that file with the Artifact tool. If the request names a wiki or a doc site, say which of the two you made.
-10. **Frame it.** The anatomy card: `Fig n` top left, a short title top right, the key hint bottom left, the live readout bottom right. Keep the readout to about 70 characters. A longer readout wraps to a second line inside 62% of the card width, so it never covers the hint. Inside the card: the equation bar, the drawing, the stepper and the colour key. The scene's explanation is spoken (step 11, "Voice"), not written in the card. A true caption goes under the card. For an Explainer, add a short reference section under the caption with `notesHtml`: what differs, what the figure leaves out, and the terms it uses. The figure carries the idea; the notes carry the depth. The notes are diagrams and tables first: each section holds a table (`table`) or a small SVG (in `html`), plus at most 3 sentences of prose. Terms go in a table (term, meaning in 12 words or fewer).
+10. **Frame it.** The card: `Fig n` top left, a short title top right, the key hint bottom left, the live readout bottom right. Keep the readout to about 70 characters. A longer readout wraps to a second line inside 62% of the card width, so it never covers the hint. Inside the card: the equation bar, the drawing, the stepper and the colour key. The scene's explanation is spoken (step 11, "Voice"), not written in the card. A true caption goes under the card. For an Explainer, add a short reference section under the caption with `notesHtml`: what differs, what the figure leaves out, and the terms it uses. The figure carries the idea; the notes carry the depth. The notes are diagrams and tables first: each section holds a table (`table`) or a small SVG (in `html`), plus at most 3 sentences of prose. Terms go in a table (term, meaning in 12 words or fewer).
 11. **Make it live.** Scenes change with the stepper and the arrow keys. The tour starts paused: the reader presses Play, and it runs once to the last scene. One more control picks the focus item (a token, a node, a language), and every view updates from the model. The readout shows the real arithmetic for the focus item. If the figure runs through time (a trace, iterations, a protocol), the reader must be able to step through it by hand: `stageHtml({ time })` adds back and next buttons, a scrubber and the "," and "." keys. The tour and `UNFOLD.beat` are not enough.
     - **The verb on the reader's input.** Give the input from step 2 a field, a slider, or a click target in the drawing. On input, run the model's `step` (shipped with `modelScript`) on the current state, then call one `render(state)` that redraws every view: drawing, equation bar, readout, tables. Do not offer only presets. Keep the presets as named buttons that set the state back to a chosen value. See `references/scenes.md`, sections 7 and 8.
     - **Repeat and reset.** If the operation repeats, add "one more step" and "reset" buttons and a visible history (rule 2 above). If the run length changes with the input, pass the new length to `UNFOLD.timeAt(t, steps)` and give each counted sweep a `count` function.
@@ -135,29 +135,27 @@ Work in this order. Write the truth model and the storyboard before any geometry
 
 ## Setup
 
-The skill imports the anatomy kit from `~/.claude/skills/anatomy` (or `$ANATOMY_DIR`). It does not copy it.
+The skill folder is `${CLAUDE_SKILL_DIR}`. It holds everything the skill needs: the kit, the scripts and the examples. Nothing else must be installed.
 
-Build a new figure in its own folder, not in `examples/`. Import the kit by its install path, so the build works from any folder:
+Build a new figure in its own folder, not in `examples/`. Import the kit by its full path, so the build works from any folder:
 
 ```js
-import { homedir } from "node:os";
-import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import * as m from "./model.mjs";
-const u = await import(pathToFileURL(join(homedir(), ".claude/skills/unfold/kit/concept-kit.mjs")).href);
+const u = await import(pathToFileURL("${CLAUDE_SKILL_DIR}/kit/concept-kit.mjs").href);
 const { iso } = u;
 ```
 
-Run the scripts by their install path too: `node ~/.claude/skills/unfold/scripts/shoot.mjs page.html --scenes N --out <dir>`.
+Run the scripts by their install path too: `node ${CLAUDE_SKILL_DIR}/scripts/shoot.mjs page.html --scenes N --out <dir>`. In this file, `../../scripts/` means the same folder, as seen from an example.
 
 | File | Use it for |
 |---|---|
-| `kit/concept-kit.mjs` | New forms and scenes. Re-exports the anatomy kit as `iso`. |
-| `~/.claude/skills/anatomy/kit/iso-kit.mjs` | Through `iso`: `fitProjection`, `slabOf`, `solidSvg`, `topMatrix`, `figureSvg`, the theme tokens, and the card `iso.plateHtml({ fig, title, hint, readout, caption, body })` (`body` is the `stageHtml` output). `references/kit.md` in anatomy has the API. |
+| `kit/concept-kit.mjs` | New forms and scenes. Re-exports `kit/iso.mjs` as `iso`. |
+| `kit/iso.mjs` | Through `iso`: `fitProjection`, `slabOf`, `solidSvg`, `topMatrix`, `figureSvg`, the theme tokens, and the card `iso.plateHtml({ fig, title, hint, readout, caption, body })` (`body` is the `stageHtml` output). `references/iso.md` has the API. |
 | `scripts/shoot.mjs` | Every scene's finished state in dark, light, 390 px and reduced motion, with readouts, console, sideways-scroll, text-overlap and cut-equation checks. |
 | `scripts/words.mjs` | The reader text of a built page against its budget: narration and on-screen words per scene, long sentences, semicolons, notes prose without a table or SVG. `--text` prints the plain text for a linter. |
-| `~/.claude/skills/anatomy/scripts/capture.mjs` | Headless Chrome screenshots, phone width, keys, reduced motion, close-ups. |
-| `~/.claude/skills/anatomy/scripts/drive.mjs` | Scripted sequences and contact sheets, to catch pops in a scene change. |
+| `scripts/record.mjs` | Records a built page's narrated tour as an MP4 with the voice and a fast silent GIF: `node ${CLAUDE_SKILL_DIR}/scripts/record.mjs page.html --out demo`. Needs ffmpeg. Use it when the user wants a video or a README preview. |
+| `scripts/drive.mjs` | Headless Chrome: scripted clicks and keys, screenshots of an element or a region, and contact sheets to catch pops in a scene change. `node scripts/drive.mjs` with no arguments prints its actions. |
 
 `concept-kit.mjs` exports:
 
@@ -188,7 +186,7 @@ Run the scripts by their install path too: `node ~/.claude/skills/unfold/scripts
 | `modelScript(fns, data)` | The model's pure functions as page source, for live inputs. Each must be a named `function` declaration, exported from `model.mjs`, and every helper it calls must be in `fns` too. `data` becomes `const` lines (finite numbers only: JSON has no Infinity). |
 | `notesHtml(sections, { summary })` | The reference section under the card, closed by default (a `<details>` with `summary` as its label). Each section is `{ title, html, table: { head, rows } }`. At phone width a table row becomes a block. |
 | `keyHtml(items, { signs })` | The colour key. `signs: true` adds the filled/hollow entries; use it only when grids show signed values. |
-| `pageHtml({ title, theme, body, script, width })` | The anatomy page with the unfold CSS and runtime. `theme` is `"dark"`, `"light"` or `"auto"` (follows the reader's system setting). The page ships only the runtime helpers that `script` names (`setGrid`, `fmt`, …), plus what they need. |
+| `pageHtml({ title, theme, body, script, width })` | The iso page with the unfold CSS and runtime. `theme` is `"dark"`, `"light"` or `"auto"` (follows the reader's system setting). The page ships only the runtime helpers that `script` names (`setGrid`, `fmt`, …), plus what they need. |
 | Page runtime | `UNFOLD.go(i)` (it also speaks the new scene's narration when voice is on), `UNFOLD.scene()`, `UNFOLD.pause()` (call it on every user input: the tour stops and the sweeps hold until the scene changes; `UNFOLD.go(i)` releases them, so `pause()` then `go(UNFOLD.scene())` replays the sweep for a new input), `UNFOLD.beat(scene, ms, fn, wait, count)` (with `count` the sweep stops after `fn(count - 1)`; the tour and `shoot.mjs` wait for it, and the tour holds the last step 1.8 s; `count` may be a function for a run whose length changes), `UNFOLD.onTime(fn)` (the step control calls `fn(t)`, then pauses, so the sweeps hold even when `fn` changes the scene), `UNFOLD.timeAt(t, steps?)` (move the control when your code changes the step; pass `steps` when a live input changed the run's length; step 0 is the start state, so the label reads "step 9 / 9" after 9 steps), `UNFOLD.narrow()`, `showRows(grid, t)`, `setGrid(grid, values, max?)`, `setBars(bars, values, max?)`, `mark`, `fmt`, `setLive(values)`, `plotAt(plotEl, x, y)`, and the `unfold:scene` and `unfold:layout` events. |
 
 The kit has helpers only for the forms an example has needed so far. For other forms in `references/vocabulary.md`, draw them with plain SVG and the same CSS tokens. Add a helper to the kit when a second figure needs the same form.
@@ -218,7 +216,7 @@ The kit has helpers only for the forms an example has needed so far. For other f
 1. `node model.mjs` prints the tables and `model ok`.
 2. Build both themes: `node build.mjs` and `node build.mjs --light`.
 3. Capture every scene's finished state in one command: `node ../../scripts/shoot.mjs page.html --scenes N --out <dir>`. It runs dark (with the reader's system set to dark, so a `theme: "auto"` page shows dark too), light (`page-light.html`), 390 px and reduced motion, prints each scene's readout, and reports a clean console, no sideways scroll, and no text in the drawing that overlaps other text (`TEXT OVERLAP` fails the run). It also fails when a scene's equation is wider than the equation bar (`EQUATION CUT`): the bar scrolls by itself, so the page does not scroll sideways, but the reader sees a cut equation. Split it over two rows (`<mtable>`) or shorten it for the narrow layout. After its wait (`--wait`, 4000 ms) it also waits until every counted sweep (`UNFOLD.beat` with `count`) of the scene is done. A sweep without `count` loops, and is shot at whatever step it shows. Keep the shots outside the skill folder. Read every PNG. In the 390 px shots, the code and labels in the drawing must be readable without zoom; if they are not, add a narrow layout.
-4. For a close-up, use `~/.claude/skills/anatomy/scripts/capture.mjs page.html --zoom x,y,w,h`. Note that `capture.mjs` presses `--key` after its wait, so its shot shows a scene part way through its entrance; use `shoot.mjs` or `drive.mjs` for finished states.
+4. For a close-up, use `drive.mjs` with a `["shot", out.png, sel, scale, [x, y, w, h]]` action after a `["wait", 4000]`, so the scene has finished its entrance.
 5. Redo one value per scene by hand from the PNG. When the topic is backed by a real tool (git, a compiler, a hash, a protocol stack), also check the model against that tool in `model.mjs`, as the blind-test git figure did with real `git`.
 6. Check each hue: one concept per hue, in every scene, in the math and in the key.
 7. Check the words: `node ../../scripts/words.mjs page.html` must print `words ok`. Play one scene with voice on and listen: numbers, symbols and code names must sound right (write "2 to the 32" in `voice` if the model reads 2³² badly). It also reports reader text that names `model.mjs` or `build.mjs`. For each problem, first try to draw the point (a label, an arrow, a table row). Cut words only after that. If the explain-clear skill is installed, also run `node ../../scripts/words.mjs page.html --text | python3 ~/.claude/skills/explain-clear/scripts/ste-lint.py` and fix what it finds. Its passive-voice and tense warnings are advice only.
