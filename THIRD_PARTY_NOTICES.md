@@ -5,7 +5,7 @@ unfold is its own skill. Its design was inspired by the anatomy skill by Ryan. A
 | unfold file | Adapted from (anatomy, commit 689dcf9) | Changes |
 |---|---|---|
 | `kit/iso.mjs` | `kit/iso-kit.mjs` | CSS tokens renamed from `--anatomy-*` to `--u-*` |
-| `scripts/drive.mjs` | `scripts/drive.mjs` | none |
+| `scripts/drive.mjs` | `scripts/drive.mjs` | Chrome starts with `--mute-audio`, so a page never plays sound on the device |
 | `scripts/chrome-port.mjs` | `scripts/chrome-port.mjs` | none |
 | `scripts/line-ends.mjs` | `scripts/line-ends.mjs` | none |
 

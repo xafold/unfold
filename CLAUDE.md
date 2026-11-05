@@ -26,7 +26,7 @@ It was inspired by the `anatomy` skill. A small part of anatomy's code is adapte
 | `kit/iso.mjs` | The card, page, iso camera, solids and the `--u-*` theme tokens. Adapted from anatomy's `iso-kit.mjs`. API in `references/iso.md`. |
 | `scripts/shoot.mjs` | Captures every scene's finished state in dark, light, 390 px and reduced motion. It fails on console errors, sideways scroll, visible text in the drawing that overlaps other text, and an equation wider than the equation bar. |
 | `scripts/record.mjs` | Records a page's narrated tour: an MP4 with the voice and a 6x silent GIF. Needs ffmpeg. About 2.5 min for `attention-head`. |
-| `scripts/drive.mjs` | Headless Chrome driver used by `shoot.mjs` and `record.mjs` (from anatomy). |
+| `scripts/drive.mjs` | Headless Chrome driver used by `shoot.mjs` and `record.mjs` (from anatomy). It starts Chrome with `--mute-audio`, so a check or a recording never plays the voice on this computer. Chrome still opens an audio stream, but the stream carries only silence (checked 2026-11-05). `record.mjs` takes the sound from the page's own clips, not from Chrome. |
 | `brand/` | Logo, icon, social card (`node brand/logo.mjs` builds them with Chrome) and the README demo (`attention-head-demo.gif`, `.mp4`). |
 | `scripts/words.mjs` | Checks the reader text of a built page against its budget (sentences per scene, sentence length, semicolons, notes prose, and reader text that names `model.mjs` or `build.mjs`). `--text` prints plain text for the explain-clear linter. |
 | `examples/<name>/` | `model.mjs` (the truth model, with asserts), `build.mjs`, and the built pages `<name>.html` and `<name>-light.html`. |
