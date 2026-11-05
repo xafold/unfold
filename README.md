@@ -194,26 +194,6 @@ It writes an MP4 with the voice and a fast GIF without sound.
 
 Some models check against real tools. `function-call` runs python3, node, ruby, gcc, java and rustc. `dijkstra` checks against networkx when it is installed. A missing tool is skipped with a message.
 
-## Benchmarks
-
-Each benchmark gives the same prompt to a builder with unfold and to a builder without it. A Gemini judge scores both pages blind, with the order swapped. Highlights:
-
-| Prompt | unfold /80 | Baseline /80 |
-|---|---|---|
-| Regex NFA | 78.50 | 38.00 |
-| Dijkstra | 79.00 | 62.00 |
-| TCP handshake | 77.75 | 58.75 |
-| Function call in all languages | 77.75 | 63.50 |
-
-Not every test is a win. Fourier and DNS lost. The full table, with the losses, is in [`benchmarks/README.md`](benchmarks/README.md).
-
-## Known limits
-
-- At 390 px, small text that the figure draws is hard to read. `attention-head`, `btree-insert` and `event-loop` do not have a narrow phone layout yet.
-- `regex-nfa` takes your input string, but not your own pattern.
-- The event-loop simulator supports only one 0 ms timer, and it does not model rendering.
-- Stack depths in `function-call` were measured on Linux x86-64. On another machine, measure them again.
-
 ## Credits
 
 unfold was inspired by the [anatomy](https://github.com/wheresryan22/anatomy) skill by Ryan. Its card, iso camera and Chrome driver are adapted from anatomy, under the MIT License. [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) lists the files.
