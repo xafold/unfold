@@ -194,46 +194,6 @@ It writes an MP4 with the voice and a fast GIF without sound.
 
 Some models check against real tools. `function-call` runs python3, node, ruby, gcc, java and rustc. `dijkstra` checks against networkx when it is installed. A missing tool is skipped with a message.
 
-## Repository layout
-
-| Path | What it is |
-|---|---|
-| `SKILL.md` | The skill: the core idea, the workflow, the kit API and the checks. Claude Code loads this file. |
-| `.claude-plugin/` | The plugin manifest (`plugin.json`) and the marketplace file (`marketplace.json`). |
-| `references/` | Style rules, the concept shapes, scenes and animation, and the iso layer API. |
-| `kit/concept-kit.mjs` | The kit: forms, scenes, page runtime, CSS and page output. |
-| `kit/iso.mjs` | The card, the page, the iso camera and the solid blocks. |
-| `scripts/` | `shoot.mjs` (screenshot checks), `words.mjs` (text budget), `record.mjs` (demo video), `drive.mjs` (headless Chrome driver). |
-| `examples/` | Finished figures with their models and build scripts. |
-| `brand/` | The logo, the icon, the social card, and the demo GIF and video. `node brand/logo.mjs` builds the logo files. |
-| `evals/evals.json` | Test prompts, one per concept shape. |
-| `benchmarks/` | Blind A/B tests against pages made without the skill. See [`benchmarks/README.md`](benchmarks/README.md). |
-| `drafts/` | Figures in progress. |
-
-## Brand
-
-| File | Use |
-|---|---|
-| [`brand/unfold-icon.png`](brand/unfold-icon.png) | App and plugin icon, 512 x 512 |
-| [`brand/unfold-logo-dark.png`](brand/unfold-logo-dark.png), [`brand/unfold-logo-light.png`](brand/unfold-logo-light.png) | Logo with the name, for dark and light backgrounds |
-| [`brand/unfold-mark.svg`](brand/unfold-mark.svg) | The mark alone, with no background |
-| [`brand/unfold-social.png`](brand/unfold-social.png) | Social preview card, 1280 x 640 |
-
-The mark is a 3 x 3 matrix in the iso camera. Three blocks rise from it in the query, key and value colours. A flat grid "unfolds" into structure.
-
-| Colour | Dark theme | Light theme | In the attention-head figure |
-|---|---|---|---|
-| Blue | `#58c4dd` | `#1f78a4` | Q, the queries |
-| Yellow | `#f4d345` | `#a67c00` | K, the keys |
-| Red | `#fc6255` | `#cf3b2e` | V, the values |
-| Green | `#83c167` | `#3e8a2a` | A, the attention weights |
-| Teal | `#5cd0b3` | `#16866b` | O, the output |
-| Purple | `#b48ad1` | `#7a4fa3` | S, the scores |
-| Gold | `#f0ac5f` | `#b8661a` | (not used; a seventh concept) |
-| Page | `#0b0b0b` | `#f2f2ef` | background |
-
-Type: the name is set in italic Latin Modern (the math font of the figures). Labels and code use the system monospace font.
-
 ## Benchmarks
 
 Each benchmark gives the same prompt to a builder with unfold and to a builder without it. A Gemini judge scores both pages blind, with the order swapped. Highlights:
