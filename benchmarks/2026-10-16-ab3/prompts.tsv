@@ -1,0 +1,2 @@
+bsearch	Explain how binary search finds a number in a sorted array, and why it needs only about log2(n) steps, as an interactive figure for a programming blog post.
+hashtable	Show how a hash table stores keys, handles collisions, and grows when it gets too full, as an interactive figure for a docs page.

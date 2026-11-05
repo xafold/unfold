@@ -1,0 +1,603 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Binary search</title><style>
+.iso{
+  --anatomy-page:#0b0b0b;--anatomy-card:#131313;--anatomy-text:#a3a3a3;--anatomy-strong:#e6e6e6;--anatomy-muted:#6e6e6e;
+  --anatomy-paper:#131313;--anatomy-face:#1b1b1b;--anatomy-top:#1c1c1c;
+  --anatomy-shade-0:#0f0f0f;--anatomy-shade-1:#121212;--anatomy-shade-2:#151515;--anatomy-shade-3:#181818;
+  --anatomy-lit-top:#262626;--anatomy-lit-shade:#1d1d1d;
+  --anatomy-hi:#d4d4d4;--anatomy-mid:#6a6a6a;--anatomy-lo:#3e3e3e;--anatomy-faint:#2a2a2a;--anatomy-lit:#ffffff;
+  --anatomy-halo:#050505;--anatomy-halo-opacity:.9;--anatomy-dot:#e6e6e6;
+  --anatomy-red:#ff6b6b;--anatomy-green:#6be0a0;--anatomy-blue:#6b9bff;
+  --anatomy-weight:.6px;--anatomy-ease:cubic-bezier(.32,.72,0,1);
+  --anatomy-mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --anatomy-lift:inset 0 1px 0 0 #ffffff0a,inset 0 0 0 1px #ffffff06,0 0 0 1px #00000026,0 1px 1px -.5px #00000014,0 3px 3px -1.5px #00000014,0 6px 6px -3px #00000014,0 12px 12px -6px #00000014;
+}
+.iso[data-theme="light"]{
+  --anatomy-page:#f2f2ef;--anatomy-card:#fbfbfa;--anatomy-text:#57575a;--anatomy-strong:#18181a;--anatomy-muted:#8c8c90;
+  --anatomy-paper:#fbfbfa;--anatomy-face:#ffffff;--anatomy-top:#ffffff;
+  --anatomy-shade-0:#dcdcd9;--anatomy-shade-1:#e5e5e2;--anatomy-shade-2:#ededea;--anatomy-shade-3:#f4f4f1;
+  --anatomy-lit-top:#ffffff;--anatomy-lit-shade:#eeeeeb;
+  --anatomy-hi:#26262a;--anatomy-mid:#8a8a8f;--anatomy-lo:#b4b4b8;--anatomy-faint:#d4d4d6;--anatomy-lit:#000000;
+  --anatomy-halo:#8a8a80;--anatomy-halo-opacity:.32;--anatomy-dot:#3a3a3e;
+  --anatomy-red:#e5484d;--anatomy-green:#30a46c;--anatomy-blue:#3e63dd;
+  --anatomy-lift:inset 0 1px 0 0 #ffffff,0 0 0 1px #0000000f,0 1px 1px -.5px #0000000a,0 3px 3px -1.5px #0000000a,0 6px 6px -3px #0000000a,0 12px 12px -6px #0000000a;
+}
+.iso-svg{display:block;width:100%;height:auto;overflow:visible}
+.iso-svg path,.iso-svg circle{vector-effect:non-scaling-stroke}
+.iso-fill{fill:var(--anatomy-paper);stroke:none}
+.iso-solid[data-lit]>.iso-fill{fill:var(--anatomy-face)}
+.iso-shade,.iso-top{stroke:none}
+.iso-shade[data-shade="0"]{fill:var(--anatomy-shade-0)}
+.iso-shade[data-shade="1"]{fill:var(--anatomy-shade-1)}
+.iso-shade[data-shade="2"]{fill:var(--anatomy-shade-2)}
+.iso-shade[data-shade="3"]{fill:var(--anatomy-shade-3)}
+.iso-top{fill:var(--anatomy-top)}
+.iso-solid[data-lit]>.iso-top{fill:var(--anatomy-lit-top)}
+.iso-solid[data-lit]>.iso-shade{fill:var(--anatomy-lit-shade)}
+.iso-solid[data-seamless]>.iso-shade,.iso-solid[data-seamless]>.iso-top{stroke-width:.4;stroke-linejoin:round}
+.iso-solid[data-seamless]>.iso-shade[data-shade="0"]{stroke:var(--anatomy-shade-0)}
+.iso-solid[data-seamless]>.iso-shade[data-shade="1"]{stroke:var(--anatomy-shade-1)}
+.iso-solid[data-seamless]>.iso-shade[data-shade="2"]{stroke:var(--anatomy-shade-2)}
+.iso-solid[data-seamless]>.iso-shade[data-shade="3"]{stroke:var(--anatomy-shade-3)}
+.iso-solid[data-seamless]>.iso-top{stroke:var(--anatomy-top)}
+.iso-solid[data-seamless][data-lit]>.iso-top{stroke:var(--anatomy-lit-top)}
+.iso-solid[data-seamless][data-lit]>.iso-shade{stroke:var(--anatomy-lit-shade)}
+.iso-solid[data-lit]>.iso-edge{stroke:var(--anatomy-lit)}
+.iso-halo{fill:var(--anatomy-halo);stroke:none;filter:blur(9px);opacity:var(--anatomy-halo-opacity);transform:translateY(3px)}
+.iso-line{fill:none;stroke:var(--anatomy-lo);stroke-width:var(--anatomy-weight);stroke-linecap:round;stroke-linejoin:round}
+.iso-line[data-tone="hi"]{stroke:var(--anatomy-hi)}
+.iso-line[data-tone="mid"]{stroke:var(--anatomy-mid)}
+.iso-line[data-tone="lo"]{stroke:var(--anatomy-lo)}
+.iso-line[data-tone="faint"]{stroke:var(--anatomy-faint)}
+.iso-line[data-tone="lit"]{stroke:var(--anatomy-lit)}
+.iso-line[data-tone="red"]{stroke:var(--anatomy-red)}
+.iso-line[data-tone="green"]{stroke:var(--anatomy-green)}
+.iso-line[data-tone="blue"]{stroke:var(--anatomy-blue)}
+.iso-line[data-dotted]{stroke-dasharray:.01 3.5;stroke-width:1}
+.iso-line[data-dashed]{stroke-dasharray:3 3}
+.iso-line[data-flow]{stroke-dasharray:2 6}
+.iso-wire-end{fill:var(--anatomy-paper);stroke:var(--anatomy-lo);stroke-width:var(--anatomy-weight)}
+.iso-wire[data-tone="hi"] .iso-wire-end{stroke:var(--anatomy-hi)}
+.iso-wire[data-tone="mid"] .iso-wire-end{stroke:var(--anatomy-mid)}
+.iso-wire[data-tone="faint"] .iso-wire-end{stroke:var(--anatomy-faint)}
+.iso-wire[data-tone="lit"] .iso-wire-end{stroke:var(--anatomy-lit)}
+.iso-dots circle{fill:var(--anatomy-dot);stroke:none;opacity:.32}
+.iso-dots[data-tone="hi"] circle{opacity:.85}
+.iso-dots[data-tone="mid"] circle{opacity:.45}
+.iso-dots[data-tone="lo"] circle{opacity:.22}
+.iso-dots[data-tone="faint"] circle{opacity:.12}
+.iso-face-text{fill:var(--anatomy-mid);font-family:var(--anatomy-mono);letter-spacing:.04em}
+.iso-face-text[data-tone="hi"]{fill:var(--anatomy-hi)}
+.iso-face-text[data-tone="lo"]{fill:var(--anatomy-lo)}
+.iso-face-text[data-tone="faint"]{fill:var(--anatomy-faint)}
+.tb-body{fill:var(--anatomy-shade-2);stroke:none}
+.tb-shine{fill:var(--anatomy-top);stroke:none}
+.tb-shade{fill:var(--anatomy-shade-0);stroke:none}
+.tb-ring{fill:none;stroke:var(--anatomy-lo);stroke-width:.45;stroke-linecap:butt;stroke-linejoin:round}
+.tb-ring[data-tone="mid"]{stroke:var(--anatomy-mid)}
+.tb-ring[data-tone="faint"]{stroke:var(--anatomy-faint)}
+.tb-ring[data-tone="hi"]{stroke:var(--anatomy-hi)}
+@keyframes iso-flow{to{stroke-dashoffset:-32}}
+@keyframes iso-pulse{0%,100%{opacity:.18}12%{opacity:1}40%{opacity:.18}}
+.iso-line[data-flow]{animation:iso-flow 1600ms linear infinite}
+.iso-dots circle[data-pulse]{animation:iso-pulse 1600ms steps(1,end) infinite;animation-delay:var(--pulse-at,0ms)}
+.iso-figure{margin:32px 0 36px}
+.iso-plate{position:relative;padding:52px 24px;border-radius:0;background:var(--anatomy-card);box-shadow:0 0 0 1px var(--anatomy-mid);--anatomy-paper:var(--anatomy-card)}
+.iso-plate-corners{position:absolute;inset:18px 20px;pointer-events:none}
+.iso-plate-corner{position:absolute;color:var(--anatomy-muted);font-family:var(--anatomy-mono);font-size:10.5px;line-height:1;letter-spacing:.04em;white-space:nowrap}
+.iso-plate-corner[data-corner="fig"]{top:0;left:0;color:var(--anatomy-text)}
+.iso-plate-corner[data-corner="title"]{top:0;right:0;text-transform:uppercase;letter-spacing:.1em}
+.iso-plate-corner[data-corner="hint"]{bottom:0;left:0;text-transform:uppercase;letter-spacing:.1em}
+.iso-plate-corner[data-corner="readout"]{right:0;bottom:0;color:var(--anatomy-text);font-variant-numeric:tabular-nums}
+.iso-plate .iso-svg{margin:0 auto}
+.iso-legend{display:grid;gap:8px;margin-top:12px;color:var(--anatomy-muted);font-size:13px;line-height:1.55}
+.iso-keys{display:flex;flex-wrap:wrap;gap:6px 18px}
+.iso-key{display:inline-flex;align-items:center;gap:7px}
+.iso-swatch{width:16px;height:10px;flex:none;overflow:visible}
+.iso-swatch path{fill:none;stroke:var(--anatomy-hi);stroke-width:1;vector-effect:non-scaling-stroke;stroke-linejoin:round;stroke-linecap:round}
+.iso-swatch[data-mark="raised"] path,.iso-swatch[data-mark="flat"] path{stroke:var(--anatomy-mid)}
+.iso-swatch[data-mark="lit"] path{stroke:var(--anatomy-lit)}
+.iso-swatch[data-mark="dim"] path{stroke:var(--anatomy-lo)}
+.iso-swatch[data-mark="dotted"] path{stroke-dasharray:.01 3;stroke-width:1.4}
+.iso-swatch[data-mark="dashed"] path{stroke-dasharray:3 2.5}
+.iso-swatch[data-mark="red"] path{stroke:var(--anatomy-red)}
+.iso-swatch[data-mark="green"] path{stroke:var(--anatomy-green)}
+.iso-swatch[data-mark="blue"] path{stroke:var(--anatomy-blue)}
+.iso-swatch-crease{stroke:var(--anatomy-lo)!important}
+@media (max-width:560px){.iso-plate{padding:48px 12px 70px}.iso-plate-corner[data-corner="hint"]{bottom:18px}}
+@media (prefers-reduced-motion:reduce){.iso-line[data-flow],.iso-dots circle[data-pulse]{animation:none}}
+
+*{box-sizing:border-box}
+html{color-scheme:dark}
+body[data-theme="light"]{color-scheme:light}
+body{margin:0;background:var(--anatomy-page);color:var(--anatomy-text);font:14px/1.6 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+.iso-page{width:min(900px,100% - 32px);margin:64px auto 96px}
+</style></head><body class="iso" data-theme="auto"><main class="iso-page"><style>
+.iso{--unfold-blue:#58c4dd;--unfold-yellow:#f4d345;--unfold-red:#fc6255;--unfold-green:#83c167;--unfold-teal:#5cd0b3;--unfold-purple:#b48ad1;--unfold-gold:#f0ac5f;--unfold-on-hot:#0b0b0b;--unfold-serif:"Latin Modern Math","STIX Two Math","Cambria Math",math,serif}
+.iso[data-theme="light"]{--unfold-blue:#1f78a4;--unfold-yellow:#a67c00;--unfold-red:#cf3b2e;--unfold-green:#3e8a2a;--unfold-teal:#16866b;--unfold-purple:#7a4fa3;--unfold-gold:#b8661a;--unfold-on-hot:#ffffff}
+[data-hue="blue"]{--hue:var(--unfold-blue)}[data-hue="yellow"]{--hue:var(--unfold-yellow)}[data-hue="red"]{--hue:var(--unfold-red)}[data-hue="green"]{--hue:var(--unfold-green)}[data-hue="teal"]{--hue:var(--unfold-teal)}[data-hue="purple"]{--hue:var(--unfold-purple)}[data-hue="gold"]{--hue:var(--unfold-gold)}[data-hue="ink"]{--hue:var(--anatomy-hi)}
+.u-key{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 16px;margin-top:10px;color:var(--anatomy-muted);font-size:12px}
+.u-key>span{display:inline-flex;align-items:center;gap:6px}
+.u-key i{width:10px;height:10px;border-radius:2px;background:var(--hue)}
+.u-key i.u-hollow{background:none;box-shadow:inset 0 0 0 1.2px var(--anatomy-mid)}
+.u-key i.u-solid{background:var(--anatomy-mid)}
+.u-stage{position:relative;outline:none;container-type:inline-size}
+.u-stage:focus-visible{outline:1px solid var(--anatomy-faint);outline-offset:8px}
+.u-stage .iso-svg{overflow:visible}
+.u-eq,.u-say{display:grid;align-items:center}
+.u-eq>.u-at,.u-say>.u-at{grid-area:1/1;opacity:0;visibility:hidden;transition:opacity .45s var(--anatomy-ease),visibility 0s .45s;margin:0}
+.u-eq{min-height:44px;margin-bottom:8px;overflow-x:auto;overflow-y:hidden}
+.u-eq math{font-family:var(--unfold-serif);font-size:20px;color:var(--anatomy-strong)}
+.u-eq [data-hue]{color:var(--hue)}
+.u-say{min-height:48px;margin-top:6px;color:var(--anatomy-text);font-size:14px;line-height:1.55;text-align:center}
+.u-say>.u-at{max-width:62ch;justify-self:center}
+.u-say b{color:var(--anatomy-strong);font-weight:500}
+.u-say [data-hue]{color:var(--hue)}
+.u-steps{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin-top:14px}
+.u-steps button{display:inline-flex;align-items:center;gap:6px;padding:5px 10px 5px 6px;border:0;border-radius:999px;background:transparent;color:var(--anatomy-muted);font:11px/1 var(--anatomy-mono);letter-spacing:.04em;cursor:pointer;box-shadow:0 0 0 1px var(--anatomy-faint);transition:color .2s,box-shadow .2s}
+.u-steps button span{display:inline-grid;place-items:center;width:16px;height:16px;border-radius:50%;background:var(--anatomy-faint);color:var(--anatomy-text);font-size:10px}
+.u-steps button:hover{color:var(--anatomy-text)}
+.u-steps button[aria-current]{color:var(--anatomy-strong);box-shadow:0 0 0 1px var(--anatomy-mid)}
+.u-steps button[aria-current] span{background:var(--anatomy-strong);color:var(--anatomy-card)}
+.u-steps .u-play{margin-right:6px}.u-steps .u-play[aria-pressed="true"]{color:var(--anatomy-strong);box-shadow:0 0 0 1px var(--anatomy-mid)}
+.u-move{transition:transform .9s var(--anatomy-ease),opacity .6s var(--anatomy-ease)}
+.u-grid text,.u-chip text,.u-bars text,.u-arrow text{dominant-baseline:central;text-anchor:middle}
+.u-cell{transform:translate(var(--x),var(--y));transition:transform .9s var(--anatomy-ease) calc(var(--i) * 18ms)}
+.u-cell-bg{fill:var(--hue);fill-opacity:var(--a);stroke:none;transition:fill-opacity .35s}
+.u-cell[data-neg]>.u-cell-bg,.u-cell-bg[data-neg]{fill-opacity:calc(var(--a) * .18);stroke:var(--hue);stroke-opacity:var(--a);stroke-width:1.2}
+.u-cell[data-masked]>.u-cell-bg,.u-cell-bg[data-masked]{fill:none;stroke:var(--anatomy-faint);stroke-width:.8;stroke-dasharray:2 2}
+.u-num{font:500 10px var(--anatomy-mono);font-variant-numeric:tabular-nums;fill:var(--anatomy-strong)}
+.u-cell[data-hot] .u-num{fill:var(--unfold-on-hot)}
+.u-cell[data-masked] .u-num{fill:var(--anatomy-lo)}
+.u-name{font:italic 600 17px var(--unfold-serif);fill:var(--hue);dominant-baseline:auto!important;text-anchor:start!important}
+.u-dims{font:400 10px var(--anatomy-mono);font-style:normal;fill:var(--anatomy-muted)}
+.u-T,.u-dims-T{display:none}
+.u-mark{fill:none;stroke:var(--anatomy-strong);stroke-width:1.2;opacity:0;transition:opacity .3s}
+.u-mark[data-on]{opacity:.9}
+.u-chip rect{fill:var(--anatomy-card);stroke:var(--anatomy-mid);stroke-width:.8;transition:stroke .25s,fill .25s}
+.u-chip text{font:500 11px var(--anatomy-mono);fill:var(--anatomy-text);transition:fill .25s}
+.u-chip[data-hue] rect{stroke:var(--hue)}
+.u-chip[data-hue] text{fill:var(--hue)}
+.u-cell[data-later],.u-mark[data-later]{opacity:0!important;transition:opacity .3s}
+.u-plot-axis{stroke:var(--anatomy-mid);stroke-width:.9;fill:none}
+.u-plot-grid{stroke:var(--anatomy-faint);stroke-width:.6;fill:none}
+.u-tick-label{font:10px var(--anatomy-mono);fill:var(--anatomy-muted)}
+.u-plot-name{font:italic 600 15px var(--unfold-serif);fill:var(--hue,var(--anatomy-text))}
+.u-curve{fill:none;stroke:var(--hue,var(--anatomy-hi));stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.u-chip[data-on] rect{fill:var(--anatomy-strong);stroke:var(--anatomy-strong)}
+.u-chip[data-on] text{fill:var(--anatomy-card)}
+.u-chip[data-i]{cursor:pointer}
+.u-arrow{--w:1.1;color:var(--anatomy-mid)}
+.u-arrow[data-hue]{color:var(--hue)}
+.u-arrow-line{fill:none;stroke:currentColor;stroke-width:var(--w);stroke-linecap:round;transition:stroke-width .4s,opacity .4s}
+.u-arrow-head{fill:currentColor}
+.u-bar-fill{fill:var(--hue);transform-box:fill-box;transform-origin:50% 100%;transform:scaleY(var(--v));transition:transform .6s var(--anatomy-ease)}
+.u-bar-value{font:500 10px var(--anatomy-mono);fill:var(--anatomy-strong);transition:y .6s var(--anatomy-ease)}
+.u-bar-label{font:11px var(--anatomy-mono);fill:var(--anatomy-muted)}
+.u-axis{stroke:var(--anatomy-mid);stroke-width:.8;fill:none}
+.u-link{fill:none;stroke:var(--hue,var(--anatomy-mid));stroke-width:1.1;stroke-linecap:round;transition:d .9s var(--anatomy-ease),opacity .5s var(--anatomy-ease),stroke .3s}
+.u-link[data-off]{opacity:0}
+.u-eq>.u-at{text-align:center}
+.u-eq .u-rule{font:500 14px/1.5 var(--anatomy-mono);color:var(--anatomy-strong);letter-spacing:.01em}
+.u-lane-bg{fill:var(--anatomy-faint);fill-opacity:.18;stroke:var(--anatomy-faint);stroke-width:.6}
+.u-lane-name{font:11px var(--anatomy-mono);fill:var(--hue,var(--anatomy-muted));text-anchor:end;dominant-baseline:central}
+.u-tick{stroke:var(--anatomy-faint);stroke-width:.6}
+.u-tick-label{font:9px var(--anatomy-mono);fill:var(--anatomy-muted);text-anchor:middle;dominant-baseline:central}
+.u-now{stroke:var(--anatomy-strong);stroke-width:1.2;transition:transform .5s var(--anatomy-ease)}
+.u-span-bar{fill:var(--hue,var(--anatomy-mid));fill-opacity:.9;transform-box:fill-box;transform-origin:0 50%;transform:scaleX(var(--v,1));transition:transform .5s var(--anatomy-ease)}
+.u-span-label{opacity:0;transition:opacity .3s}
+.u-span[data-labeled] .u-span-label{opacity:1}
+.u-span-label text{font:500 10px var(--anatomy-mono);fill:var(--unfold-on-hot);dominant-baseline:central}
+.u-face .u-cell-bg{stroke-width:.5}
+.u-cell-bg{transform-box:fill-box;transform-origin:50% 50%}
+.u-cell[data-hl]>.u-cell-bg{stroke:var(--anatomy-strong);stroke-opacity:1;stroke-width:1.6;animation:u-ping .5s var(--anatomy-ease)}
+.u-pulse{fill:var(--hue,var(--anatomy-strong));filter:drop-shadow(0 0 3px var(--hue,var(--anatomy-strong)))}
+.u-rise{transform-box:fill-box}
+@keyframes u-pop{from{opacity:0;transform:scale(.4)}}
+@keyframes u-fade{from{opacity:0}}
+@keyframes u-rise{from{opacity:0;transform:translateY(-14px)}}
+@keyframes u-grow{from{transform:scaleY(0)}}
+@keyframes u-draw{from{stroke-dasharray:1;stroke-dashoffset:1}to{stroke-dasharray:1;stroke-dashoffset:0}}
+@keyframes u-ping{from{stroke-width:4;stroke-opacity:0}}
+.u-floor-text{font-family:var(--unfold-serif);font-style:italic;font-weight:600;fill:var(--hue,var(--anatomy-text))}
+.u-floor-label{font-family:var(--anatomy-mono);fill:var(--anatomy-muted)}
+.u-guide{fill:none;stroke:var(--anatomy-lo);stroke-width:.8;stroke-dasharray:2 3}
+.u-controls{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px 18px;margin-top:10px}
+.u-controls button{border:0;border-radius:999px;background:transparent;color:var(--anatomy-muted);font:11px/1 var(--anatomy-mono);letter-spacing:.04em;padding:6px 10px;cursor:pointer;box-shadow:0 0 0 1px var(--anatomy-faint);transition:color .2s,box-shadow .2s}
+.u-controls button:hover{color:var(--anatomy-text)}
+.u-controls button[aria-pressed="true"]{color:var(--anatomy-strong);box-shadow:0 0 0 1px var(--anatomy-mid)}
+.u-time{display:flex;align-items:center;gap:8px;flex:1 1 260px;max-width:440px;transition:opacity .4s}
+.u-time button{width:28px;height:28px;padding:0;font-size:15px}
+.u-time input{flex:1;min-width:80px;accent-color:var(--anatomy-hi)}
+.u-ctl{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px 12px;transition:opacity .4s}
+.u-controls label{display:inline-flex;align-items:center;gap:6px;color:var(--anatomy-muted);font:11px var(--anatomy-mono)}
+.u-controls input[type=number]{width:calc(5ch + 28px);padding:4px 6px;border:0;border-radius:6px;background:transparent;color:var(--anatomy-text);font:12px var(--anatomy-mono);font-variant-numeric:tabular-nums;box-shadow:0 0 0 1px var(--anatomy-faint)}
+.u-controls input[type=range]{accent-color:var(--anatomy-hi)}
+.u-controls select{max-width:100%;padding:4px 22px 4px 8px;border:0;border-radius:6px;background:var(--anatomy-card);color:var(--anatomy-text);font:11px var(--anatomy-mono);box-shadow:0 0 0 1px var(--anatomy-faint);cursor:pointer}
+.iso-plate-corner[data-corner="readout"]{max-width:62%;white-space:normal;text-align:right;line-height:1.4}
+.u-time output{font:11px var(--anatomy-mono);color:var(--anatomy-muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.u-notes{margin-top:56px;color:var(--anatomy-text);font-size:14px;line-height:1.65}
+.u-notes h2{margin:36px 0 10px;font:500 13px var(--anatomy-mono);letter-spacing:.04em;color:var(--anatomy-strong)}
+.u-notes p,.u-notes ul{margin:0 0 12px;max-width:72ch}
+.u-notes li{margin-bottom:6px}
+.u-notes b{color:var(--anatomy-strong);font-weight:500}
+.u-notes code{font:12.5px var(--anatomy-mono);color:var(--anatomy-strong)}
+.u-notes table{width:100%;border-collapse:collapse;font-size:13px;line-height:1.5}
+.u-notes th,.u-notes td{padding:7px 10px 7px 0;border-bottom:1px solid var(--anatomy-faint);text-align:left;vertical-align:top}
+.u-notes th{color:var(--anatomy-muted);font:500 11.5px var(--anatomy-mono);letter-spacing:.03em}
+.u-notes svg{display:block;width:100%;max-width:640px;height:auto;margin:6px 0 14px;overflow:visible}
+.u-notes td:first-child{color:var(--anatomy-strong);white-space:nowrap}
+@media (max-width:560px){.u-notes thead{display:none}.u-notes tr{display:block;padding:8px 0;border-bottom:1px solid var(--anatomy-faint)}.u-notes td{display:block;padding:2px 0;border:0}.u-notes td[data-th]:not(:first-child)::before{content:attr(data-th) ": ";color:var(--anatomy-muted)}}
+@container (max-width:520px){.u-num,.u-bar-value{display:none}.u-eq math{font-size:14px}.u-steps button{font-size:0;gap:0;padding:4px}.u-controls{gap:8px;flex-direction:column;align-items:stretch}.u-ctl{gap:6px 8px}.u-time{flex:none;max-width:none}.u-controls label{gap:4px}}
+@media (max-width:560px){.iso-plate-corner[data-corner="readout"]{left:0;max-width:none;white-space:normal;text-align:right;line-height:1.4}.iso-plate-corner[data-corner="hint"]{display:none}}
+@media (prefers-reduced-motion:reduce){.u-stage *{transition:none!important;animation:none!important}.u-pulse{display:none}}
+@media (prefers-color-scheme:light){html{color-scheme:light}.iso[data-theme="auto"]{
+  --anatomy-page:#f2f2ef;--anatomy-card:#fbfbfa;--anatomy-text:#57575a;--anatomy-strong:#18181a;--anatomy-muted:#8c8c90;
+  --anatomy-paper:#fbfbfa;--anatomy-face:#ffffff;--anatomy-top:#ffffff;
+  --anatomy-shade-0:#dcdcd9;--anatomy-shade-1:#e5e5e2;--anatomy-shade-2:#ededea;--anatomy-shade-3:#f4f4f1;
+  --anatomy-lit-top:#ffffff;--anatomy-lit-shade:#eeeeeb;
+  --anatomy-hi:#26262a;--anatomy-mid:#8a8a8f;--anatomy-lo:#b4b4b8;--anatomy-faint:#d4d4d6;--anatomy-lit:#000000;
+  --anatomy-halo:#8a8a80;--anatomy-halo-opacity:.32;--anatomy-dot:#3a3a3e;
+  --anatomy-red:#e5484d;--anatomy-green:#30a46c;--anatomy-blue:#3e63dd;
+  --anatomy-lift:inset 0 1px 0 0 #ffffff,0 0 0 1px #0000000f,0 1px 1px -.5px #0000000a,0 3px 3px -1.5px #0000000a,0 6px 6px -3px #0000000a,0 12px 12px -6px #0000000a;
+;--unfold-blue:#1f78a4;--unfold-yellow:#a67c00;--unfold-red:#cf3b2e;--unfold-green:#3e8a2a;--unfold-teal:#16866b;--unfold-purple:#7a4fa3;--unfold-gold:#b8661a;--unfold-on-hot:#ffffff}}</style><figure class="iso-figure"><div class="iso-plate"><div class="iso-plate-corners" aria-hidden="true"><span class="iso-plate-corner" data-corner="fig">Fig 1</span><span class="iso-plate-corner" data-corner="title">Binary search</span><span class="iso-plate-corner" data-corner="hint">← → scene · ↑ ↓ step</span><span class="iso-plate-corner" data-corner="readout" data-readout>step 0 · low 0, high 15: all 16 cells can hold 37</span></div><style>.u-stage[data-scene="0"] .u-at[data-at="0"]{opacity:1;visibility:visible;transition-delay:.15s}
+.u-stage[data-scene="0"] .u-grid[data-t~="0"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="0"] .u-grid[data-t~="0"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="0"] .u-grid[data-t~="0"] .u-dims:not(.u-dims-T),.u-stage[data-scene="0"] .u-grid[data-t~="0"] .u-mark{display:none}
+.u-stage[data-scene="1"] .u-at[data-at="1"]{opacity:1;visibility:visible;transition-delay:.15s}
+.u-stage[data-scene="1"] .u-grid[data-t~="1"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="1"] .u-grid[data-t~="1"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="1"] .u-grid[data-t~="1"] .u-dims:not(.u-dims-T),.u-stage[data-scene="1"] .u-grid[data-t~="1"] .u-mark{display:none}
+.u-stage[data-scene="2"] .u-at[data-at="2"]{opacity:1;visibility:visible;transition-delay:.15s}
+.u-stage[data-scene="2"] .u-grid[data-t~="2"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="2"] .u-grid[data-t~="2"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="2"] .u-grid[data-t~="2"] .u-dims:not(.u-dims-T),.u-stage[data-scene="2"] .u-grid[data-t~="2"] .u-mark{display:none}
+.u-stage[data-scene="3"] .u-at[data-at="3"]{opacity:1;visibility:visible;transition-delay:.15s}
+.u-stage[data-scene="3"] .u-grid[data-t~="3"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="3"] .u-grid[data-t~="3"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="3"] .u-grid[data-t~="3"] .u-dims:not(.u-dims-T),.u-stage[data-scene="3"] .u-grid[data-t~="3"] .u-mark{display:none}
+.u-stage[data-scene="4"] .u-at[data-at="4"]{opacity:1;visibility:visible;transition-delay:.15s}
+.u-stage[data-scene="4"] .u-grid[data-t~="4"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="4"] .u-grid[data-t~="4"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="4"] .u-grid[data-t~="4"] .u-dims:not(.u-dims-T),.u-stage[data-scene="4"] .u-grid[data-t~="4"] .u-mark{display:none}.u-stage:not(:is([data-scene="0"],[data-scene="1"],[data-scene="2"],[data-scene="3"])) .u-time{opacity:.4}.u-stage:not(:is([data-scene="0"],[data-scene="1"],[data-scene="2"],[data-scene="3"],[data-scene="4"])) .u-ctl{opacity:.4}.b-cell rect{fill:var(--anatomy-card);stroke:var(--anatomy-lo);stroke-width:1;transition:fill .35s,stroke .35s,opacity .35s}
+.b-cell{transition:opacity .4s}
+.b-cell[data-st="in"] rect{fill:color-mix(in srgb,var(--unfold-blue) 14%,var(--anatomy-card));stroke:var(--unfold-blue)}
+.b-cell[data-st="out"]{opacity:.32}
+.b-cell[data-st="mid"] rect{fill:color-mix(in srgb,var(--unfold-gold) 22%,var(--anatomy-card));stroke:var(--unfold-gold);stroke-width:2.2}
+.b-cell[data-st="hit"] rect{fill:color-mix(in srgb,var(--unfold-green) 30%,var(--anatomy-card));stroke:var(--unfold-green);stroke-width:2.4}
+.b-val{font:600 15px var(--anatomy-mono);fill:var(--anatomy-strong);text-anchor:middle;dominant-baseline:central}
+.b-idx{font:10px var(--anatomy-mono);fill:var(--anatomy-muted);text-anchor:middle;dominant-baseline:central}
+.b-ptr{transition:transform .5s var(--anatomy-ease),opacity .3s}
+.b-ptr path{fill:var(--hue)}
+.b-ptr rect{fill:color-mix(in srgb,var(--hue) 18%,var(--anatomy-card));stroke:var(--hue)}
+.b-ptr text{font:11px var(--anatomy-mono);fill:var(--hue);text-anchor:middle;dominant-baseline:central}
+.b-ptr .b-cmp{font:600 12px var(--anatomy-mono);fill:var(--anatomy-strong)}
+#drop{transition:opacity .35s}
+.b-dropline{fill:none;stroke:var(--anatomy-muted);stroke-width:1.2}
+.b-droptext{font:11px var(--anatomy-mono);fill:var(--anatomy-muted);text-anchor:middle}
+#tgt{transition:transform .4s}
+#tgt rect{fill:color-mix(in srgb,var(--hue) 22%,var(--anatomy-card));stroke:var(--hue);stroke-width:1.5}
+#tgt .b-tv{font:600 15px var(--anatomy-mono);fill:var(--hue);text-anchor:middle;dominant-baseline:central}
+#tgt .b-tl{font:10px var(--anatomy-mono);fill:var(--hue);text-anchor:middle;letter-spacing:.06em;text-transform:uppercase}
+.b-head{font:10.5px var(--anatomy-mono);fill:var(--anatomy-muted);letter-spacing:.06em;text-transform:uppercase}
+.b-row{transition:opacity .4s}
+.b-bar{fill:color-mix(in srgb,var(--unfold-blue) 22%,var(--anatomy-card));stroke:var(--unfold-blue);stroke-width:1;transition:x .5s var(--anatomy-ease),width .5s var(--anatomy-ease)}
+.b-tick{fill:var(--unfold-gold);transition:x .5s var(--anatomy-ease)}
+.b-row[data-hit] .b-tick{fill:var(--unfold-green)}
+.b-rk{font:10px var(--anatomy-mono);fill:var(--anatomy-muted);text-anchor:end;dominant-baseline:central}
+.b-size{font:11px var(--anatomy-mono);fill:var(--anatomy-text);dominant-baseline:central}
+.b-size.b-inside{fill:var(--anatomy-strong);font-weight:600}
+#ladHead,.b-row{transition:opacity .4s}
+.u-stage[data-scene="0"] #ladder{opacity:.25}
+#arrG{transition:opacity .5s}
+.u-stage[data-scene="4"] #arrG{opacity:0;pointer-events:none}
+#scaleG{opacity:0;transition:opacity .5s;pointer-events:none}
+.u-stage[data-scene="4"] #scaleG{opacity:1}
+#scaleIn{transform:translate(152px,4px)}
+.u-stage[data-narrow] #scaleIn{transform:translate(16px,8px) scale(.64)}
+.b-sbar{fill:color-mix(in srgb,var(--hue) 30%,var(--anatomy-card));stroke:var(--hue);stroke-width:1.2}
+.b-sval{font:600 16px var(--anatomy-mono);fill:var(--hue);text-anchor:middle}
+.b-note{font:600 11px var(--anatomy-mono);fill:var(--unfold-purple);letter-spacing:.04em}
+.u-stage[data-narrow] .b-note{font-size:16px}
+.b-slab{font:12px var(--anatomy-mono);fill:var(--anatomy-text);text-anchor:middle}
+.u-stage[data-narrow] :is(.b-sval,.b-slab){font-size:19px}
+.u-stage[data-narrow] #scaleIn .b-head{font-size:17px}
+.u-stage[data-narrow] .b-idx{font-size:9px}
+.u-stage[data-narrow] .b-val{font-size:12px}
+.u-notes .b-code{white-space:pre;font:12.5px/1.55 var(--anatomy-mono);color:var(--anatomy-text);background:var(--anatomy-card);padding:12px 14px;border-radius:6px;overflow-x:auto;box-shadow:0 0 0 1px var(--anatomy-faint)}</style><div class="u-stage" tabindex="0" role="group" aria-roledescription="explainer" aria-label="Binary search explainer. Left and right arrows change the scene. Up and down arrows, or comma and period, step through the search." data-scene="0" data-count="5" data-dwell="7000" data-narrow-box="0 0 400 316"><div class="u-eq" aria-live="polite"><div class="u-at" data-at="0"><math display="block"><msub><mi>a</mi><mn>0</mn></msub><mo>≤</mo><msub><mi>a</mi><mn>1</mn></msub><mo>≤</mo><mo>⋯</mo><mo>≤</mo><msub><mi>a</mi><mn>15</mn></msub></math></div><div class="u-at" data-at="1"><math display="block"><mi data-hue="gold">mid</mi><mo>=</mo><mrow><mo>⌊</mo><mo stretchy="false">(</mo><mi data-hue="blue">low</mi><mo>+</mo><mi data-hue="blue">high</mi><mo stretchy="false">)</mo><mo>/</mo><mn>2</mn><mo>⌋</mo></mrow></math></div><div class="u-at" data-at="2"><math display="block"><mtable columnalign="left"><mtr><mtd><msub><mi>a</mi><mi data-hue="gold">mid</mi></msub><mo>&lt;</mo><mi data-hue="green">t</mi><mo>⇒</mo><mi data-hue="blue">low</mi><mo>=</mo><mi data-hue="gold">mid</mi><mo>+</mo><mn>1</mn></mtd></mtr><mtr><mtd><msub><mi>a</mi><mi data-hue="gold">mid</mi></msub><mo>&gt;</mo><mi data-hue="green">t</mi><mo>⇒</mo><mi data-hue="blue">high</mi><mo>=</mo><mi data-hue="gold">mid</mi><mo>−</mo><mn>1</mn></mtd></mtr></mtable></math></div><div class="u-at" data-at="3"><math display="block"><mtext>repeat while</mtext><mspace width=".4em"/><mi data-hue="blue">low</mi><mo>≤</mo><mi data-hue="blue">high</mi></math></div><div class="u-at" data-at="4"><math display="block"><mfrac><mi>n</mi><msup><mn>2</mn><mi>k</mi></msup></mfrac><mo>≥</mo><mn>1</mn><mo>⇒</mo><mi>k</mi><mo>≤</mo><msub><mi>log</mi><mn>2</mn></msub><mi>n</mi></math></div></div><svg xmlns="http://www.w3.org/2000/svg" class="iso-svg" viewBox="0 0 820 284" role="img" aria-label="Binary search on a sorted array of 16 numbers: low, mid and high pointers close in on the target, and a ladder shows the range halving at each compare."><g id="arrG"><g id="tgt" data-hue="green" style="transform:translate(4px,56px)"><text class="b-tl" x="28" y="-6">target</text><rect width="56" height="24" rx="5"/><text class="b-tv" x="28" y="12">37</text></g><g class="b-cell" data-i="0" data-st="in"><rect x="71" y="50" width="38" height="36" rx="3"/><text class="b-val" x="90" y="68">3</text><text class="b-idx" x="90" y="98">0</text></g><g class="b-cell" data-i="1" data-st="in"><rect x="111" y="50" width="38" height="36" rx="3"/><text class="b-val" x="130" y="68">8</text><text class="b-idx" x="130" y="98">1</text></g><g class="b-cell" data-i="2" data-st="in"><rect x="151" y="50" width="38" height="36" rx="3"/><text class="b-val" x="170" y="68">12</text><text class="b-idx" x="170" y="98">2</text></g><g class="b-cell" data-i="3" data-st="in"><rect x="191" y="50" width="38" height="36" rx="3"/><text class="b-val" x="210" y="68">17</text><text class="b-idx" x="210" y="98">3</text></g><g class="b-cell" data-i="4" data-st="in"><rect x="231" y="50" width="38" height="36" rx="3"/><text class="b-val" x="250" y="68">21</text><text class="b-idx" x="250" y="98">4</text></g><g class="b-cell" data-i="5" data-st="in"><rect x="271" y="50" width="38" height="36" rx="3"/><text class="b-val" x="290" y="68">26</text><text class="b-idx" x="290" y="98">5</text></g><g class="b-cell" data-i="6" data-st="in"><rect x="311" y="50" width="38" height="36" rx="3"/><text class="b-val" x="330" y="68">30</text><text class="b-idx" x="330" y="98">6</text></g><g class="b-cell" data-i="7" data-st="in"><rect x="351" y="50" width="38" height="36" rx="3"/><text class="b-val" x="370" y="68">34</text><text class="b-idx" x="370" y="98">7</text></g><g class="b-cell" data-i="8" data-st="in"><rect x="391" y="50" width="38" height="36" rx="3"/><text class="b-val" x="410" y="68">37</text><text class="b-idx" x="410" y="98">8</text></g><g class="b-cell" data-i="9" data-st="in"><rect x="431" y="50" width="38" height="36" rx="3"/><text class="b-val" x="450" y="68">41</text><text class="b-idx" x="450" y="98">9</text></g><g class="b-cell" data-i="10" data-st="in"><rect x="471" y="50" width="38" height="36" rx="3"/><text class="b-val" x="490" y="68">45</text><text class="b-idx" x="490" y="98">10</text></g><g class="b-cell" data-i="11" data-st="in"><rect x="511" y="50" width="38" height="36" rx="3"/><text class="b-val" x="530" y="68">52</text><text class="b-idx" x="530" y="98">11</text></g><g class="b-cell" data-i="12" data-st="in"><rect x="551" y="50" width="38" height="36" rx="3"/><text class="b-val" x="570" y="68">58</text><text class="b-idx" x="570" y="98">12</text></g><g class="b-cell" data-i="13" data-st="in"><rect x="591" y="50" width="38" height="36" rx="3"/><text class="b-val" x="610" y="68">63</text><text class="b-idx" x="610" y="98">13</text></g><g class="b-cell" data-i="14" data-st="in"><rect x="631" y="50" width="38" height="36" rx="3"/><text class="b-val" x="650" y="68">71</text><text class="b-idx" x="650" y="98">14</text></g><g class="b-cell" data-i="15" data-st="in"><rect x="671" y="50" width="38" height="36" rx="3"/><text class="b-val" x="690" y="68">79</text><text class="b-idx" x="690" y="98">15</text></g><g class="b-ptr" id="pLow" data-hue="blue" style="transform:translate(90px,108px)"><path d="M-5 6L0 0L5 6Z"/><rect x="-19" y="6" width="38" height="16" rx="8"/><text x="0" y="14">low</text></g><g class="b-ptr" id="pHigh" data-hue="blue" style="transform:translate(690px,130px)"><path d="M-5 6L0 0L5 6Z"/><rect x="-19" y="6" width="38" height="16" rx="8"/><text x="0" y="14">high</text></g><g class="b-ptr b-mid" id="pMid" data-hue="gold" style="transform:translate(370px,0px);opacity:0"><text class="b-cmp" x="0" y="9"></text><rect x="-19" y="16" width="38" height="16" rx="8"/><text x="0" y="24">mid</text><path d="M-5 38L0 44L5 38Z"/></g><g id="drop" style="opacity:0"><path class="b-dropline" d=""/><text class="b-droptext" x="0" y="0">dropped</text></g></g><g id="ladder"><text class="b-head" id="ladHead" x="70" y="162">range at each compare</text><g class="b-row" data-k="0" style="opacity:0"><text class="b-rk" x="60" y="0">1</text><rect class="b-bar" x="70" y="-7" width="640" height="14" rx="3"/><rect class="b-tick" x="70" y="-7" width="40" height="14" rx="2"/><text class="b-size" x="70" y="0">16 cells</text></g><g class="b-row" data-k="1" style="opacity:0"><text class="b-rk" x="60" y="0">2</text><rect class="b-bar" x="70" y="-7" width="640" height="14" rx="3"/><rect class="b-tick" x="70" y="-7" width="40" height="14" rx="2"/><text class="b-size" x="70" y="0">16 cells</text></g><g class="b-row" data-k="2" style="opacity:0"><text class="b-rk" x="60" y="0">3</text><rect class="b-bar" x="70" y="-7" width="640" height="14" rx="3"/><rect class="b-tick" x="70" y="-7" width="40" height="14" rx="2"/><text class="b-size" x="70" y="0">16 cells</text></g><g class="b-row" data-k="3" style="opacity:0"><text class="b-rk" x="60" y="0">4</text><rect class="b-bar" x="70" y="-7" width="640" height="14" rx="3"/><rect class="b-tick" x="70" y="-7" width="40" height="14" rx="2"/><text class="b-size" x="70" y="0">16 cells</text></g><g class="b-row" data-k="4" style="opacity:0"><text class="b-rk" x="60" y="0">5</text><rect class="b-bar" x="70" y="-7" width="640" height="14" rx="3"/><rect class="b-tick" x="70" y="-7" width="40" height="14" rx="2"/><text class="b-size" x="70" y="0">16 cells</text></g></g><g id="scaleG"><g id="scaleIn"><text class="b-head" x="0" y="8">most compares for n sorted cells</text><g data-hue="purple"><rect class="b-sbar" x="0" y="106.66666666666667" width="130" height="15.333333333333332" rx="3"/><text class="b-sval" x="65" y="99.66666666666667">5</text><text class="b-slab" x="65" y="137">n = 16</text></g><g data-hue="purple"><rect class="b-sbar" x="144" y="91.33333333333334" width="130" height="30.666666666666664" rx="3"/><text class="b-sval" x="209" y="84.33333333333334">10</text><text class="b-slab" x="209" y="137">1,000</text></g><g data-hue="purple"><rect class="b-sbar" x="288" y="60.66666666666667" width="130" height="61.33333333333333" rx="3"/><text class="b-sval" x="353" y="53.66666666666667">20</text><text class="b-slab" x="353" y="137">1 million</text></g><g data-hue="purple"><rect class="b-sbar" x="432" y="30" width="130" height="92" rx="3"/><text class="b-sval" x="497" y="23">30</text><text class="b-slab" x="497" y="137">1 billion</text></g><text class="b-note" x="288" y="8">×1,000 cells: +10 compares</text></g></g></svg><div class="u-controls"><div class="u-ctl" data-scenes="0 1 2 3 4"><label>target <input type="number" id="tIn" min="0" max="99" step="1" value="37"></label><button type="button" data-t="37">37 found</button><button type="button" data-t="79">79 most compares</button><button type="button" data-t="40">40 missing</button></div><div class="u-time" data-label="step"><button type="button" data-step="-1" aria-label="Previous step">‹</button><input type="range" min="0" max="7" value="0" aria-label="step"><button type="button" data-step="1" aria-label="Next step">›</button><output>step 0 / 7</output></div></div><div class="u-say" aria-live="polite"><p class="u-at" data-at="0">The array is sorted from small to large. The search keeps two pointers, <b data-hue="blue">low</b> and <b data-hue="blue">high</b>, around the cells that can still hold the <b data-hue="green">target</b>.</p><p class="u-at" data-at="1">The search reads the middle cell of the range, <b data-hue="gold">mid</b>, and compares it with the <b data-hue="green">target</b>. One compare tells which half can hold the target.</p><p class="u-at" data-at="2">The array is sorted, so if a[mid] is too small, every cell left of it is too small. One compare drops mid and that whole half.</p><p class="u-at" data-at="3">The search repeats compare and drop until a[mid] equals the <b data-hue="green">target</b>. If low passes high first, no cell is left, so the target is not in the array.</p><p class="u-at" data-at="4">Each compare leaves at most half of the range, so 16 cells need at most 5 compares. <b data-hue="purple">1,000 times more cells</b> add only 10 compares.</p></div><nav class="u-steps" aria-label="Scenes"><button type="button" class="u-play" aria-pressed="false"><span>▶</span>Play</button><button type="button" data-go="0" aria-current="step"><span>1</span>Sorted array</button><button type="button" data-go="1"><span>2</span>Compare mid</button><button type="button" data-go="2"><span>3</span>Drop a half</button><button type="button" data-go="3"><span>4</span>Close in</button><button type="button" data-go="4"><span>5</span>Why log₂ n</button></nav><div class="u-key"><span data-hue="blue"><i></i>range: low to high (target can be here)</span><span data-hue="gold"><i></i>mid (the cell compared)</span><span data-hue="green"><i></i>target</span><span data-hue="purple"><i></i>most compares</span></div></div></div><figcaption class="iso-legend"><span class="iso-caption">A sorted array of 16 values, chosen by hand. The first target is 37. Every pointer, compare and count comes from running the search on this array. The code under the figure gives the same answer for every target from 0 to 99. Type any target, or pick a preset.</span></figcaption></figure><section class="u-notes"><h2>The loop in code</h2><div class="b-code">function binarySearch(a, t) {
+  let low = 0, high = a.length - 1;
+  while (low &lt;= high) {
+    const mid = Math.floor((low + high) / 2);
+    if (a[mid] === t) return mid;
+    if (a[mid] &lt; t) low = mid + 1;
+    else high = mid - 1;
+  }
+  return -1;
+}</div><h2>How the count grows</h2><p>The binary column is ⌊log₂ n⌋ + 1. A miss leaves at most ⌊n/2⌋ cells, so each compare at least halves the range.</p><table><thead><tr><th>cells n</th><th>linear search, most compares</th><th>binary search, most compares</th></tr></thead><tbody><tr><td data-th="cells n">16</td><td data-th="linear search, most compares">16</td><td data-th="binary search, most compares">5</td></tr><tr><td data-th="cells n">1,000</td><td data-th="linear search, most compares">1,000</td><td data-th="binary search, most compares">10</td></tr><tr><td data-th="cells n">1,000,000</td><td data-th="linear search, most compares">1,000,000</td><td data-th="binary search, most compares">20</td></tr><tr><td data-th="cells n">1,000,000,000</td><td data-th="linear search, most compares">1,000,000,000</td><td data-th="binary search, most compares">30</td></tr></tbody></table><h2>What the figure leaves out</h2><table><thead><tr><th>case</th><th>what to know</th></tr></thead><tbody><tr><td data-th="case">Unsorted array</td><td data-th="what to know">The search gives wrong answers. Sort first, or use a hash table.</td></tr><tr><td data-th="case">Repeated values</td><td data-th="what to know">This loop returns any matching index, not the first.</td></tr><tr><td data-th="case">Finding the first match</td><td data-th="what to know">Keep searching left after a hit (lower bound).</td></tr><tr><td data-th="case">Integer overflow</td><td data-th="what to know">In C or Java, low + high can overflow. Use low + (high − low) / 2.</td></tr><tr><td data-th="case">Half-open range</td><td data-th="what to know">Many libraries use [low, high). The loop test becomes low &lt; high.</td></tr></tbody></table><h2>Terms</h2><table><thead><tr><th>term</th><th>meaning</th></tr></thead><tbody><tr><td data-th="term">sorted</td><td data-th="meaning">each value is at least the value before it</td></tr><tr><td data-th="term">low, high</td><td data-th="meaning">the first and last index the target can still be at</td></tr><tr><td data-th="term">mid</td><td data-th="meaning">the middle index of the range, rounded down</td></tr><tr><td data-th="term">compare</td><td data-th="meaning">one check of a[mid] against the target</td></tr><tr><td data-th="term">⌊x⌋</td><td data-th="meaning">x rounded down to a whole number</td></tr><tr><td data-th="term">log₂ n</td><td data-th="meaning">how many times n halves before it reaches 1</td></tr></tbody></table></section></main><script type="module">function runtime() {
+  const stage = document.querySelector(".u-stage");
+  const count = Number(stage.dataset.count);
+  const dwell = Number(stage.dataset.dwell);
+  const still = matchMedia("(prefers-reduced-motion: reduce)");
+  let scene = 0;
+  let visible = false;
+  let playing = false;
+  let held = false;
+  let next = 0;
+  const beats = [];
+  const go = (i, by = "user") => {
+    scene = Math.max(0, Math.min(count - 1, i));
+    stage.dataset.scene = String(scene);
+    stage.querySelectorAll("[data-go]").forEach((b) => (Number(b.dataset.go) === scene ? b.setAttribute("aria-current", "step") : b.removeAttribute("aria-current")));
+    stage.querySelectorAll("[data-ds]").forEach((el) => {
+      const d = JSON.parse(el.dataset.ds)[scene];
+      el.toggleAttribute("data-off", !d);
+      if (!d) return;
+      if (CSS.supports("d", 'path("M0 0")')) el.style.d = `path("${d}")`;
+      else el.setAttribute("d", d);
+    });
+    stage.dispatchEvent(new CustomEvent("unfold:scene", { detail: { scene, by } }));
+    if (by === "user") setPlaying(false);
+    held = false;
+    next = performance.now() + dwell;
+    for (const b of beats) {
+      b.n = 0;
+      b.at = performance.now() + b.wait - b.ms;
+      if (still.matches && b.scene === scene) b.fn(-1);
+    }
+    setBusy();
+  };
+  // data-busy is on the stage while a counted sweep of this scene still runs (shoot.mjs waits for it to clear).
+  // A sweep is done one `ms` after its last call, so the last step has time to move.
+  const setBusy = (now = performance.now()) => {
+    const busy = !held && !still.matches && beats.some((b) => b.scene === scene && b.count && (b.n < b.count || now - b.at < b.ms));
+    if (busy !== stage.hasAttribute("data-busy")) stage.toggleAttribute("data-busy", busy);
+  };
+  // The tour runs only after the reader presses Play, and stops at the last scene or at any input.
+  const playBtn = stage.querySelector(".u-play");
+  const setPlaying = (on) => {
+    playing = on;
+    playBtn.setAttribute("aria-pressed", String(on));
+    playBtn.firstChild.textContent = on ? "❚❚" : "▶";
+    playBtn.lastChild.textContent = on ? "Pause" : "Play";
+  };
+  playBtn.addEventListener("click", () => {
+    if (playing) return setPlaying(false);
+    if (scene === count - 1) go(0, "tour");
+    next = performance.now() + dwell;
+    setPlaying(true);
+  });
+  const tour = (now) => {
+    if (playing && visible && now > next) scene === count - 1 ? setPlaying(false) : go(scene + 1, "tour");
+    for (const b of beats) {
+      if (b.scene === scene && visible && !held && !still.matches && now - b.at >= b.ms && !(b.count && b.n >= b.count)) {
+        b.at = now;
+        b.fn(b.n++);
+      }
+    }
+    setBusy(now);
+    requestAnimationFrame(tour);
+  };
+  stage.querySelector(".u-steps").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-go]");
+    if (b) go(Number(b.dataset.go));
+  });
+  stage.addEventListener("keydown", (e) => {
+    const to = { ArrowRight: scene + 1, ArrowLeft: scene - 1, Home: 0, End: count - 1 }[e.key];
+    if (to === undefined) return;
+    e.preventDefault();
+    go(to);
+  });
+  // Time by hand: the step control and the "," and "." keys call the page's onTime(t). Its keys stay inside it.
+  const timer = stage.querySelector(".u-time");
+  let onTime = () => {};
+  const range = timer?.querySelector("input");
+  // onTime first: it may call go(), which releases the sweeps. pause() after it holds them again.
+  const byHand = (t) => {
+    onTime(Math.max(0, Math.min(Number(range.max), t)));
+    pause();
+  };
+  if (timer) {
+    range.addEventListener("input", () => byHand(Number(range.value)));
+    timer.addEventListener("click", (e) => {
+      const b = e.target.closest("[data-step]");
+      if (b) byHand(Number(range.value) + Number(b.dataset.step));
+    });
+    stage.addEventListener("keydown", (e) => {
+      const by = { ",": -1, ".": 1 }[e.key];
+      if (by === undefined) return;
+      e.preventDefault();
+      byHand(Number(range.value) + by);
+    });
+  }
+  // Keys typed in a control (a scrubber, a number field) stay in it: no scene or focus change.
+  stage.querySelectorAll(".u-controls :is(input,select,textarea)").forEach((el) => el.addEventListener("keydown", (e) => e.stopPropagation()));
+  // A scene-scoped control (stageHtml controlScenes) used in another scene moves to the first scene that uses it.
+  const ctl = stage.querySelector(".u-ctl");
+  const owners = ctl?.dataset.scenes.split(" ").map(Number);
+  const toOwner = () => owners.includes(scene) || go(owners[0]);
+  // Capture phase: the move runs before the page's own handler, so a preset applied on scene entry
+  // does not overwrite what the reader just set.
+  ctl?.addEventListener("input", toOwner, true);
+  ctl?.addEventListener("click", (e) => e.target.closest("button") && toOwner(), true);
+  // timeAt(t, steps): show step t. Pass steps when the run's length changed (a live input made a longer trace).
+  const timeAt = (t, steps) => {
+    if (!timer) return;
+    if (steps) range.max = String(steps - 1);
+    range.value = String(t);
+    timer.querySelector("output").textContent = `${timer.dataset.label} ${t} / ${range.max}`;
+  };
+  // Narrow layout: below 560 px the drawing takes its second viewBox and the stage gets data-narrow.
+  const svg = stage.querySelector("svg");
+  const wide = svg?.getAttribute("viewBox");
+  if (stage.dataset.narrowBox)
+    new ResizeObserver(([entry]) => {
+      const on = entry.contentRect.width < 560;
+      if (on === stage.hasAttribute("data-narrow")) return;
+      stage.toggleAttribute("data-narrow", on);
+      svg.setAttribute("viewBox", on ? stage.dataset.narrowBox : wide);
+      stage.dispatchEvent(new CustomEvent("unfold:layout", { detail: { narrow: on } }));
+    }).observe(stage);
+  new IntersectionObserver((entries) => (visible = entries[entries.length - 1].isIntersecting), { rootMargin: "120px 0px" }).observe(stage);
+  next = performance.now() + dwell;
+  requestAnimationFrame(tour);
+  // beat(scene, ms, fn, wait, count): call fn(0), fn(1), … every ms while that scene shows, starting `wait` ms after it opens.
+  // With count, it stops after fn(count - 1) and the stage loses data-busy. Without it, the sweep never ends (a loop).
+  // Under reduced motion fn(-1) is called once instead: show the resting state.
+  const beat = (sceneIndex, ms, fn, wait = 1000, count = 0) => {
+    beats.push({ scene: sceneIndex, ms, fn, wait, count, n: 0, at: performance.now() + wait - ms });
+    setBusy();
+  };
+  // pause(): the user took control. The tour stops, and the sweeps hold until the scene changes.
+  const pause = () => {
+    setPlaying(false);
+    held = true;
+    setBusy();
+  };
+  return { stage, go, beat, pause, scene: () => scene, onTime: (fn) => (onTime = fn), timeAt, narrow: () => stage.hasAttribute("data-narrow") };
+}
+const UNFOLD = runtime();
+
+const A = [3,8,12,17,21,26,30,34,37,41,45,52,58,63,71,79];
+const T0 = 37;
+const LAY = {"d":{"x0":70,"cw":40,"cy":50,"ch":36,"font":15,"lowY":108,"highY":130,"ladY":178,"rowH":22,"tgt":[4,56],"head":[70,162],"rowLabel":true},"n":{"x0":16,"cw":23,"cy":60,"ch":30,"font":12,"lowY":116,"highY":138,"ladY":220,"rowH":21,"tgt":[326,182],"head":[16,198],"rowLabel":false}};
+const ROWS = 5;
+function search(a, t) {
+  const steps = [];
+  const rows = [];
+  let lo = 0;
+  let hi = a.length - 1;
+  let k = 0;
+  steps.push({ phase: "start", lo, hi, mid: -1, k, say: "low 0, high " + hi + ": all " + a.length + " cells can hold " + t });
+  while (lo <= hi) {
+    const mid = Math.floor((lo + hi) / 2);
+    const v = a[mid];
+    k += 1;
+    rows.push({ lo, hi, mid, size: hi - lo + 1, step: steps.length });
+    const cmp = v < t ? "<" : v > t ? ">" : "=";
+    if (cmp === "=") {
+      steps.push({ phase: "found", lo, hi, mid, k, cmp, say: "compare " + k + ": a[" + mid + "] = " + v + " is the target. Found after " + k + " compares" });
+      return { steps, rows, index: mid, compares: k };
+    }
+    steps.push({ phase: "compare", lo, hi, mid, k, cmp, say: "compare " + k + ": mid = ⌊(" + lo + "+" + hi + ")/2⌋ = " + mid + ", a[" + mid + "] = " + v + " " + cmp + " " + t });
+    if (cmp === "<") lo = mid + 1;
+    else hi = mid - 1;
+    const left = Math.max(0, hi - lo + 1);
+    const move = cmp === "<" ? "low = " + mid + "+1 = " + lo : "high = " + mid + "−1 = " + hi;
+    const end = lo > hi ? ". low > high: " + t + " is not in the array" : ": " + left + " cell" + (left === 1 ? "" : "s") + " left";
+    steps.push({ phase: lo > hi ? "missing" : "narrow", lo, hi, mid, k, cmp, say: move + end });
+  }
+  return { steps, rows, index: -1, compares: k };
+}
+
+const root = UNFOLD.stage;
+const readout = document.querySelector("[data-readout]");
+const field = root.querySelector("#tIn");
+const cellsEl = [...root.querySelectorAll(".b-cell")];
+const rowsEl = [...root.querySelectorAll(".b-row")];
+const pLow = root.querySelector("#pLow"), pHigh = root.querySelector("#pHigh"), pMid = root.querySelector("#pMid");
+let t = T0, R = search(A, T0), step = 0, crossing = false;
+const L = () => (UNFOLD.narrow() ? LAY.n : LAY.d);
+const cx = (i) => L().x0 + i * L().cw + L().cw / 2;
+const last = () => R.steps.length - 1;
+const sceneStep = (s) => [0, 1, Math.min(2, last()), last(), last()][s];
+const ownerScene = (k) => Math.min(k, 3);
+const put = (el, x, y) => (el.style.transform = "translate(" + x + "px," + y + "px)");
+function setText(el, s) { if (el.textContent !== s) el.textContent = s; }
+function layout() {
+  const l = L();
+  cellsEl.forEach((g, i) => {
+    const [r, v, ix] = g.children;
+    r.setAttribute("x", l.x0 + i * l.cw + 1); r.setAttribute("width", l.cw - 2); r.setAttribute("y", l.cy); r.setAttribute("height", l.ch);
+    v.setAttribute("x", cx(i)); v.setAttribute("y", l.cy + l.ch / 2);
+    ix.setAttribute("x", cx(i)); ix.setAttribute("y", l.cy + l.ch + 12);
+  });
+  put(root.querySelector("#tgt"), l.tgt[0], l.tgt[1]);
+  const head = root.querySelector("#ladHead");
+  head.setAttribute("x", l.head[0]); head.setAttribute("y", l.head[1]);
+  rowsEl.forEach((g, k) => { g.setAttribute("transform", "translate(0 " + (l.ladY + k * l.rowH) + ")"); g.querySelector(".b-rk").style.display = l.rowLabel ? "" : "none"; });
+  show(step);
+}
+function show(k) {
+  step = Math.max(0, Math.min(last(), k));
+  const s = R.steps[step], l = L();
+  const done = s.phase === "found" || s.phase === "missing";
+  cellsEl.forEach((g, i) => {
+    let st = i >= s.lo && i <= s.hi ? "in" : "out";
+    if (s.phase === "compare" && i === s.mid) st = "mid";
+    if (s.phase === "found" && i === s.mid) st = "hit";
+    g.dataset.st = st;
+  });
+  const clamp = (x) => Math.max(20, Math.min((UNFOLD.narrow() ? 400 : 820) - 20, x));
+  put(pLow, clamp(cx(s.lo)), l.lowY);
+  put(pHigh, clamp(cx(s.hi)), l.highY);
+  const showMid = s.phase === "compare" || s.phase === "found";
+  pMid.style.opacity = showMid ? 1 : 0;
+  if (s.mid >= 0) put(pMid, cx(s.mid), l.cy - 44);
+  setText(pMid.querySelector(".b-cmp"), showMid ? A[s.mid] + " " + (s.cmp === "=" ? "=" : s.cmp) + " " + t : "");
+  rowsEl.forEach((g, k) => {
+    const r = R.rows[k];
+    const on = r && step >= r.step;
+    g.style.opacity = on ? 1 : 0;
+    if (!r) return;
+    const x = l.x0 + r.lo * l.cw, w = r.size * l.cw;
+    const [, bar, tick, size] = g.children;
+    bar.setAttribute("x", x); bar.setAttribute("width", w);
+    tick.setAttribute("x", l.x0 + r.mid * l.cw); tick.setAttribute("width", l.cw);
+    g.toggleAttribute("data-hit", R.index === r.mid);
+    setText(size, r.size + (r.size === 1 ? " cell" : " cells"));
+    // The size label sits right of the bar, else left of it, else inside its right end.
+    const right = x + w + 6, edge = UNFOLD.narrow() ? 400 : 820;
+    let at = [right, "start"];
+    if (edge - right < 56) at = x - 6 > 60 ? [x - 6, "end"] : [x + w - 6, "end"];
+    size.setAttribute("x", at[0]); size.setAttribute("text-anchor", at[1]);
+    size.classList.toggle("b-inside", at[0] === x + w - 6);
+  });
+  // The half this step removed: from the old low to mid, or from mid to the old high.
+  const drop = root.querySelector("#drop");
+  const cut = s.phase === "narrow" || s.phase === "missing";
+  drop.style.opacity = cut ? 1 : 0;
+  if (cut) {
+    const p = R.steps[step - 1];
+    const [a, b] = s.cmp === "<" ? [p.lo, s.mid] : [s.mid, p.hi];
+    const x1 = l.x0 + a * l.cw + 2, x2 = l.x0 + (b + 1) * l.cw - 2, y = l.cy - 8;
+    drop.querySelector("path").setAttribute("d", "M" + x1 + " " + (y + 5) + "V" + y + "H" + x2 + "V" + (y + 5));
+    const tx = drop.querySelector("text");
+    tx.setAttribute("x", Math.max(36, Math.min((UNFOLD.narrow() ? 400 : 820) - 36, (x1 + x2) / 2))); tx.setAttribute("y", y - 6);
+    setText(tx, b - a + 1 > 2 ? "dropped " + (b - a + 1) : "dropped");
+  }
+  setText(root.querySelector(".b-tv"), String(t));
+  UNFOLD.timeAt(step, R.steps.length);
+  const text = UNFOLD.scene() === 4
+    ? "16 cells: at most \u230alog\u2082 16\u230b + 1 = 5 compares. Target " + t + " used " + R.compares
+    : "step " + step + " \u00b7 " + s.say;
+  setText(readout, text);
+}
+function stepTo(k) {
+  show(k);
+  const owner = ownerScene(step);
+  if (UNFOLD.scene() !== owner) { crossing = true; UNFOLD.go(owner); crossing = false; show(step); }
+  UNFOLD.pause();
+}
+function setTarget(v) {
+  t = v; R = search(A, t);
+  show(sceneStep(UNFOLD.scene()));
+}
+root.addEventListener("unfold:scene", (e) => { if (!crossing) show(sceneStep(e.detail.scene)); });
+root.addEventListener("unfold:layout", layout);
+UNFOLD.onTime(stepTo);
+UNFOLD.beat(3, 1100, (n) => show(n < 0 ? last() : Math.min(n, last())), 500, 11);
+root.addEventListener("keydown", (e) => {
+  const to = { ArrowUp: step - 1, ArrowDown: step + 1 }[e.key];
+  if (to === undefined || e.target.closest("input")) return;
+  e.preventDefault();
+  stepTo(to);
+});
+field.addEventListener("input", () => {
+  UNFOLD.pause();
+  const v = Number(field.value);
+  if (field.value === "" || !Number.isFinite(v)) return;
+  setTarget(Math.round(Math.max(0, Math.min(99, v))));
+});
+field.addEventListener("change", () => { field.value = String(t); });
+root.querySelectorAll("[data-t]").forEach((b) => b.addEventListener("click", () => { UNFOLD.pause(); field.value = b.dataset.t; setTarget(Number(b.dataset.t)); }));
+layout();
+</script></body></html>

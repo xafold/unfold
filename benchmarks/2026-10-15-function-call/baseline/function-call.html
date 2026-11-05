@@ -1,0 +1,703 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>How a Function Call Works</title>
+<style>
+:root {
+  --bg: #f7f7f5; --panel: #ffffff; --fg: #1d1d1f; --muted: #6b6b70; --line: #e2e2e0;
+  --accent: #2f6fde; --accent-soft: #e4edfc; --hl: #fff4c2; --hl-border: #e0b400;
+  --push: #1f9d55; --pop: #d64545; --code-bg: #fbfbfa; --frame: #f0f4fb; --frame-top: #e4edfc;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #141416; --panel: #1d1d20; --fg: #ececee; --muted: #9a9aa2; --line: #2e2e33;
+  --accent: #6ea2ff; --accent-soft: #1f2b44; --hl: #3a3317; --hl-border: #c9a10a;
+  --push: #4cc483; --pop: #ff7a7a; --code-bg: #18181b; --frame: #22262f; --frame-top: #1f2b44; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #141416; --panel: #1d1d20; --fg: #ececee; --muted: #9a9aa2; --line: #2e2e33;
+  --accent: #6ea2ff; --accent-soft: #1f2b44; --hl: #3a3317; --hl-border: #c9a10a;
+  --push: #4cc483; --pop: #ff7a7a; --code-bg: #18181b; --frame: #22262f; --frame-top: #1f2b44; color-scheme: dark }
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif; }
+.wrap { max-width: 1180px; margin: 0 auto; padding-block: 24px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h1 { font-size: 1.9rem; margin: 0 0 4px; }
+h2 { font-size: 1.3rem; margin: 40px 0 12px; }
+h3 { font-size: 1rem; margin: 0 0 6px; }
+p { margin: 0 0 10px; }
+.sub { color: var(--muted); margin-bottom: 20px; }
+code, .mono { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 0.88em; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; min-width: 0; }
+
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+.tabs button { border: 1px solid var(--line); background: var(--panel); color: var(--fg); border-radius: 999px;
+  padding: 6px 14px; font: inherit; font-size: 0.9rem; cursor: pointer; }
+.tabs button[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+.grid { display: grid; grid-template-columns: 1.25fr 1fr; gap: 16px; }
+@media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+
+.code { background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px; overflow: auto; max-height: 460px;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 13px; line-height: 1.6; padding: 8px 0; }
+.code .ln { display: flex; white-space: pre; border-left: 3px solid transparent; padding-right: 12px; min-width: max-content; }
+.code .ln span:first-child { width: 3em; text-align: right; color: var(--muted); padding-right: 12px; flex: none; user-select: none; }
+.code .ln.active { background: var(--hl); border-left-color: var(--hl-border); }
+.code .cm { color: var(--muted); }
+.meta { color: var(--muted); font-size: 0.85rem; margin-top: 8px; }
+
+.stack-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+.stack { display: flex; flex-direction: column; gap: 8px; min-height: 250px; }
+.frame { border: 1px solid var(--line); background: var(--frame); border-radius: 8px; padding: 8px 12px; }
+.frame.top { background: var(--frame-top); border-color: var(--accent); }
+.frame .fn { font-weight: 600; font-family: ui-monospace, Menlo, Consolas, monospace; display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.frame .ra { font-weight: 400; color: var(--muted); font-size: 0.8rem; }
+.frame .vars { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.var { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.85rem; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 1px 8px; }
+.var.changed { border-color: var(--hl-border); background: var(--hl); }
+.frame.pushed { animation: pushIn .45s ease-out; border-color: var(--push); }
+.frame.ghost { border-style: dashed; border-color: var(--pop); opacity: .6; animation: popOut .6s ease-in forwards; }
+@keyframes pushIn { from { opacity: 0; transform: translateY(-14px); } }
+@keyframes popOut { to { opacity: 0; transform: translateY(-14px); } }
+.badge { font-size: 0.75rem; padding: 1px 8px; border-radius: 999px; font-weight: 600; }
+.badge.push { color: var(--push); border: 1px solid var(--push); }
+.badge.pop { color: var(--pop); border: 1px solid var(--pop); }
+.bottom-label { text-align: center; color: var(--muted); font-size: 0.8rem; border-top: 2px solid var(--line); padding-top: 4px; }
+.io { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+.io div { border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; font-size: 0.85rem; }
+.io b { display: block; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 1.1rem; }
+
+.controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 16px 0 8px; }
+.controls button { font: inherit; padding: 6px 14px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); color: var(--fg); cursor: pointer; }
+.controls button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+.controls input[type=range] { flex: 1; min-width: 120px; accent-color: var(--accent); }
+.stepno { color: var(--muted); font-size: 0.9rem; min-width: 6em; }
+
+.phases { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 12px; }
+.phases span { font-size: 0.82rem; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+.phases span.on { background: var(--accent-soft); border-color: var(--accent); color: var(--fg); font-weight: 600; }
+.explain h3 { font-size: 1.1rem; }
+
+.hood { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-top: 16px; }
+.hood .panel.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.hood .label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin-bottom: 4px; }
+
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+ol.big li { margin-bottom: 8px; }
+
+.mem { max-width: 460px; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.85rem; }
+.mem div { border: 1px solid var(--line); border-top: none; padding: 6px 10px; display: flex; justify-content: space-between; gap: 8px; background: var(--panel); }
+.mem div:first-child { border-top: 1px solid var(--line); }
+.mem div.caller { background: var(--frame); }
+.mem div.callee { background: var(--frame-top); }
+.mem small { color: var(--muted); font-family: system-ui, sans-serif; }
+
+.tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); }
+table { border-collapse: collapse; width: 100%; font-size: 0.88rem; min-width: 760px; }
+th, td { text-align: left; vertical-align: top; padding: 8px 12px; border-bottom: 1px solid var(--line); }
+th { background: var(--frame); position: sticky; top: 0; }
+tr:last-child td { border-bottom: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>How a Function Call Works</h1>
+<p class="sub">One small program, 13 languages. Step through it and watch the call stack grow and shrink.</p>
+
+<div class="tabs" id="tabs" role="tablist"></div>
+
+<div class="grid">
+  <div class="panel">
+    <div class="code" id="code"></div>
+    <div class="meta" id="runsAs"></div>
+  </div>
+  <div class="panel">
+    <div class="stack-head"><h3>Call stack</h3><span class="meta" style="margin:0">top = running now</span></div>
+    <div class="stack" id="stack"></div>
+    <div class="bottom-label">bottom of the stack</div>
+    <div class="io">
+      <div>Last return value<b id="retval">-</b></div>
+      <div>Program output<b id="output">&nbsp;</b></div>
+    </div>
+  </div>
+</div>
+
+<div class="controls">
+  <button id="prev" aria-label="Previous step">&larr; Back</button>
+  <button id="next" class="primary" aria-label="Next step">Next &rarr;</button>
+  <button id="play">Play</button>
+  <button id="reset">Reset</button>
+  <input type="range" id="slider" min="0" value="0" aria-label="Step">
+  <span class="stepno" id="stepno"></span>
+</div>
+
+<div class="panel explain">
+  <div class="phases" id="phases"></div>
+  <h3 id="stepTitle"></h3>
+  <p id="stepText"></p>
+</div>
+
+<div class="hood" id="hood"></div>
+
+<h2>The idea in five steps</h2>
+<div class="panel">
+  <p>A function call stops the current code, runs other code, and then continues exactly where it stopped. Every language does the same five things. They differ only in <em>how</em> they do them.</p>
+  <ol class="big">
+    <li><b>Evaluate the arguments.</b> The caller computes each argument value. Most languages do this before the call. Haskell waits until a value is needed.</li>
+    <li><b>Save the return address.</b> This is the place in the caller where execution must continue after the call.</li>
+    <li><b>Push a new frame.</b> A frame is a block of memory for one single call. It holds the parameters, the local variables, and the return address.</li>
+    <li><b>Run the body.</b> The callee (the called function) runs. If it calls another function, another frame goes on top.</li>
+    <li><b>Return and pop.</b> The callee puts the result where the caller expects it. Its frame is removed. Execution continues at the return address.</li>
+  </ol>
+</div>
+
+<h2>Why a stack?</h2>
+<div class="cards">
+  <div class="panel"><h3>Last in, first out</h3><p>The function that was called last always finishes first. A stack has exactly this order. A call and a return each only move one pointer, so they are very cheap.</p></div>
+  <div class="panel"><h3>Recursion works</h3><p>Each call gets its own frame. So a function that calls itself has a separate <code>x</code> for each call. The calls do not overwrite each other's variables.</p></div>
+  <div class="panel"><h3>Stack overflow</h3><p>The stack has a fixed maximum size. If calls nest too deep, for example in recursion without an end, it runs out of space. That error is a stack overflow.</p></div>
+</div>
+
+<h2>Inside one native frame (x86-64)</h2>
+<div class="grid">
+  <div class="mem">
+    <div class="caller"><span>caller's frame (main)</span><small>higher addresses</small></div>
+    <div class="caller"><span>arguments 7, 8, ...</span><small>only if more than 6</small></div>
+    <div class="callee"><span>return address</span><small>pushed by <code>call</code></small></div>
+    <div class="callee"><span>saved rbp, rbx, ...</span><small>pushed by the callee</small></div>
+    <div class="callee"><span>local variables</span><small>space reserved by the callee</small></div>
+    <div><span>&darr; rsp (top of stack)</span><small>lower addresses</small></div>
+  </div>
+  <div class="panel">
+    <p>On x86-64 the stack grows <b>down</b>, toward lower addresses. The register <code>rsp</code> always points to the top.</p>
+    <p>On Linux and macOS (System V ABI), the first six integer arguments are passed in registers <code>rdi, rsi, rdx, rcx, r8, r9</code>. Only extra arguments go on the stack. The result comes back in <code>rax</code>.</p>
+    <p>Windows x64 uses a different convention: <code>rcx, rdx, r8, r9</code>, plus 32 bytes of "shadow space" that the caller reserves.</p>
+    <p>Small functions often keep everything in registers. Then their frame is only the return address.</p>
+  </div>
+</div>
+
+<h2>Three ways languages run a call</h2>
+<div class="cards">
+  <div class="panel"><h3>Native machine code</h3><p><b>C, C++, Rust, Go, Swift</b>. The compiler turns the call into a <code>call</code> instruction. The CPU's own stack holds the frames. This is the fastest kind of call. Compilers often inline small functions, which means they copy the body into the caller so no call happens.</p></div>
+  <div class="panel"><h3>Virtual machine</h3><p><b>Java, Kotlin, C#, Python, JavaScript, Ruby, PHP</b>. The source becomes bytecode. A call is one bytecode instruction, and the VM builds the frame in its own data structures. A JIT compiler (Java, Kotlin, C#, JavaScript, and optionally Ruby and PHP) turns hot code into native calls at runtime.</p></div>
+  <div class="panel"><h3>Lazy evaluation</h3><p><b>Haskell</b>. A call does not run at once. It makes a <em>thunk</em>: a stored "compute this later" note on the heap. The thunk runs only when something needs its value. Frames on the stack say what to do with a result when it arrives.</p></div>
+</div>
+
+<h2>How arguments are passed</h2>
+<div class="tablewrap">
+<table>
+  <thead><tr><th>Style</th><th>What the callee gets</th><th>Can it change the caller's variable?</th><th>Can it change a shared object?</th><th>Examples</th></tr></thead>
+  <tbody>
+    <tr><td>By value</td><td>A copy</td><td>No</td><td>Only through a pointer</td><td>C, Go, C# (default), Swift value types, Rust <code>Copy</code> types</td></tr>
+    <tr><td>By reference</td><td>Another name for the caller's variable</td><td>Yes</td><td>Yes</td><td>C++ <code>T&amp;</code>, C# <code>ref</code>/<code>out</code>, PHP <code>&amp;$x</code>, Swift <code>inout</code> (copy in, copy back out)</td></tr>
+    <tr><td>By sharing</td><td>A copy of a reference to the same object</td><td>No</td><td>Yes</td><td>Python, JavaScript, Ruby, Java and Kotlin objects</td></tr>
+    <tr><td>By move</td><td>The value itself; the caller loses it</td><td>No (caller cannot use it after)</td><td>Callee now owns it</td><td>Rust (default for non-<code>Copy</code> types), C++ <code>std::move</code></td></tr>
+    <tr><td>By need (lazy)</td><td>A thunk, computed at most once</td><td>No (values are immutable)</td><td>No</td><td>Haskell</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h2>All languages side by side</h2>
+<div class="tablewrap">
+<table>
+  <thead><tr><th>Language</th><th>Runs as</th><th>Where frames live</th><th>Tail calls optimized?</th><th>When the stack is too deep</th></tr></thead>
+  <tbody id="compare"></tbody>
+</table>
+</div>
+
+</div>
+
+<script>
+const LANGS = [
+{ id: 'c', label: 'C', names: ['main', 'sumOfSquares', 'square'],
+  src: `#include <stdio.h>
+
+int square(int x) {
+@sqBody|    return x * x;
+}
+
+@sosHead|int sumOfSquares(int a, int b) {
+@sosBody|    return square(a) + square(b);
+}
+
+int main(void) {
+@call|    int result = sumOfSquares(3, 4);
+@print|    printf("%d\\n", result);
+    return 0;
+}`,
+  runs: 'Compiled ahead of time to machine code',
+  frames: 'Native call stack, managed by code the compiler generates',
+  pass: 'By value. Every argument is copied. To let a function change a caller\'s variable, pass a pointer to it.',
+  call: 'The compiler emits a <code>call</code> instruction. On x86-64 Linux, <code>a</code> goes in register <code>edi</code> and <code>b</code> in <code>esi</code>. <code>call</code> pushes the return address and jumps. The function prologue then reserves stack space for locals if it needs any.',
+  ret: 'The result goes in register <code>eax</code>. The epilogue releases the frame. <code>ret</code> pops the return address and jumps back to the caller.',
+  extra: 'With <code>-O2</code>, the compiler will probably inline <code>square</code>. Then the program has no call to it at all. It may even compute 25 at compile time.',
+  tco: 'Not guaranteed. GCC and Clang often do it at -O2.',
+  overflow: 'Undefined behavior, usually a segmentation fault. Linux main-thread stack: 8 MB by default.' },
+
+{ id: 'cpp', label: 'C++', names: ['main', 'sumOfSquares', 'square'],
+  src: `#include <iostream>
+
+int square(int x) {
+@sqBody|    return x * x;
+}
+
+@sosHead|int sumOfSquares(int a, int b) {
+@sosBody|    return square(a) + square(b);
+}
+
+int main() {
+@call|    int result = sumOfSquares(3, 4);
+@print|    std::cout << result << '\\n';
+}`,
+  runs: 'Compiled ahead of time to machine code',
+  frames: 'Native call stack',
+  pass: 'By value by default. For objects, a copy or move constructor runs. <code>T&amp;</code> passes a reference. <code>const T&amp;</code> avoids the copy.',
+  call: 'Same machine mechanism as C. A member function gets the object address as a hidden first argument, <code>this</code>. Names are "mangled" (for example <code>_Z6squarei</code>) so that overloads with the same name stay separate.',
+  ret: 'When a frame is left, destructors run for its local objects in reverse order. This is RAII. A large return value is often built directly in the caller\'s memory (return value optimization).',
+  extra: '<code>inline</code>, templates, and <code>constexpr</code> let the compiler remove many calls. A <code>constexpr</code> call can run at compile time.',
+  tco: 'Not guaranteed. Optimizers often do it.',
+  overflow: 'Undefined behavior, usually a segmentation fault.' },
+
+{ id: 'rust', label: 'Rust', names: ['main', 'sum_of_squares', 'square'],
+  src: `fn square(x: i32) -> i32 {
+@sqBody|    x * x
+}
+
+@sosHead|fn sum_of_squares(a: i32, b: i32) -> i32 {
+@sosBody|    square(a) + square(b)
+}
+
+fn main() {
+@call|    let result = sum_of_squares(3, 4);
+@print|    println!("{}", result);
+}`,
+  runs: 'Compiled ahead of time to machine code (via LLVM)',
+  frames: 'Native call stack',
+  pass: 'By move: the caller can no longer use the value. Types like <code>i32</code> are <code>Copy</code>, so they are copied instead. <code>&amp;T</code> and <code>&amp;mut T</code> borrow the value. The compiler checks every borrow.',
+  call: 'The Rust ABI is not stable, so the compiler chooses the registers freely. Use <code>extern "C"</code> when you need the C convention. In debug builds, <code>x * x</code> checks for integer overflow and panics if it happens.',
+  ret: 'The last expression without a semicolon is the return value. When the frame ends, values the function still owns are dropped. Their <code>Drop</code> code runs in reverse order.',
+  extra: 'A panic unwinds the stack frame by frame and drops each value, unless the build uses <code>panic = "abort"</code>.',
+  tco: 'Not guaranteed. An explicit <code>become</code> keyword exists only as an unstable feature.',
+  overflow: 'A guard page detects it. The program aborts with "has overflowed its stack". Spawned threads get 2 MiB by default.' },
+
+{ id: 'go', label: 'Go', names: ['main', 'sumOfSquares', 'square'],
+  src: `package main
+
+import "fmt"
+
+func square(x int) int {
+@sqBody|    return x * x
+}
+
+@sosHead|func sumOfSquares(a, b int) int {
+@sosBody|    return square(a) + square(b)
+}
+
+func main() {
+@call|    result := sumOfSquares(3, 4)
+@print|    fmt.Println(result)
+}`,
+  runs: 'Compiled ahead of time to machine code (Go\'s own compiler)',
+  frames: 'Goroutine stack. It starts small (a few KB) and grows by being copied to a bigger block.',
+  pass: 'Always by value. Slices, maps, channels, and pointers are small headers that point to shared data. So the callee can change that shared data.',
+  call: 'Since Go 1.17, arguments and results go in registers. The prologue compares the stack pointer to a limit. If the stack is too small, it calls <code>runtime.morestack</code>, which allocates a bigger stack and copies the old one into it.',
+  ret: 'Results come back in registers. A function can return several values. Deferred calls (<code>defer</code>) run just before the frame is left.',
+  extra: 'The statement <code>go square(3)</code> runs the call on a new goroutine, which has its own stack.',
+  tco: 'No.',
+  overflow: 'Fatal error: "goroutine stack exceeds 1000000000-byte limit" (1 GB on 64-bit).' },
+
+{ id: 'java', label: 'Java', names: ['main', 'sumOfSquares', 'square'],
+  src: `public class Main {
+    static int square(int x) {
+@sqBody|        return x * x;
+    }
+
+@sosHead|    static int sumOfSquares(int a, int b) {
+@sosBody|        return square(a) + square(b);
+    }
+
+    public static void main(String[] args) {
+@call|        int result = sumOfSquares(3, 4);
+@print|        System.out.println(result);
+    }
+}`,
+  runs: 'JVM bytecode. Interpreted first, then JIT-compiled when hot.',
+  frames: 'JVM stack per thread. Each frame has a local-variable array and an operand stack.',
+  pass: 'By value. For an object, the value that is copied is the reference. So the callee can change the object, but not the caller\'s variable.',
+  call: 'Bytecode: <code>iload_0</code> pushes <code>a</code> onto the operand stack. Then <code>invokestatic square(I)I</code> creates a new frame and moves the argument into local slot 0 of that frame.',
+  ret: '<code>imul</code> multiplies the top two values. <code>ireturn</code> pops the result, removes the frame, and pushes the result onto the caller\'s operand stack.',
+  extra: 'The HotSpot JIT compilers (C1 and C2) inline small methods such as <code>square</code>. After JIT, the frames are real native frames.',
+  tco: 'No.',
+  overflow: '<code>StackOverflowError</code>. Default thread stack is about 1 MB (<code>-Xss</code>).' },
+
+{ id: 'kotlin', label: 'Kotlin', names: ['main', 'sumOfSquares', 'square'],
+  src: `fun square(x: Int): Int {
+@sqBody|    return x * x
+}
+
+@sosHead|fun sumOfSquares(a: Int, b: Int): Int {
+@sosBody|    return square(a) + square(b)
+}
+
+fun main() {
+@call|    val result = sumOfSquares(3, 4)
+@print|    println(result)
+}`,
+  runs: 'JVM bytecode (Kotlin can also target JavaScript, Wasm, and native code)',
+  frames: 'JVM frames, the same as Java',
+  pass: 'Same as Java. Parameters are read-only (<code>val</code>), so the callee cannot even reassign its own copy.',
+  call: 'A top-level function becomes a static method in a class named after the file, here <code>MainKt.square</code>. The call is <code>invokestatic</code>. A function with default arguments also gets a generated <code>$default</code> method for calls that leave them out.',
+  ret: '<code>ireturn</code>, the same as Java. An <code>inline</code> function is copied into the caller, so no call happens at runtime.',
+  extra: 'A <code>suspend</code> function gets a hidden continuation parameter. It can pause and resume later without blocking the thread.',
+  tco: 'Only for self-recursion marked <code>tailrec</code>. The compiler turns it into a loop.',
+  overflow: '<code>StackOverflowError</code>.' },
+
+{ id: 'csharp', label: 'C#', names: ['Main', 'SumOfSquares', 'Square'],
+  src: `using System;
+
+class Program {
+    static int Square(int x) {
+@sqBody|        return x * x;
+    }
+
+@sosHead|    static int SumOfSquares(int a, int b) {
+@sosBody|        return Square(a) + Square(b);
+    }
+
+    static void Main() {
+@call|        int result = SumOfSquares(3, 4);
+@print|        Console.WriteLine(result);
+    }
+}`,
+  runs: 'IL bytecode. The .NET runtime JIT-compiles each method before its first run.',
+  frames: 'Native call stack (after JIT)',
+  pass: 'By value by default. <code>ref</code>, <code>out</code>, and <code>in</code> pass by reference. A <code>struct</code> is copied. For a <code>class</code>, the reference is copied.',
+  call: 'IL: <code>ldarg.0</code>, then <code>call int32 Program::Square(int32)</code>. The first call goes through a stub that starts the JIT. After that, it is a normal native call.',
+  ret: 'IL <code>ret</code> returns the value on the evaluation stack. In the machine code, it is a normal register return.',
+  extra: 'Tiered compilation: a quick JIT first, then an optimized JIT for hot methods, with inlining.',
+  tco: 'IL has a <code>tail.</code> prefix (F# uses it). The C# compiler does not emit it.',
+  overflow: '<code>StackOverflowException</code>. It cannot be caught. The process ends.' },
+
+{ id: 'python', label: 'Python', names: ['<module>', 'sum_of_squares', 'square'],
+  src: `def square(x):
+@sqBody|    return x * x
+
+@sosHead|def sum_of_squares(a, b):
+@sosBody|    return square(a) + square(b)
+
+@call|result = sum_of_squares(3, 4)
+@print|print(result)`,
+  runs: 'Bytecode, run by the CPython interpreter loop',
+  frames: 'Interpreter frames on a per-thread data stack (3.11+). A full frame object is made only when needed, for example for a traceback.',
+  pass: 'By sharing. The name <code>x</code> is bound to the same object the caller passed. Rebinding <code>x</code> does not affect the caller. Changing a list in place does.',
+  call: 'Bytecode: load <code>square</code>, load <code>a</code>, <code>CALL 1</code>. Since 3.11, a Python-to-Python call does not start a new C-level interpreter loop. The loop just switches to the new frame.',
+  ret: '<code>BINARY_OP</code> (<code>*</code>) computes the result. <code>RETURN_VALUE</code> pops the frame and pushes the result onto the caller\'s value stack.',
+  extra: 'Default argument values are evaluated once, when <code>def</code> runs. They are not evaluated again at each call.',
+  tco: 'No (a deliberate design choice).',
+  overflow: '<code>RecursionError</code> after about 1000 nested calls (<code>sys.getrecursionlimit()</code>).' },
+
+{ id: 'js', label: 'JavaScript', names: ['global', 'sumOfSquares', 'square'],
+  src: `function square(x) {
+@sqBody|  return x * x;
+}
+
+@sosHead|function sumOfSquares(a, b) {
+@sosBody|  return square(a) + square(b);
+}
+
+@call|const result = sumOfSquares(3, 4);
+@print|console.log(result);`,
+  runs: 'Bytecode (V8 Ignition). Hot functions are JIT-compiled (Sparkplug, Maglev, TurboFan).',
+  frames: 'Execution contexts on a call stack. In V8 they are native stack frames. Variables captured by closures live on the heap.',
+  pass: 'By sharing, like Python. Primitives (numbers, strings) act like copies. Objects are shared.',
+  call: 'A new execution context is created and pushed. Missing arguments become <code>undefined</code>. Extra arguments are allowed. The value of <code>this</code> depends on how the function is called, not on where it is defined.',
+  ret: 'The context is popped. A function without <code>return</code> gives <code>undefined</code>.',
+  extra: '<code>await</code> and generators can pause a frame and resume it later. The paused state is kept on the heap.',
+  tco: 'In the spec (strict mode), but only Safari (JavaScriptCore) implements it.',
+  overflow: '<code>RangeError: Maximum call stack size exceeded</code>.' },
+
+{ id: 'ruby', label: 'Ruby', names: ['<main>', 'sum_of_squares', 'square'],
+  src: `def square(x)
+@sqBody|  x * x
+end
+
+@sosHead|def sum_of_squares(a, b)
+@sosBody|  square(a) + square(b)
+end
+
+@call|result = sum_of_squares(3, 4)
+@print|puts result`,
+  runs: 'YARV bytecode. Optional YJIT compiler.',
+  frames: 'Control frames on the YARV VM stack',
+  pass: 'By sharing. Every value is an object reference. Small integers are stored directly in the reference.',
+  call: 'Every call is a message sent to a receiver. <code>square(a)</code> sends <code>square</code> to <code>self</code>, the top-level <code>main</code> object. The VM looks up the method in the receiver\'s class. An inline cache makes the next lookup fast.',
+  ret: 'The value of the last expression is returned. The <code>leave</code> instruction pops the control frame.',
+  extra: 'A call can also pass a block (<code>do ... end</code>). The block keeps a link to the caller\'s frame, so it can use the caller\'s variables.',
+  tco: 'Off by default. A VM compile option can turn it on.',
+  overflow: '<code>SystemStackError: stack level too deep</code>.' },
+
+{ id: 'php', label: 'PHP', names: ['{main}', 'sumOfSquares', 'square'], prefix: '$',
+  src: `<?php
+function square(int $x): int {
+@sqBody|    return $x * $x;
+}
+
+@sosHead|function sumOfSquares(int $a, int $b): int {
+@sosBody|    return square($a) + square($b);
+}
+
+@call|$result = sumOfSquares(3, 4);
+@print|echo $result, "\\n";`,
+  runs: 'Zend opcodes (cached by OPcache). Optional JIT since PHP 8.',
+  frames: 'Call frames (<code>zend_execute_data</code>) on the Zend VM stack',
+  pass: 'By value. Arrays are copy-on-write: they are copied only if changed. Objects are handles, so they are shared. <code>&amp;$x</code> passes by reference.',
+  call: 'Opcodes: <code>INIT_FCALL</code> reserves the new frame. <code>SEND_VAR</code> copies each argument into it. <code>DO_UCALL</code> starts it. The <code>int</code> type declarations are checked on entry.',
+  ret: '<code>RETURN</code> copies the value to the caller\'s result slot and frees the frame. The <code>: int</code> return type is checked.',
+  extra: 'Type checks on parameters and return values run on every call.',
+  tco: 'No.',
+  overflow: 'PHP 8.3+: <code>Error</code> "Maximum call stack size reached". Older versions often crash with a segmentation fault.' },
+
+{ id: 'swift', label: 'Swift', names: ['main', 'sumOfSquares', 'square'],
+  src: `func square(_ x: Int) -> Int {
+@sqBody|    return x * x
+}
+
+@sosHead|func sumOfSquares(_ a: Int, _ b: Int) -> Int {
+@sosBody|    return square(a) + square(b)
+}
+
+@call|let result = sumOfSquares(3, 4)
+@print|print(result)`,
+  runs: 'Compiled ahead of time to machine code (via LLVM)',
+  frames: 'Native call stack',
+  pass: 'Value types (<code>Int</code>, structs, arrays) are copied; arrays only when changed (copy-on-write). Classes are shared references counted by ARC. <code>inout</code> copies the value in and the change back out.',
+  call: 'Swift has its own calling convention (<code>swiftcc</code>). It reserves special registers for <code>self</code> and for thrown errors. For class references, the compiler may add ARC retain and release calls around the call.',
+  ret: 'The return value comes back in registers. A <code>throws</code> function returns its error in a special register. It does not unwind the stack.',
+  extra: 'A generic function is either specialized (one copy for each type) or called with type metadata as hidden arguments. Also, <code>Int</code> overflow in <code>x * x</code> traps at runtime.',
+  tco: 'Not guaranteed.',
+  overflow: 'The program crashes (<code>EXC_BAD_ACCESS</code> on Apple platforms).' },
+
+{ id: 'haskell', label: 'Haskell', names: ['main', 'sumOfSquares', 'square'],
+  src: `square :: Int -> Int
+@sqBody|square x = x * x
+
+sumOfSquares :: Int -> Int -> Int
+@sosHead,sosBody|sumOfSquares a b = square a + square b
+
+main :: IO ()
+main = do
+@call|  let result = sumOfSquares 3 4
+@print|  print result`,
+  runs: 'Compiled by GHC to machine code, through the STG machine model',
+  frames: 'GHC\'s own stack, separate from the C stack. Unevaluated values (thunks) live on the heap.',
+  pass: 'By need (lazy). Arguments are passed as thunks. A thunk is computed at most once, when its value is needed.',
+  call: '<code>sumOfSquares 3 4</code> does not run at once. It builds a thunk. <code>print</code> needs the value, so the thunk is evaluated then. This page shows the eager order so that you can compare it with the other languages.',
+  ret: 'To compute <code>square a + square b</code>, GHC pushes a continuation frame ("what to do with the result") and evaluates <code>square a</code>. A return is a jump to the continuation on top of the stack.',
+  extra: 'With <code>-O</code>, strictness analysis sees that the <code>Int</code> arguments are always used. Then GHC passes plain machine integers, much like C.',
+  tco: 'Yes. Every tail call is a jump.',
+  overflow: 'The stack grows on the heap up to 80% of physical memory by default (<code>+RTS -K</code>).' },
+
+{ id: 'asm', label: 'x86-64 assembly', names: ['main', 'sumOfSquares', 'square'],
+  src: `square:                     ; x arrives in edi
+@sqBody|    mov   eax, edi          ; eax = x
+    imul  eax, edi          ; eax = x * x (return value)
+    ret                     ; pop return address, jump back
+
+@sosHead|sumOfSquares:               ; a in edi, b in esi
+    push  rbx               ; save rbx (the callee must restore it)
+    mov   ebx, esi          ; ebx = b, survives the call
+@sosCallA|    call  square            ; a is already in edi
+@sosRetA|    mov   edi, ebx          ; back here after ret; edi = b
+    mov   ebx, eax          ; ebx = square(a)
+@sosCallB|    call  square            ; eax = square(b)
+@sosAdd|    add   eax, ebx          ; eax = square(a) + square(b)
+    pop   rbx               ; restore rbx
+    ret
+
+main:
+    sub   rsp, 8            ; keep the stack 16-byte aligned
+    mov   edi, 3            ; 1st argument
+    mov   esi, 4            ; 2nd argument
+@call|    call  sumOfSquares
+@callRet|    mov   esi, eax          ; result -> 2nd printf argument
+    lea   rdi, [rip + fmt]  ; 1st argument: "%d\\n"
+    xor   eax, eax
+@print|    call  printf
+    xor   eax, eax          ; return 0
+    add   rsp, 8
+    ret`,
+  runs: 'Machine instructions. This is what C, C++, Rust, Go, and Swift become.',
+  frames: 'The hardware stack. Register <code>rsp</code> points to its top.',
+  pass: 'In registers (System V ABI): <code>rdi, rsi, rdx, rcx, r8, r9</code>. Extra arguments go on the stack. The result comes back in <code>rax</code>.',
+  call: '<code>call</code> pushes the address of the next instruction onto the stack and jumps to the function. The function pushes any callee-saved register it will change (here <code>rbx</code>).',
+  ret: 'The result is in <code>eax</code>. The function restores saved registers with <code>pop</code>. <code>ret</code> pops the return address into the instruction pointer <code>rip</code>.',
+  extra: '<code>square</code> calls nothing (a "leaf" function). So its whole frame is the 8-byte return address, and <code>x</code> lives only in a register. The stack must be 16-byte aligned at every <code>call</code>.',
+  tco: 'A tail call can be a plain <code>jmp</code>.',
+  overflow: 'Segmentation fault when the stack reaches the guard page.' },
+];
+
+// Frame names: M = main, S = sumOfSquares, Q = square. "SQ(a)" is a temp value in the S frame.
+const STEPS = [
+  { key: 'call', kind: 'exec', phases: [0], frames: [['M', { result: '?' }]],
+    title: 'Evaluate the arguments',
+    text: '{M} reaches the call. It evaluates the arguments first: 3 and 4. No function has been called yet.' },
+  { key: 'sosHead', kind: 'call', phases: [1], frames: [['M', { result: '?' }], ['S', { a: 3, b: 4 }]],
+    title: 'Push a frame and jump',
+    text: 'A new frame for {S} goes on top of the stack. It holds a = 3, b = 4, and the return address (where to continue in {M}). Control jumps to the start of {S}.' },
+  { key: 'sosCallA', kind: 'exec', phases: [0], frames: [['M', { result: '?' }], ['S', { a: 3, b: 4 }]],
+    title: 'Now the callee becomes a caller',
+    text: '{S} needs {Q}(a). It evaluates the argument: a is 3. {M} still waits below, paused in the middle of its line.' },
+  { key: 'sqBody', kind: 'call', phases: [1, 2], frames: [['M', { result: '?' }], ['S', { a: 3, b: 4 }], ['Q', { x: 3 }]],
+    title: 'Run the body of {Q}',
+    text: 'A frame for {Q} is pushed with x = 3. Three frames are now on the stack. Only the top one runs. The body computes x * x = 9.' },
+  { key: 'sosRetA', kind: 'return', phases: [3, 4], ret: 9, frames: [['M', { result: '?' }], ['S', { a: 3, b: 4, 'SQ(a)': 9 }]],
+    title: 'Return 9 and pop',
+    text: '{Q} returns 9. Its frame is removed, so x no longer exists. Execution continues in {S} at the saved return address. {S} keeps 9 as a temporary value.' },
+  { key: 'sosCallB', kind: 'exec', phases: [0], frames: [['M', { result: '?' }], ['S', { a: 3, b: 4, 'SQ(a)': 9 }]],
+    title: 'Evaluate {Q}(b)',
+    text: 'Next is the right side of the +. {S} evaluates the argument: b is 4.' },
+  { key: 'sqBody', kind: 'call', phases: [1, 2], frames: [['M', { result: '?' }], ['S', { a: 3, b: 4, 'SQ(a)': 9 }], ['Q', { x: 4 }]],
+    title: 'Same function, new frame',
+    text: '{Q} runs again, in a new and separate frame with x = 4. The old frame with x = 3 is gone. The body computes 16.' },
+  { key: 'sosAdd', kind: 'return', phases: [3, 4], ret: 16, frames: [['M', { result: '?' }], ['S', { a: 3, b: 4, 'SQ(a)': 9, 'SQ(b)': 16 }]],
+    title: 'Return 16, then add',
+    text: '{Q} returns 16 and its frame is popped. {S} adds 9 + 16 = 25.' },
+  { key: 'callRet', kind: 'return', phases: [3, 4], ret: 25, frames: [['M', { result: 25 }]],
+    title: 'Return 25 to {M}',
+    text: '{S} returns 25. Its frame is popped. {M} continues where it paused and stores 25 in result. Only the bottom frame is left.' },
+  { key: 'print', kind: 'exec', phases: [2], ret: 25, out: '25', frames: [['M', { result: 25 }]],
+    title: 'Print the result',
+    text: 'Printing is one more function call. It goes through the same five steps. The program prints 25.' },
+];
+const PHASES = ['1. Evaluate arguments', '2. Push frame + return address', '3. Run the body', '4. Return the value', '5. Pop frame, resume caller'];
+const FALLBACK = { sosCallA: 'sosBody', sosRetA: 'sosBody', sosCallB: 'sosBody', sosAdd: 'sosBody', callRet: 'call' };
+
+for (const lang of LANGS) {
+  lang.lines = []; lang.marks = {};
+  lang.src.split('\n').forEach((l, i) => {
+    const m = l.match(/^@([\w,]+)\|/);
+    if (m) { m[1].split(',').forEach(k => lang.marks[k] = i); l = l.slice(m[0].length); }
+    lang.lines.push(l);
+  });
+}
+
+const $ = id => document.getElementById(id);
+let lang = LANGS[0], step = 0, shown = null, timer = null;
+
+const fname = code => lang.names['MSQ'.indexOf(code)];
+const fill = s => s.replace(/\{M\}/g, fname('M')).replace(/\{S\}/g, fname('S')).replace(/\{Q\}/g, fname('Q'));
+const vname = k => k.replace('SQ', fname('Q')).replace(/\b(result|[abx])\b/g, m => (lang.prefix || '') + m);
+const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+function renderTabs() {
+  $('tabs').innerHTML = '';
+  for (const l of LANGS) {
+    const b = document.createElement('button');
+    b.textContent = l.label; b.setAttribute('role', 'tab');
+    b.setAttribute('aria-selected', l === lang);
+    b.onclick = () => { lang = l; renderTabs(); renderCode(); render(); };
+    $('tabs').appendChild(b);
+  }
+}
+
+function renderCode() {
+  const comment = lang.id === 'asm' ? ';' : null;
+  $('code').innerHTML = lang.lines.map((l, i) => {
+    let html = esc(l);
+    if (comment && l.includes(comment)) { const c = l.indexOf(comment); html = esc(l.slice(0, c)) + '<span class="cm">' + esc(l.slice(c)) + '</span>'; }
+    return `<div class="ln" data-i="${i}"><span>${i + 1}</span><span>${html || ' '}</span></div>`;
+  }).join('');
+  $('runsAs').innerHTML = '<b>Runs as:</b> ' + lang.runs;
+  shown = null;
+}
+
+function render() {
+  const s = STEPS[step];
+  // code highlight
+  const line = lang.marks[s.key] ?? lang.marks[FALLBACK[s.key]];
+  const box = $('code');
+  box.querySelectorAll('.ln').forEach(el => el.classList.toggle('active', +el.dataset.i === line));
+  const act = box.querySelector('.ln.active');
+  if (act) {
+    const top = act.offsetTop - box.offsetTop, h = box.clientHeight;
+    if (top < box.scrollTop || top > box.scrollTop + h - 40) box.scrollTop = top - h / 3;
+  }
+
+  // stack (drawn top first)
+  const prev = shown === null ? null : STEPS[shown];
+  let html = '';
+  if (prev && prev.frames.length > s.frames.length) {
+    const [code, vars] = prev.frames[prev.frames.length - 1];
+    html += frameHtml(code, vars, prev.frames.length - 1, prev.frames, 'ghost', null);
+  }
+  for (let i = s.frames.length - 1; i >= 0; i--) {
+    const [code, vars] = s.frames[i];
+    const before = prev && prev.frames[i] && prev.frames[i][0] === code ? prev.frames[i][1] : null;
+    const isNew = prev && !before;
+    html += frameHtml(code, vars, i, s.frames, (i === s.frames.length - 1 ? 'top ' : '') + (isNew ? 'pushed' : ''), before);
+  }
+  $('stack').innerHTML = html;
+  const ghost = $('stack').querySelector('.ghost');
+  if (ghost) ghost.addEventListener('animationend', () => ghost.remove());
+  $('retval').textContent = s.ret ?? '-';
+  $('output').textContent = s.out ?? ' ';
+
+  // explanation
+  $('phases').innerHTML = PHASES.map((p, i) => `<span class="${s.phases.includes(i) ? 'on' : ''}">${p}</span>`).join('');
+  $('stepTitle').textContent = fill(s.title);
+  $('stepText').textContent = fill(s.text);
+  $('stepno').textContent = `Step ${step + 1} / ${STEPS.length}`;
+  $('slider').value = step;
+  $('prev').disabled = step === 0;
+  $('next').disabled = step === STEPS.length - 1;
+
+  // under the hood
+  const cards = [
+    ['Arguments', lang.pass, false],
+    ['On a call', lang.call, s.kind === 'call'],
+    ['On a return', lang.ret, s.kind === 'return'],
+    ['Good to know', lang.extra, false],
+  ];
+  $('hood').innerHTML = cards.map(([t, b, on]) =>
+    `<div class="panel ${on ? 'on' : ''}"><div class="label">${lang.label}: ${t}</div><div>${b}</div></div>`).join('');
+  shown = step;
+}
+
+function frameHtml(code, vars, i, frames, cls, before) {
+  const ra = i === 0 ? 'started by the runtime' : 'returns to: ' + fname(frames[i - 1][0]);
+  const badge = cls.includes('ghost') ? '<span class="badge pop">popped</span>' : cls.includes('pushed') ? '<span class="badge push">pushed</span>' : '';
+  const v = Object.entries(vars).map(([k, val]) => {
+    const changed = before && before[k] !== val;
+    return `<span class="var ${changed ? 'changed' : ''}">${esc(vname(k))} = ${val}</span>`;
+  }).join('');
+  return `<div class="frame ${cls}"><div class="fn"><span>${esc(fname(code))} ${badge}</span><span class="ra">${ra}</span></div><div class="vars">${v}</div></div>`;
+}
+
+function go(n) { step = Math.max(0, Math.min(STEPS.length - 1, n)); render(); }
+function stop() { clearInterval(timer); timer = null; $('play').textContent = 'Play'; }
+$('prev').onclick = () => { stop(); go(step - 1); };
+$('next').onclick = () => { stop(); go(step + 1); };
+$('reset').onclick = () => { stop(); shown = null; go(0); };
+$('slider').max = STEPS.length - 1;
+$('slider').oninput = e => { stop(); go(+e.target.value); };
+$('play').onclick = () => {
+  if (timer) return stop();
+  if (step === STEPS.length - 1) { shown = null; go(0); }
+  $('play').textContent = 'Pause';
+  timer = setInterval(() => { if (step === STEPS.length - 1) stop(); else go(step + 1); }, 1800);
+};
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') return;
+  if (e.key === 'ArrowRight') { stop(); go(step + 1); }
+  if (e.key === 'ArrowLeft') { stop(); go(step - 1); }
+});
+
+$('compare').innerHTML = LANGS.map(l =>
+  `<tr><td><b>${l.label}</b></td><td>${l.runs}</td><td>${l.frames}</td><td>${l.tco}</td><td>${l.overflow}</td></tr>`).join('');
+
+renderTabs(); renderCode(); render();
+</script>
+</body>
+</html>

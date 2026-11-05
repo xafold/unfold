@@ -1,0 +1,603 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Gradient descent</title><style>
+.iso{
+  --anatomy-page:#0b0b0b;--anatomy-card:#131313;--anatomy-text:#a3a3a3;--anatomy-strong:#e6e6e6;--anatomy-muted:#6e6e6e;
+  --anatomy-paper:#131313;--anatomy-face:#1b1b1b;--anatomy-top:#1c1c1c;
+  --anatomy-shade-0:#0f0f0f;--anatomy-shade-1:#121212;--anatomy-shade-2:#151515;--anatomy-shade-3:#181818;
+  --anatomy-lit-top:#262626;--anatomy-lit-shade:#1d1d1d;
+  --anatomy-hi:#d4d4d4;--anatomy-mid:#6a6a6a;--anatomy-lo:#3e3e3e;--anatomy-faint:#2a2a2a;--anatomy-lit:#ffffff;
+  --anatomy-halo:#050505;--anatomy-halo-opacity:.9;--anatomy-dot:#e6e6e6;
+  --anatomy-red:#ff6b6b;--anatomy-green:#6be0a0;--anatomy-blue:#6b9bff;
+  --anatomy-weight:.6px;--anatomy-ease:cubic-bezier(.32,.72,0,1);
+  --anatomy-mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --anatomy-lift:inset 0 1px 0 0 #ffffff0a,inset 0 0 0 1px #ffffff06,0 0 0 1px #00000026,0 1px 1px -.5px #00000014,0 3px 3px -1.5px #00000014,0 6px 6px -3px #00000014,0 12px 12px -6px #00000014;
+}
+.iso[data-theme="light"]{
+  --anatomy-page:#f2f2ef;--anatomy-card:#fbfbfa;--anatomy-text:#57575a;--anatomy-strong:#18181a;--anatomy-muted:#8c8c90;
+  --anatomy-paper:#fbfbfa;--anatomy-face:#ffffff;--anatomy-top:#ffffff;
+  --anatomy-shade-0:#dcdcd9;--anatomy-shade-1:#e5e5e2;--anatomy-shade-2:#ededea;--anatomy-shade-3:#f4f4f1;
+  --anatomy-lit-top:#ffffff;--anatomy-lit-shade:#eeeeeb;
+  --anatomy-hi:#26262a;--anatomy-mid:#8a8a8f;--anatomy-lo:#b4b4b8;--anatomy-faint:#d4d4d6;--anatomy-lit:#000000;
+  --anatomy-halo:#8a8a80;--anatomy-halo-opacity:.32;--anatomy-dot:#3a3a3e;
+  --anatomy-red:#e5484d;--anatomy-green:#30a46c;--anatomy-blue:#3e63dd;
+  --anatomy-lift:inset 0 1px 0 0 #ffffff,0 0 0 1px #0000000f,0 1px 1px -.5px #0000000a,0 3px 3px -1.5px #0000000a,0 6px 6px -3px #0000000a,0 12px 12px -6px #0000000a;
+}
+.iso-svg{display:block;width:100%;height:auto;overflow:visible}
+.iso-svg path,.iso-svg circle{vector-effect:non-scaling-stroke}
+.iso-fill{fill:var(--anatomy-paper);stroke:none}
+.iso-solid[data-lit]>.iso-fill{fill:var(--anatomy-face)}
+.iso-shade,.iso-top{stroke:none}
+.iso-shade[data-shade="0"]{fill:var(--anatomy-shade-0)}
+.iso-shade[data-shade="1"]{fill:var(--anatomy-shade-1)}
+.iso-shade[data-shade="2"]{fill:var(--anatomy-shade-2)}
+.iso-shade[data-shade="3"]{fill:var(--anatomy-shade-3)}
+.iso-top{fill:var(--anatomy-top)}
+.iso-solid[data-lit]>.iso-top{fill:var(--anatomy-lit-top)}
+.iso-solid[data-lit]>.iso-shade{fill:var(--anatomy-lit-shade)}
+.iso-solid[data-seamless]>.iso-shade,.iso-solid[data-seamless]>.iso-top{stroke-width:.4;stroke-linejoin:round}
+.iso-solid[data-seamless]>.iso-shade[data-shade="0"]{stroke:var(--anatomy-shade-0)}
+.iso-solid[data-seamless]>.iso-shade[data-shade="1"]{stroke:var(--anatomy-shade-1)}
+.iso-solid[data-seamless]>.iso-shade[data-shade="2"]{stroke:var(--anatomy-shade-2)}
+.iso-solid[data-seamless]>.iso-shade[data-shade="3"]{stroke:var(--anatomy-shade-3)}
+.iso-solid[data-seamless]>.iso-top{stroke:var(--anatomy-top)}
+.iso-solid[data-seamless][data-lit]>.iso-top{stroke:var(--anatomy-lit-top)}
+.iso-solid[data-seamless][data-lit]>.iso-shade{stroke:var(--anatomy-lit-shade)}
+.iso-solid[data-lit]>.iso-edge{stroke:var(--anatomy-lit)}
+.iso-halo{fill:var(--anatomy-halo);stroke:none;filter:blur(9px);opacity:var(--anatomy-halo-opacity);transform:translateY(3px)}
+.iso-line{fill:none;stroke:var(--anatomy-lo);stroke-width:var(--anatomy-weight);stroke-linecap:round;stroke-linejoin:round}
+.iso-line[data-tone="hi"]{stroke:var(--anatomy-hi)}
+.iso-line[data-tone="mid"]{stroke:var(--anatomy-mid)}
+.iso-line[data-tone="lo"]{stroke:var(--anatomy-lo)}
+.iso-line[data-tone="faint"]{stroke:var(--anatomy-faint)}
+.iso-line[data-tone="lit"]{stroke:var(--anatomy-lit)}
+.iso-line[data-tone="red"]{stroke:var(--anatomy-red)}
+.iso-line[data-tone="green"]{stroke:var(--anatomy-green)}
+.iso-line[data-tone="blue"]{stroke:var(--anatomy-blue)}
+.iso-line[data-dotted]{stroke-dasharray:.01 3.5;stroke-width:1}
+.iso-line[data-dashed]{stroke-dasharray:3 3}
+.iso-line[data-flow]{stroke-dasharray:2 6}
+.iso-wire-end{fill:var(--anatomy-paper);stroke:var(--anatomy-lo);stroke-width:var(--anatomy-weight)}
+.iso-wire[data-tone="hi"] .iso-wire-end{stroke:var(--anatomy-hi)}
+.iso-wire[data-tone="mid"] .iso-wire-end{stroke:var(--anatomy-mid)}
+.iso-wire[data-tone="faint"] .iso-wire-end{stroke:var(--anatomy-faint)}
+.iso-wire[data-tone="lit"] .iso-wire-end{stroke:var(--anatomy-lit)}
+.iso-dots circle{fill:var(--anatomy-dot);stroke:none;opacity:.32}
+.iso-dots[data-tone="hi"] circle{opacity:.85}
+.iso-dots[data-tone="mid"] circle{opacity:.45}
+.iso-dots[data-tone="lo"] circle{opacity:.22}
+.iso-dots[data-tone="faint"] circle{opacity:.12}
+.iso-face-text{fill:var(--anatomy-mid);font-family:var(--anatomy-mono);letter-spacing:.04em}
+.iso-face-text[data-tone="hi"]{fill:var(--anatomy-hi)}
+.iso-face-text[data-tone="lo"]{fill:var(--anatomy-lo)}
+.iso-face-text[data-tone="faint"]{fill:var(--anatomy-faint)}
+.tb-body{fill:var(--anatomy-shade-2);stroke:none}
+.tb-shine{fill:var(--anatomy-top);stroke:none}
+.tb-shade{fill:var(--anatomy-shade-0);stroke:none}
+.tb-ring{fill:none;stroke:var(--anatomy-lo);stroke-width:.45;stroke-linecap:butt;stroke-linejoin:round}
+.tb-ring[data-tone="mid"]{stroke:var(--anatomy-mid)}
+.tb-ring[data-tone="faint"]{stroke:var(--anatomy-faint)}
+.tb-ring[data-tone="hi"]{stroke:var(--anatomy-hi)}
+@keyframes iso-flow{to{stroke-dashoffset:-32}}
+@keyframes iso-pulse{0%,100%{opacity:.18}12%{opacity:1}40%{opacity:.18}}
+.iso-line[data-flow]{animation:iso-flow 1600ms linear infinite}
+.iso-dots circle[data-pulse]{animation:iso-pulse 1600ms steps(1,end) infinite;animation-delay:var(--pulse-at,0ms)}
+.iso-figure{margin:32px 0 36px}
+.iso-plate{position:relative;padding:52px 24px;border-radius:0;background:var(--anatomy-card);box-shadow:0 0 0 1px var(--anatomy-mid);--anatomy-paper:var(--anatomy-card)}
+.iso-plate-corners{position:absolute;inset:18px 20px;pointer-events:none}
+.iso-plate-corner{position:absolute;color:var(--anatomy-muted);font-family:var(--anatomy-mono);font-size:10.5px;line-height:1;letter-spacing:.04em;white-space:nowrap}
+.iso-plate-corner[data-corner="fig"]{top:0;left:0;color:var(--anatomy-text)}
+.iso-plate-corner[data-corner="title"]{top:0;right:0;text-transform:uppercase;letter-spacing:.1em}
+.iso-plate-corner[data-corner="hint"]{bottom:0;left:0;text-transform:uppercase;letter-spacing:.1em}
+.iso-plate-corner[data-corner="readout"]{right:0;bottom:0;color:var(--anatomy-text);font-variant-numeric:tabular-nums}
+.iso-plate .iso-svg{margin:0 auto}
+.iso-legend{display:grid;gap:8px;margin-top:12px;color:var(--anatomy-muted);font-size:13px;line-height:1.55}
+.iso-keys{display:flex;flex-wrap:wrap;gap:6px 18px}
+.iso-key{display:inline-flex;align-items:center;gap:7px}
+.iso-swatch{width:16px;height:10px;flex:none;overflow:visible}
+.iso-swatch path{fill:none;stroke:var(--anatomy-hi);stroke-width:1;vector-effect:non-scaling-stroke;stroke-linejoin:round;stroke-linecap:round}
+.iso-swatch[data-mark="raised"] path,.iso-swatch[data-mark="flat"] path{stroke:var(--anatomy-mid)}
+.iso-swatch[data-mark="lit"] path{stroke:var(--anatomy-lit)}
+.iso-swatch[data-mark="dim"] path{stroke:var(--anatomy-lo)}
+.iso-swatch[data-mark="dotted"] path{stroke-dasharray:.01 3;stroke-width:1.4}
+.iso-swatch[data-mark="dashed"] path{stroke-dasharray:3 2.5}
+.iso-swatch[data-mark="red"] path{stroke:var(--anatomy-red)}
+.iso-swatch[data-mark="green"] path{stroke:var(--anatomy-green)}
+.iso-swatch[data-mark="blue"] path{stroke:var(--anatomy-blue)}
+.iso-swatch-crease{stroke:var(--anatomy-lo)!important}
+@media (max-width:560px){.iso-plate{padding:48px 12px 70px}.iso-plate-corner[data-corner="hint"]{bottom:18px}}
+@media (prefers-reduced-motion:reduce){.iso-line[data-flow],.iso-dots circle[data-pulse]{animation:none}}
+
+*{box-sizing:border-box}
+html{color-scheme:dark}
+body[data-theme="light"]{color-scheme:light}
+body{margin:0;background:var(--anatomy-page);color:var(--anatomy-text);font:14px/1.6 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+.iso-page{width:min(900px,100% - 32px);margin:64px auto 96px}
+</style></head><body class="iso" data-theme="light"><main class="iso-page"><style>
+.iso{--unfold-blue:#58c4dd;--unfold-yellow:#f4d345;--unfold-red:#fc6255;--unfold-green:#83c167;--unfold-teal:#5cd0b3;--unfold-purple:#b48ad1;--unfold-gold:#f0ac5f;--unfold-on-hot:#0b0b0b;--unfold-serif:"Latin Modern Math","STIX Two Math","Cambria Math",math,serif}
+.iso[data-theme="light"]{--unfold-blue:#1f78a4;--unfold-yellow:#a67c00;--unfold-red:#cf3b2e;--unfold-green:#3e8a2a;--unfold-teal:#16866b;--unfold-purple:#7a4fa3;--unfold-gold:#b8661a;--unfold-on-hot:#ffffff}
+[data-hue="blue"]{--hue:var(--unfold-blue)}[data-hue="yellow"]{--hue:var(--unfold-yellow)}[data-hue="red"]{--hue:var(--unfold-red)}[data-hue="green"]{--hue:var(--unfold-green)}[data-hue="teal"]{--hue:var(--unfold-teal)}[data-hue="purple"]{--hue:var(--unfold-purple)}[data-hue="gold"]{--hue:var(--unfold-gold)}[data-hue="ink"]{--hue:var(--anatomy-hi)}
+.u-key{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 16px;margin-top:10px;color:var(--anatomy-muted);font-size:12px}
+.u-key>span{display:inline-flex;align-items:center;gap:6px}
+.u-key i{width:10px;height:10px;border-radius:2px;background:var(--hue)}
+.u-key i.u-hollow{background:none;box-shadow:inset 0 0 0 1.2px var(--anatomy-mid)}
+.u-key i.u-solid{background:var(--anatomy-mid)}
+.u-stage{position:relative;outline:none;container-type:inline-size}
+.u-stage:focus-visible{outline:1px solid var(--anatomy-faint);outline-offset:8px}
+.u-stage .iso-svg{overflow:visible}
+.u-eq,.u-say{display:grid;align-items:center}
+.u-eq>.u-at,.u-say>.u-at{grid-area:1/1;opacity:0;visibility:hidden;transition:opacity .45s var(--anatomy-ease),visibility 0s .45s;margin:0}
+.u-eq{min-height:44px;margin-bottom:8px;overflow-x:auto;overflow-y:hidden}
+.u-eq math{font-family:var(--unfold-serif);font-size:20px;color:var(--anatomy-strong)}
+.u-eq [data-hue]{color:var(--hue)}
+.u-say{min-height:48px;margin-top:6px;color:var(--anatomy-text);font-size:14px;line-height:1.55;text-align:center}
+.u-say>.u-at{max-width:62ch;justify-self:center}
+.u-say b{color:var(--anatomy-strong);font-weight:500}
+.u-say [data-hue]{color:var(--hue)}
+.u-steps{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin-top:14px}
+.u-steps button{display:inline-flex;align-items:center;gap:6px;padding:5px 10px 5px 6px;border:0;border-radius:999px;background:transparent;color:var(--anatomy-muted);font:11px/1 var(--anatomy-mono);letter-spacing:.04em;cursor:pointer;box-shadow:0 0 0 1px var(--anatomy-faint);transition:color .2s,box-shadow .2s}
+.u-steps button span{display:inline-grid;place-items:center;width:16px;height:16px;border-radius:50%;background:var(--anatomy-faint);color:var(--anatomy-text);font-size:10px}
+.u-steps button:hover{color:var(--anatomy-text)}
+.u-steps button[aria-current]{color:var(--anatomy-strong);box-shadow:0 0 0 1px var(--anatomy-mid)}
+.u-steps button[aria-current] span{background:var(--anatomy-strong);color:var(--anatomy-card)}
+.u-move{transition:transform .9s var(--anatomy-ease),opacity .6s var(--anatomy-ease)}
+.u-grid text,.u-chip text,.u-bars text,.u-arrow text{dominant-baseline:central;text-anchor:middle}
+.u-cell{transform:translate(var(--x),var(--y));transition:transform .9s var(--anatomy-ease) calc(var(--i) * 18ms)}
+.u-cell-bg{fill:var(--hue);fill-opacity:var(--a);stroke:none;transition:fill-opacity .35s}
+.u-cell[data-neg]>.u-cell-bg,.u-cell-bg[data-neg]{fill-opacity:calc(var(--a) * .18);stroke:var(--hue);stroke-opacity:var(--a);stroke-width:1.2}
+.u-cell[data-masked]>.u-cell-bg,.u-cell-bg[data-masked]{fill:none;stroke:var(--anatomy-faint);stroke-width:.8;stroke-dasharray:2 2}
+.u-num{font:500 10px var(--anatomy-mono);font-variant-numeric:tabular-nums;fill:var(--anatomy-strong)}
+.u-cell[data-hot] .u-num{fill:var(--unfold-on-hot)}
+.u-cell[data-masked] .u-num{fill:var(--anatomy-lo)}
+.u-name{font:italic 600 17px var(--unfold-serif);fill:var(--hue);dominant-baseline:auto!important;text-anchor:start!important}
+.u-dims{font:400 10px var(--anatomy-mono);font-style:normal;fill:var(--anatomy-muted)}
+.u-T,.u-dims-T{display:none}
+.u-mark{fill:none;stroke:var(--anatomy-strong);stroke-width:1.2;opacity:0;transition:opacity .3s}
+.u-mark[data-on]{opacity:.9}
+.u-chip rect{fill:var(--anatomy-card);stroke:var(--anatomy-mid);stroke-width:.8;transition:stroke .25s,fill .25s}
+.u-chip text{font:500 11px var(--anatomy-mono);fill:var(--anatomy-text);transition:fill .25s}
+.u-chip[data-hue] rect{stroke:var(--hue)}
+.u-chip[data-hue] text{fill:var(--hue)}
+.u-cell[data-later],.u-mark[data-later]{opacity:0!important;transition:opacity .3s}
+.u-plot-axis{stroke:var(--anatomy-mid);stroke-width:.9;fill:none}
+.u-plot-grid{stroke:var(--anatomy-faint);stroke-width:.6;fill:none}
+.u-tick-label{font:10px var(--anatomy-mono);fill:var(--anatomy-muted)}
+.u-plot-name{font:italic 600 15px var(--unfold-serif);fill:var(--hue,var(--anatomy-text))}
+.u-curve{fill:none;stroke:var(--hue,var(--anatomy-hi));stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.u-chip[data-on] rect{fill:var(--anatomy-strong);stroke:var(--anatomy-strong)}
+.u-chip[data-on] text{fill:var(--anatomy-card)}
+.u-chip[data-i]{cursor:pointer}
+.u-arrow{--w:1.1;color:var(--anatomy-mid)}
+.u-arrow[data-hue]{color:var(--hue)}
+.u-arrow-line{fill:none;stroke:currentColor;stroke-width:var(--w);stroke-linecap:round;transition:stroke-width .4s,opacity .4s}
+.u-arrow-head{fill:currentColor}
+.u-bar-fill{fill:var(--hue);transform-box:fill-box;transform-origin:50% 100%;transform:scaleY(var(--v));transition:transform .6s var(--anatomy-ease)}
+.u-bar-value{font:500 10px var(--anatomy-mono);fill:var(--anatomy-strong);transition:y .6s var(--anatomy-ease)}
+.u-bar-label{font:11px var(--anatomy-mono);fill:var(--anatomy-muted)}
+.u-axis{stroke:var(--anatomy-mid);stroke-width:.8;fill:none}
+.u-link{fill:none;stroke:var(--hue,var(--anatomy-mid));stroke-width:1.1;stroke-linecap:round;transition:d .9s var(--anatomy-ease),opacity .5s var(--anatomy-ease),stroke .3s}
+.u-link[data-off]{opacity:0}
+.u-eq>.u-at{text-align:center}
+.u-eq .u-rule{font:500 14px/1.5 var(--anatomy-mono);color:var(--anatomy-strong);letter-spacing:.01em}
+.u-lane-bg{fill:var(--anatomy-faint);fill-opacity:.18;stroke:var(--anatomy-faint);stroke-width:.6}
+.u-lane-name{font:11px var(--anatomy-mono);fill:var(--hue,var(--anatomy-muted));text-anchor:end;dominant-baseline:central}
+.u-tick{stroke:var(--anatomy-faint);stroke-width:.6}
+.u-tick-label{font:9px var(--anatomy-mono);fill:var(--anatomy-muted);text-anchor:middle;dominant-baseline:central}
+.u-now{stroke:var(--anatomy-strong);stroke-width:1.2;transition:transform .5s var(--anatomy-ease)}
+.u-span-bar{fill:var(--hue,var(--anatomy-mid));fill-opacity:.9;transform-box:fill-box;transform-origin:0 50%;transform:scaleX(var(--v,1));transition:transform .5s var(--anatomy-ease)}
+.u-span-label{opacity:0;transition:opacity .3s}
+.u-span[data-labeled] .u-span-label{opacity:1}
+.u-span-label text{font:500 10px var(--anatomy-mono);fill:var(--unfold-on-hot);dominant-baseline:central}
+.u-face .u-cell-bg{stroke-width:.5}
+.u-cell-bg{transform-box:fill-box;transform-origin:50% 50%}
+.u-cell[data-hl]>.u-cell-bg{stroke:var(--anatomy-strong);stroke-opacity:1;stroke-width:1.6;animation:u-ping .5s var(--anatomy-ease)}
+.u-pulse{fill:var(--hue,var(--anatomy-strong));filter:drop-shadow(0 0 3px var(--hue,var(--anatomy-strong)))}
+.u-rise{transform-box:fill-box}
+@keyframes u-pop{from{opacity:0;transform:scale(.4)}}
+@keyframes u-fade{from{opacity:0}}
+@keyframes u-rise{from{opacity:0;transform:translateY(-14px)}}
+@keyframes u-grow{from{transform:scaleY(0)}}
+@keyframes u-draw{from{stroke-dasharray:1;stroke-dashoffset:1}to{stroke-dasharray:1;stroke-dashoffset:0}}
+@keyframes u-ping{from{stroke-width:4;stroke-opacity:0}}
+.u-floor-text{font-family:var(--unfold-serif);font-style:italic;font-weight:600;fill:var(--hue,var(--anatomy-text))}
+.u-floor-label{font-family:var(--anatomy-mono);fill:var(--anatomy-muted)}
+.u-guide{fill:none;stroke:var(--anatomy-lo);stroke-width:.8;stroke-dasharray:2 3}
+.u-controls{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px 18px;margin-top:10px}
+.u-controls button{border:0;border-radius:999px;background:transparent;color:var(--anatomy-muted);font:11px/1 var(--anatomy-mono);letter-spacing:.04em;padding:6px 10px;cursor:pointer;box-shadow:0 0 0 1px var(--anatomy-faint);transition:color .2s,box-shadow .2s}
+.u-controls button:hover{color:var(--anatomy-text)}
+.u-controls button[aria-pressed="true"]{color:var(--anatomy-strong);box-shadow:0 0 0 1px var(--anatomy-mid)}
+.u-time{display:flex;align-items:center;gap:8px;flex:1 1 260px;max-width:440px;transition:opacity .4s}
+.u-time button{width:28px;height:28px;padding:0;font-size:15px}
+.u-time input{flex:1;min-width:80px;accent-color:var(--anatomy-hi)}
+.u-time output{font:11px var(--anatomy-mono);color:var(--anatomy-muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.u-notes{margin-top:56px;color:var(--anatomy-text);font-size:14px;line-height:1.65}
+.u-notes h2{margin:36px 0 10px;font:500 13px var(--anatomy-mono);letter-spacing:.04em;color:var(--anatomy-strong)}
+.u-notes p,.u-notes ul{margin:0 0 12px;max-width:72ch}
+.u-notes li{margin-bottom:6px}
+.u-notes b{color:var(--anatomy-strong);font-weight:500}
+.u-notes code{font:12.5px var(--anatomy-mono);color:var(--anatomy-strong)}
+.u-notes table{width:100%;border-collapse:collapse;font-size:13px;line-height:1.5}
+.u-notes th,.u-notes td{padding:7px 10px 7px 0;border-bottom:1px solid var(--anatomy-faint);text-align:left;vertical-align:top}
+.u-notes th{color:var(--anatomy-muted);font:500 11.5px var(--anatomy-mono);letter-spacing:.03em}
+.u-notes svg{display:block;width:100%;max-width:640px;height:auto;margin:6px 0 14px;overflow:visible}
+.u-notes td:first-child{color:var(--anatomy-strong);white-space:nowrap}
+@media (max-width:560px){.u-notes thead{display:none}.u-notes tr{display:block;padding:8px 0;border-bottom:1px solid var(--anatomy-faint)}.u-notes td{display:block;padding:2px 0;border:0}.u-notes td[data-th]:not(:first-child)::before{content:attr(data-th) ": ";color:var(--anatomy-muted)}}
+@container (max-width:520px){.u-num,.u-bar-value{display:none}.u-eq math{font-size:14px}.u-steps button{font-size:0;gap:0;padding:4px}}
+@media (max-width:560px){.iso-plate-corner[data-corner="readout"]{left:0;white-space:normal;text-align:right;line-height:1.4}.iso-plate-corner[data-corner="hint"]{display:none}}
+@media (prefers-reduced-motion:reduce){.u-stage *{transition:none!important;animation:none!important}.u-pulse{display:none}}
+</style><figure class="iso-figure"><div class="iso-plate"><div class="iso-plate-corners" aria-hidden="true"><span class="iso-plate-corner" data-corner="fig">Fig 1</span><span class="iso-plate-corner" data-corner="title">Gradient descent</span><span class="iso-plate-corner" data-corner="hint">← → scene · , . step · ↑ ↓ learning rate</span><span class="iso-plate-corner" data-corner="readout" data-readout>L(1) = (1 − 3)² = 4</span></div><style>.u-stage[data-scene="0"] .u-at[data-at="0"]{opacity:1;visibility:visible;transition-delay:.15s}
+.u-stage[data-scene="0"] .u-grid[data-t~="0"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="0"] .u-grid[data-t~="0"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="0"] .u-grid[data-t~="0"] .u-dims:not(.u-dims-T),.u-stage[data-scene="0"] .u-grid[data-t~="0"] .u-mark{display:none}
+.u-stage[data-scene="1"] .u-at[data-at="1"]{opacity:1;visibility:visible;transition-delay:.15s}
+.u-stage[data-scene="1"] .u-grid[data-t~="1"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="1"] .u-grid[data-t~="1"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="1"] .u-grid[data-t~="1"] .u-dims:not(.u-dims-T),.u-stage[data-scene="1"] .u-grid[data-t~="1"] .u-mark{display:none}
+.u-stage[data-scene="2"] .u-at[data-at="2"]{opacity:1;visibility:visible;transition-delay:.15s}
+.u-stage[data-scene="2"] .u-grid[data-t~="2"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="2"] .u-grid[data-t~="2"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="2"] .u-grid[data-t~="2"] .u-dims:not(.u-dims-T),.u-stage[data-scene="2"] .u-grid[data-t~="2"] .u-mark{display:none}
+.u-stage[data-scene="3"] .u-at[data-at="3"]{opacity:1;visibility:visible;transition-delay:.15s}
+.u-stage[data-scene="3"] .u-grid[data-t~="3"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="3"] .u-grid[data-t~="3"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="3"] .u-grid[data-t~="3"] .u-dims:not(.u-dims-T),.u-stage[data-scene="3"] .u-grid[data-t~="3"] .u-mark{display:none}
+.u-stage[data-scene="4"] .u-at[data-at="4"]{opacity:1;visibility:visible;transition-delay:.15s}
+.u-stage[data-scene="4"] .u-grid[data-t~="4"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="4"] .u-grid[data-t~="4"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="4"] .u-grid[data-t~="4"] .u-dims:not(.u-dims-T),.u-stage[data-scene="4"] .u-grid[data-t~="4"] .u-mark{display:none}
+.u-stage[data-scene="5"] .u-at[data-at="5"]{opacity:1;visibility:visible;transition-delay:.15s}
+.u-stage[data-scene="5"] .u-grid[data-t~="5"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="5"] .u-grid[data-t~="5"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="5"] .u-grid[data-t~="5"] .u-dims:not(.u-dims-T),.u-stage[data-scene="5"] .u-grid[data-t~="5"] .u-mark{display:none}
+.u-stage[data-scene="6"] .u-at[data-at="6"]{opacity:1;visibility:visible;transition-delay:.15s}
+.u-stage[data-scene="6"] .u-grid[data-t~="6"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="6"] .u-grid[data-t~="6"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="6"] .u-grid[data-t~="6"] .u-dims:not(.u-dims-T),.u-stage[data-scene="6"] .u-grid[data-t~="6"] .u-mark{display:none}.u-stage:not(:is([data-scene="3"],[data-scene="4"],[data-scene="5"],[data-scene="6"])) .u-time{opacity:.4}.el-lab{font:500 11px var(--anatomy-mono);fill:var(--anatomy-muted);paint-order:stroke;stroke:var(--anatomy-card);stroke-width:3px;stroke-linejoin:round}
+.el-hue[data-hue],.el-hue [data-hue]{fill:var(--hue)}
+.el-min circle{fill:var(--anatomy-hi)}
+.el-move{transition:transform .6s var(--anatomy-ease),opacity .4s}
+.el-point{fill:var(--unfold-yellow);stroke:var(--anatomy-card);stroke-width:1.5}
+.el-ghost{fill:none;stroke:var(--unfold-yellow);stroke-width:1.3;stroke-dasharray:2 2}
+.el-height{stroke:var(--unfold-blue);stroke-width:2.2;fill:none;transition:d .6s var(--anatomy-ease)}
+.el-tangent{stroke:var(--unfold-red);stroke-width:1.6;fill:none;stroke-linecap:round;transition:d .6s var(--anatomy-ease)}
+.el-trail{stroke:var(--unfold-green);stroke-width:1.2;fill:none;stroke-opacity:.7;stroke-dasharray:3 2;transition:d .6s var(--anatomy-ease)}
+.el-dot{transition:transform .6s var(--anatomy-ease),opacity .4s}.el-dot circle{fill:var(--unfold-yellow);fill-opacity:.55}
+.el-sline{stroke:var(--unfold-green);stroke-width:1.8;fill:none;transition:d .6s var(--anatomy-ease)}
+.el-shead{fill:var(--unfold-green);transition:d .6s var(--anatomy-ease)}
+.el-gapline{stroke:var(--unfold-purple);stroke-width:1.6;fill:none;transition:d .6s var(--anatomy-ease)}
+:is(.el-slope,.el-stepviz,.el-gap,#hlab,.el-col,#ttl){transition:opacity .45s var(--anatomy-ease)}
+.u-stage[data-scene="0"] .el-slope{opacity:0}
+.u-stage[data-scene="0"] .el-stepviz{opacity:0}
+.u-stage[data-scene="1"] .el-stepviz{opacity:0}
+.u-stage[data-scene="0"] .el-gap{opacity:0}
+.u-stage[data-scene="1"] .el-gap{opacity:0}
+.u-stage[data-scene="2"] .el-gap{opacity:0}
+.u-stage[data-scene="3"] .el-gap{opacity:0}
+.u-stage[data-scene="4"] .el-gap{opacity:0}
+.u-stage[data-scene="5"] .el-gap{opacity:0}
+.u-stage[data-scene="0"] .col-g{opacity:0}
+.u-stage[data-scene="0"] .col-s{opacity:0}
+.u-stage[data-scene="1"] .col-s{opacity:0}
+.u-stage[data-scene="0"] #ttl{opacity:0}
+.u-stage[data-scene="1"] #ttl{opacity:0}
+.u-stage[data-scene="0"] #verdict{opacity:0}
+.u-stage[data-scene="1"] #verdict{opacity:0}
+.u-stage[data-scene="2"] #verdict{opacity:0}
+.u-stage[data-scene="3"] #verdict{opacity:0}
+.u-stage[data-scene="4"] #verdict{opacity:0}
+.u-stage[data-scene="5"] #verdict{opacity:0}
+.el-verdict{font:12px var(--anatomy-mono);fill:var(--anatomy-strong);transition:opacity .45s}
+.el-ttl{font:500 12px var(--anatomy-mono);fill:var(--unfold-green)}
+.el-head{font:italic 600 15px var(--unfold-serif);fill:var(--anatomy-muted)}
+.el-head [data-hue]{fill:var(--hue)}
+.el-t{font:11px var(--anatomy-mono);fill:var(--anatomy-muted);dominant-baseline:central;transition:opacity .3s}
+.el-t[data-later]{opacity:0}
+.el-right .u-num{font-size:11px}
+.el-right{transform:translate(445px,60px)}
+.u-stage[data-narrow] .el-right{transform:translate(32px,370px)}
+.u-stage[data-narrow] .el-right .u-num{display:inline;font-size:12px}
+.u-stage[data-narrow] :is(.el-lab,.u-tick-label){font-size:13px}
+.el-eta{display:inline-flex;align-items:center;gap:8px;font:12px var(--anatomy-mono);color:var(--anatomy-muted);transition:opacity .4s}
+.el-eta span{font:italic 600 16px var(--unfold-serif);color:var(--unfold-green)}
+.el-eta input{width:140px;accent-color:var(--unfold-green)}
+.el-eta output{min-width:3.2em;color:var(--anatomy-strong);font-variant-numeric:tabular-nums}
+.u-stage:not([data-scene="6"]) .el-eta{opacity:.5}</style><div class="u-stage" tabindex="0" role="group" aria-roledescription="explainer" aria-label="Gradient descent explainer. Left and right arrows change the scene. Comma and period step through the 6 steps. Up and down arrows change the learning rate." data-scene="0" data-count="7" data-dwell="10000" data-narrow-box="0 0 400 600"><div class="u-eq" aria-live="polite"><div class="u-at" data-at="0"><math display="block"><mi data-hue="blue">L</mi><mo>(</mo><mi data-hue="yellow">w</mi><mo>)</mo><mo>=</mo><msup><mrow><mo>(</mo><mi data-hue="yellow">w</mi><mo>−</mo><mn>3</mn><mo>)</mo></mrow><mn>2</mn></msup></math></div><div class="u-at" data-at="1"><math display="block"><msup><mi data-hue="red">L</mi><mo>′</mo></msup><mo>(</mo><mi data-hue="yellow">w</mi><mo>)</mo><mo>=</mo><mn>2</mn><mo>(</mo><mi data-hue="yellow">w</mi><mo>−</mo><mn>3</mn><mo>)</mo></math></div><div class="u-at" data-at="2"><math display="block"><msub><mi data-hue="yellow">w</mi><mrow><mi>t</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>=</mo><msub><mi data-hue="yellow">w</mi><mi>t</mi></msub><mo>−</mo><mi data-hue="green">η</mi><mo>·</mo><msup><mi data-hue="red">L</mi><mo>′</mo></msup><mo>(</mo><msub><mi data-hue="yellow">w</mi><mi>t</mi></msub><mo>)</mo></math></div><div class="u-at" data-at="3"><math display="block"><msub><mi data-hue="yellow">w</mi><mrow><mi>t</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>=</mo><msub><mi data-hue="yellow">w</mi><mi>t</mi></msub><mo>−</mo><mn data-hue="green">0.05</mn><mo>·</mo><msup><mi data-hue="red">L</mi><mo>′</mo></msup><mo>(</mo><msub><mi data-hue="yellow">w</mi><mi>t</mi></msub><mo>)</mo></math></div><div class="u-at" data-at="4"><math display="block"><msub><mi data-hue="yellow">w</mi><mrow><mi>t</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>=</mo><msub><mi data-hue="yellow">w</mi><mi>t</mi></msub><mo>−</mo><mn data-hue="green">0.25</mn><mo>·</mo><msup><mi data-hue="red">L</mi><mo>′</mo></msup><mo>(</mo><msub><mi data-hue="yellow">w</mi><mi>t</mi></msub><mo>)</mo></math></div><div class="u-at" data-at="5"><math display="block"><msub><mi data-hue="yellow">w</mi><mrow><mi>t</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>=</mo><msub><mi data-hue="yellow">w</mi><mi>t</mi></msub><mo>−</mo><mn data-hue="green">1.05</mn><mo>·</mo><msup><mi data-hue="red">L</mi><mo>′</mo></msup><mo>(</mo><msub><mi data-hue="yellow">w</mi><mi>t</mi></msub><mo>)</mo></math></div><div class="u-at" data-at="6"><math display="block"><msub><mi data-hue="yellow">w</mi><mrow><mi>t</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>−</mo><mn>3</mn><mo>=</mo><mo>(</mo><mn>1</mn><mo>−</mo><mn>2</mn><mi data-hue="green">η</mi><mo>)</mo><mrow data-hue="purple"><mo>(</mo><msub><mi data-hue="yellow">w</mi><mi>t</mi></msub><mo>−</mo><mn>3</mn><mo>)</mo></mrow></math></div></div><svg xmlns="http://www.w3.org/2000/svg" class="iso-svg" viewBox="0 0 820 350" role="img" aria-label="Gradient descent on the loss L(w) = (w − 3)², with the weight as a point on the curve, the slope as a tangent, each step as an arrow, and a table of every step."><g class="el-left"><g class="u-plot" id="plot"><path class="u-plot-grid" d="M40 26V288M82.5 26V288M125 26V288M167.5 26V288M210 26V288M252.5 26V288M295 26V288M337.5 26V288M380 26V288M40 207.4H380M40 126.8H380M40 46.2H380"/><path class="u-plot-axis" d="M40 288H380M82.5 26V288M40 288v4M82.5 288v4M125 288v4M167.5 288v4M210 288v4M252.5 288v4M295 288v4M337.5 288v4M380 288v4M82.5 207.4h-4M82.5 126.8h-4M82.5 46.2h-4"/><text class="u-tick-label" x="40" y="303" text-anchor="middle">−1</text><text class="u-tick-label" x="82.5" y="303" text-anchor="middle">0</text><text class="u-tick-label" x="125" y="303" text-anchor="middle">1</text><text class="u-tick-label" x="167.5" y="303" text-anchor="middle">2</text><text class="u-tick-label" x="210" y="303" text-anchor="middle">3</text><text class="u-tick-label" x="252.5" y="303" text-anchor="middle">4</text><text class="u-tick-label" x="295" y="303" text-anchor="middle">5</text><text class="u-tick-label" x="337.5" y="303" text-anchor="middle">6</text><text class="u-tick-label" x="380" y="303" text-anchor="middle">7</text><text class="u-tick-label" x="75.5" y="210.9" text-anchor="end">4</text><text class="u-tick-label" x="75.5" y="130.3" text-anchor="end">8</text><text class="u-tick-label" x="75.5" y="49.7" text-anchor="end">12</text><text class="u-plot-name" data-hue="yellow" x="386" y="292">w</text><text class="u-plot-name" data-hue="blue" x="82.5" y="18" text-anchor="middle">L</text><path class="u-curve" data-hue="blue" d="M57 26.8L59.1 34L61.3 41.1L63.4 48.1L65.5 55L67.6 61.8L69.8 68.5L71.9 75.1L74 81.6L76.1 88L78.3 94.3L80.4 100.5L82.5 106.6L84.6 112.6L86.8 118.5L88.9 124.3L91 130L93.1 135.6L95.3 141.1L97.4 146.5L99.5 151.8L101.6 156.9L103.8 162L105.9 167L108 171.9L110.1 176.7L112.3 181.4L114.4 186L116.5 190.5L118.6 194.8L120.8 199.1L122.9 203.3L125 207.4L127.1 211.4L129.3 215.2L131.4 219L133.5 222.7L135.6 226.3L137.8 229.8L139.9 233.1L142 236.4L144.1 239.6L146.3 242.7L148.4 245.6L150.5 248.5L152.6 251.3L154.8 253.9L156.9 256.5L159 259L161.1 261.3L163.3 263.6L165.4 265.8L167.5 267.8L169.6 269.8L171.8 271.7L173.9 273.4L176 275.1L178.1 276.7L180.3 278.1L182.4 279.5L184.5 280.7L186.6 281.9L188.8 283L190.9 283.9L193 284.8L195.1 285.5L197.3 286.2L199.4 286.7L201.5 287.2L203.6 287.5L205.8 287.8L207.9 287.9L210 288L212.1 287.9L214.2 287.8L216.4 287.5L218.5 287.2L220.6 286.7L222.8 286.2L224.9 285.5L227 284.8L229.1 283.9L231.3 283L233.4 281.9L235.5 280.7L237.6 279.5L239.8 278.1L241.9 276.7L244 275.1L246.1 273.4L248.3 271.7L250.4 269.8L252.5 267.8L254.6 265.8L256.8 263.6L258.9 261.3L261 259L263.1 256.5L265.3 253.9L267.4 251.3L269.5 248.5L271.6 245.6L273.8 242.7L275.9 239.6L278 236.4L280.1 233.1L282.3 229.8L284.4 226.3L286.5 222.7L288.6 219L290.8 215.2L292.9 211.4L295 207.4L297.1 203.3L299.3 199.1L301.4 194.8L303.5 190.5L305.6 186L307.8 181.4L309.9 176.7L312 171.9L314.1 167L316.3 162L318.4 156.9L320.5 151.8L322.6 146.5L324.8 141.1L326.9 135.6L329 130L331.1 124.3L333.3 118.5L335.4 112.6L337.5 106.6L339.6 100.5L341.8 94.3L343.9 88L346 81.6L348.1 75.1L350.3 68.5L352.4 61.8L354.5 55L356.6 48.1L358.8 41.1L360.9 34L363 26.8"/></g><g class="el-min"><path class="u-guide" d="M210 288V241.64615384615385"/><circle cx="210" cy="288" r="2.6"/><text class="el-lab" x="210" y="233.58461538461538" text-anchor="middle">lowest loss</text></g><g class="el-stepviz"><path id="trail" class="el-trail" d=""/><g class="el-dot" data-i="0" style="transform:translate(125px,207.4px)"><circle r="2.4"/></g><g class="el-dot" data-i="1" style="transform:translate(125px,207.4px)"><circle r="2.4"/></g><g class="el-dot" data-i="2" style="transform:translate(125px,207.4px)"><circle r="2.4"/></g><g class="el-dot" data-i="3" style="transform:translate(125px,207.4px)"><circle r="2.4"/></g><g class="el-dot" data-i="4" style="transform:translate(125px,207.4px)"><circle r="2.4"/></g><g class="el-dot" data-i="5" style="transform:translate(125px,207.4px)"><circle r="2.4"/></g><g class="el-dot" data-i="6" style="transform:translate(125px,207.4px)"><circle r="2.4"/></g></g><path id="height" class="el-height" d="M125 288V207.4"/><g id="hlab" class="el-move" style="transform:translate(119px,247.7px)"><text class="el-lab el-hue" data-hue="blue" x="0" y="4" text-anchor="end">L</text></g><g class="el-slope"><path id="tangent" class="el-tangent" d=""/><g id="slab" class="el-move"><text class="el-lab el-hue" data-hue="red" x="0" y="0">slope</text></g></g><g class="el-stepviz"><g id="ghost" class="el-move" style="transform:translate(125px,207.4px)"><circle class="el-ghost" r="5"/></g><g class="el-step"><path id="sline" class="el-sline" d=""/><path id="shead" class="el-shead" d=""/><g id="slab2" class="el-move"><text class="el-lab el-hue" data-hue="green" x="0" y="0" text-anchor="middle">step</text></g></g></g><g class="el-gap"><path id="gap" class="el-gapline" d=""/><g id="glab" class="el-move"><text class="el-lab el-hue" data-hue="purple" x="0" y="0" text-anchor="middle"></text></g></g><g id="point" class="el-move" style="transform:translate(125px,207.4px)"><circle class="el-point" r="5"/></g><g id="wlab" class="el-move" style="transform:translate(125px,318px)"><text class="el-lab el-hue" data-hue="yellow" x="0" y="0" text-anchor="middle">w = 1.000</text></g></g><g class="el-right"><text id="ttl" class="el-ttl" x="0" y="0">η = 0.25</text><text id="verdict" class="el-verdict" x="0" y="222"></text><text class="el-head" x="8" y="30" text-anchor="middle">t</text><text class="el-t" data-r="0" x="8" y="55" text-anchor="middle">0</text><text class="el-t" data-r="1" x="8" y="77" text-anchor="middle">1</text><text class="el-t" data-r="2" x="8" y="99" text-anchor="middle">2</text><text class="el-t" data-r="3" x="8" y="121" text-anchor="middle">3</text><text class="el-t" data-r="4" x="8" y="143" text-anchor="middle">4</text><text class="el-t" data-r="5" x="8" y="165" text-anchor="middle">5</text><text class="el-t" data-r="6" x="8" y="187" text-anchor="middle">6</text><g class="el-col " transform="translate(30 0)"><text class="el-head el-hue" x="36" y="30" text-anchor="middle"><tspan data-hue="yellow">w</tspan></text><g transform="translate(0 44)"><g class="u-grid " id="gW" data-hue="yellow" data-max="7" data-places="3"><rect class="u-mark" data-r="0" x="-2" y="-1" width="76" height="24" rx="3"/><rect class="u-mark" data-r="1" x="-2" y="21" width="76" height="24" rx="3"/><rect class="u-mark" data-r="2" x="-2" y="43" width="76" height="24" rx="3"/><rect class="u-mark" data-r="3" x="-2" y="65" width="76" height="24" rx="3"/><rect class="u-mark" data-r="4" x="-2" y="87" width="76" height="24" rx="3"/><rect class="u-mark" data-r="5" x="-2" y="109" width="76" height="24" rx="3"/><rect class="u-mark" data-r="6" x="-2" y="131" width="76" height="24" rx="3"/><g class="u-cell" data-r="0" data-c="0" style="--x:0px;--y:0px;--tx:0px;--ty:0px;--i:0;--r:0;--c:0"><rect class="u-cell-bg" x=".75" y=".75" width="70.5" height="20.5" rx="2" style="--a:0.21"/><text class="u-num" x="36" y="11">1.000</text></g><g class="u-cell" data-r="1" data-c="0" style="--x:0px;--y:22px;--tx:72px;--ty:0px;--i:1;--r:1;--c:0"><rect class="u-cell-bg" x=".75" y=".75" width="70.5" height="20.5" rx="2" style="--a:0.33"/><text class="u-num" x="36" y="11">2.000</text></g><g class="u-cell" data-r="2" data-c="0" style="--x:0px;--y:44px;--tx:144px;--ty:0px;--i:2;--r:2;--c:0"><rect class="u-cell-bg" x=".75" y=".75" width="70.5" height="20.5" rx="2" style="--a:0.39"/><text class="u-num" x="36" y="11">2.500</text></g><g class="u-cell" data-r="3" data-c="0" style="--x:0px;--y:66px;--tx:216px;--ty:0px;--i:3;--r:3;--c:0"><rect class="u-cell-bg" x=".75" y=".75" width="70.5" height="20.5" rx="2" style="--a:0.41"/><text class="u-num" x="36" y="11">2.750</text></g><g class="u-cell" data-r="4" data-c="0" style="--x:0px;--y:88px;--tx:288px;--ty:0px;--i:4;--r:4;--c:0"><rect class="u-cell-bg" x=".75" y=".75" width="70.5" height="20.5" rx="2" style="--a:0.43"/><text class="u-num" x="36" y="11">2.875</text></g><g class="u-cell" data-r="5" data-c="0" style="--x:0px;--y:110px;--tx:360px;--ty:0px;--i:5;--r:5;--c:0"><rect class="u-cell-bg" x=".75" y=".75" width="70.5" height="20.5" rx="2" style="--a:0.44"/><text class="u-num" x="36" y="11">2.938</text></g><g class="u-cell" data-r="6" data-c="0" style="--x:0px;--y:132px;--tx:432px;--ty:0px;--i:6;--r:6;--c:0"><rect class="u-cell-bg" x=".75" y=".75" width="70.5" height="20.5" rx="2" style="--a:0.44"/><text class="u-num" x="36" y="11">2.969</text></g></g></g></g><g class="el-col col-g" transform="translate(108 0)"><text class="el-head el-hue" x="36" y="30" text-anchor="middle"><tspan data-hue="red">L′(w)</tspan></text><g transform="translate(0 44)"><g class="u-grid " id="gG" data-hue="red" data-max="8" data-places="3"><rect class="u-mark" data-r="0" x="-2" y="-1" width="76" height="24" rx="3"/><rect class="u-mark" data-r="1" x="-2" y="21" width="76" height="24" rx="3"/><rect class="u-mark" data-r="2" x="-2" y="43" width="76" height="24" rx="3"/><rect class="u-mark" data-r="3" x="-2" y="65" width="76" height="24" rx="3"/><rect class="u-mark" data-r="4" x="-2" y="87" width="76" height="24" rx="3"/><rect class="u-mark" data-r="5" x="-2" y="109" width="76" height="24" rx="3"/><rect class="u-mark" data-r="6" x="-2" y="131" width="76" height="24" rx="3"/><g class="u-cell" data-r="0" data-c="0" data-neg style="--x:0px;--y:0px;--tx:0px;--ty:0px;--i:0;--r:0;--c:0"><rect class="u-cell-bg" x=".75" y=".75" width="70.5" height="20.5" rx="2" style="--a:0.50"/><text class="u-num" x="36" y="11">−4.000</text></g><g class="u-cell" data-r="1" data-c="0" data-neg style="--x:0px;--y:22px;--tx:72px;--ty:0px;--i:1;--r:1;--c:0"><rect class="u-cell-bg" x=".75" y=".75" width="70.5" height="20.5" rx="2" style="--a:0.30"/><text class="u-num" x="36" y="11">−2.000</text></g><g class="u-cell" data-r="2" data-c="0" data-neg style="--x:0px;--y:44px;--tx:144px;--ty:0px;--i:2;--r:2;--c:0"><rect class="u-cell-bg" x=".75" y=".75" width="70.5" height="20.5" rx="2" style="--a:0.20"/><text class="u-num" x="36" y="11">−1.000</text></g><g class="u-cell" data-r="3" data-c="0" data-neg style="--x:0px;--y:66px;--tx:216px;--ty:0px;--i:3;--r:3;--c:0"><rect class="u-cell-bg" x=".75" y=".75" width="70.5" height="20.5" rx="2" style="--a:0.15"/><text class="u-num" x="36" y="11">−0.500</text></g><g class="u-cell" data-r="4" data-c="0" data-neg style="--x:0px;--y:88px;--tx:288px;--ty:0px;--i:4;--r:4;--c:0"><rect class="u-cell-bg" x=".75" y=".75" width="70.5" height="20.5" rx="2" style="--a:0.13"/><text class="u-num" x="36" y="11">−0.250</text></g><g class="u-cell" data-r="5" data-c="0" data-neg style="--x:0px;--y:110px;--tx:360px;--ty:0px;--i:5;--r:5;--c:0"><rect class="u-cell-bg" x=".75" y=".75" width="70.5" height="20.5" rx="2" style="--a:0.11"/><text class="u-num" x="36" y="11">−0.125</text></g><g class="u-cell" data-r="6" data-c="0" data-neg style="--x:0px;--y:132px;--tx:432px;--ty:0px;--i:6;--r:6;--c:0"><rect class="u-cell-bg" x=".75" y=".75" width="70.5" height="20.5" rx="2" style="--a:0.11"/><text class="u-num" x="36" y="11">−0.063</text></g></g></g></g><g class="el-col col-s" transform="translate(186 0)"><text class="el-head el-hue" x="36" y="30" text-anchor="middle"><tspan data-hue="green">−η·L′</tspan></text><g transform="translate(0 44)"><g class="u-grid " id="gS" data-hue="green" data-max="8" data-places="3"><rect class="u-mark" data-r="0" x="-2" y="-1" width="76" height="24" rx="3"/><rect class="u-mark" data-r="1" x="-2" y="21" width="76" height="24" rx="3"/><rect class="u-mark" data-r="2" x="-2" y="43" width="76" height="24" rx="3"/><rect class="u-mark" data-r="3" x="-2" y="65" width="76" height="24" rx="3"/><rect class="u-mark" data-r="4" x="-2" y="87" width="76" height="24" rx="3"/><rect class="u-mark" data-r="5" x="-2" y="109" width="76" height="24" rx="3"/><rect class="u-mark" data-r="6" x="-2" y="131" width="76" height="24" rx="3"/><g class="u-cell" data-r="0" data-c="0" style="--x:0px;--y:0px;--tx:0px;--ty:0px;--i:0;--r:0;--c:0"><rect class="u-cell-bg" x=".75" y=".75" width="70.5" height="20.5" rx="2" style="--a:0.20"/><text class="u-num" x="36" y="11">1.000</text></g><g class="u-cell" data-r="1" data-c="0" style="--x:0px;--y:22px;--tx:72px;--ty:0px;--i:1;--r:1;--c:0"><rect class="u-cell-bg" x=".75" y=".75" width="70.5" height="20.5" rx="2" style="--a:0.15"/><text class="u-num" x="36" y="11">0.500</text></g><g class="u-cell" data-r="2" data-c="0" style="--x:0px;--y:44px;--tx:144px;--ty:0px;--i:2;--r:2;--c:0"><rect class="u-cell-bg" x=".75" y=".75" width="70.5" height="20.5" rx="2" style="--a:0.13"/><text class="u-num" x="36" y="11">0.250</text></g><g class="u-cell" data-r="3" data-c="0" style="--x:0px;--y:66px;--tx:216px;--ty:0px;--i:3;--r:3;--c:0"><rect class="u-cell-bg" x=".75" y=".75" width="70.5" height="20.5" rx="2" style="--a:0.11"/><text class="u-num" x="36" y="11">0.125</text></g><g class="u-cell" data-r="4" data-c="0" style="--x:0px;--y:88px;--tx:288px;--ty:0px;--i:4;--r:4;--c:0"><rect class="u-cell-bg" x=".75" y=".75" width="70.5" height="20.5" rx="2" style="--a:0.11"/><text class="u-num" x="36" y="11">0.063</text></g><g class="u-cell" data-r="5" data-c="0" style="--x:0px;--y:110px;--tx:360px;--ty:0px;--i:5;--r:5;--c:0"><rect class="u-cell-bg" x=".75" y=".75" width="70.5" height="20.5" rx="2" style="--a:0.10"/><text class="u-num" x="36" y="11">0.031</text></g><g class="u-cell" data-r="6" data-c="0" style="--x:0px;--y:132px;--tx:432px;--ty:0px;--i:6;--r:6;--c:0"><rect class="u-cell-bg" x=".75" y=".75" width="70.5" height="20.5" rx="2" style="--a:0.10"/><text class="u-num" x="36" y="11">0.016</text></g></g></g></g><g class="el-col " transform="translate(264 0)"><text class="el-head el-hue" x="36" y="30" text-anchor="middle"><tspan data-hue="blue">L(w)</tspan></text><g transform="translate(0 44)"><g class="u-grid " id="gL" data-hue="blue" data-max="13" data-places="3"><rect class="u-mark" data-r="0" x="-2" y="-1" width="76" height="24" rx="3"/><rect class="u-mark" data-r="1" x="-2" y="21" width="76" height="24" rx="3"/><rect class="u-mark" data-r="2" x="-2" y="43" width="76" height="24" rx="3"/><rect class="u-mark" data-r="3" x="-2" y="65" width="76" height="24" rx="3"/><rect class="u-mark" data-r="4" x="-2" y="87" width="76" height="24" rx="3"/><rect class="u-mark" data-r="5" x="-2" y="109" width="76" height="24" rx="3"/><rect class="u-mark" data-r="6" x="-2" y="131" width="76" height="24" rx="3"/><g class="u-cell" data-r="0" data-c="0" style="--x:0px;--y:0px;--tx:0px;--ty:0px;--i:0;--r:0;--c:0"><rect class="u-cell-bg" x=".75" y=".75" width="70.5" height="20.5" rx="2" style="--a:0.35"/><text class="u-num" x="36" y="11">4.000</text></g><g class="u-cell" data-r="1" data-c="0" style="--x:0px;--y:22px;--tx:72px;--ty:0px;--i:1;--r:1;--c:0"><rect class="u-cell-bg" x=".75" y=".75" width="70.5" height="20.5" rx="2" style="--a:0.16"/><text class="u-num" x="36" y="11">1.000</text></g><g class="u-cell" data-r="2" data-c="0" style="--x:0px;--y:44px;--tx:144px;--ty:0px;--i:2;--r:2;--c:0"><rect class="u-cell-bg" x=".75" y=".75" width="70.5" height="20.5" rx="2" style="--a:0.12"/><text class="u-num" x="36" y="11">0.250</text></g><g class="u-cell" data-r="3" data-c="0" style="--x:0px;--y:66px;--tx:216px;--ty:0px;--i:3;--r:3;--c:0"><rect class="u-cell-bg" x=".75" y=".75" width="70.5" height="20.5" rx="2" style="--a:0.10"/><text class="u-num" x="36" y="11">0.063</text></g><g class="u-cell" data-r="4" data-c="0" style="--x:0px;--y:88px;--tx:288px;--ty:0px;--i:4;--r:4;--c:0"><rect class="u-cell-bg" x=".75" y=".75" width="70.5" height="20.5" rx="2" style="--a:0.10"/><text class="u-num" x="36" y="11">0.016</text></g><g class="u-cell" data-r="5" data-c="0" style="--x:0px;--y:110px;--tx:360px;--ty:0px;--i:5;--r:5;--c:0"><rect class="u-cell-bg" x=".75" y=".75" width="70.5" height="20.5" rx="2" style="--a:0.10"/><text class="u-num" x="36" y="11">0.004</text></g><g class="u-cell" data-r="6" data-c="0" style="--x:0px;--y:132px;--tx:432px;--ty:0px;--i:6;--r:6;--c:0"><rect class="u-cell-bg" x=".75" y=".75" width="70.5" height="20.5" rx="2" style="--a:0.10"/><text class="u-num" x="36" y="11">0.001</text></g></g></g></g></g></svg><div class="u-controls"><label class="el-eta"><span>η</span><input type="range" min="1" max="21" step="1" value="15" aria-label="Learning rate η for the last scene"><output>0.75</output></label><div class="u-time" data-label="step"><button type="button" data-step="-1" aria-label="Previous step">‹</button><input type="range" min="0" max="6" value="0" aria-label="step"><button type="button" data-step="1" aria-label="Next step">›</button><output>step 0 / 6</output></div></div><div class="u-say" aria-live="polite"><p class="u-at" data-at="0">The <b data-hue="blue">loss</b> L measures how wrong the <b data-hue="yellow">weight</b> w is. It is lowest at w = 3, so training must find that point.</p><p class="u-at" data-at="1">The <b data-hue="red">slope</b> L′ tells which way the loss goes up. At w = 1 the slope is negative, so the loss falls to the right.</p><p class="u-at" data-at="2">Gradient descent moves w against the slope. The <b data-hue="green">learning rate</b> η sets how far: 0.25 × 4 = 1, so w goes from 1 to 2.</p><p class="u-at" data-at="3">With η = 0.05, each step closes only a tenth of the <b data-hue="purple">gap</b> between w and 3. After 6 steps, w is still at 1.937.</p><p class="u-at" data-at="4">With η = 0.25, each step halves the <b data-hue="purple">gap</b>. After 6 steps, w is at 2.969 and still moves closer to 3.</p><p class="u-at" data-at="5">With η = 1.05, each step jumps past 3 and lands further away. The loss grows at every step, so w never reaches 3.</p><p class="u-at" data-at="6">Each step multiplies the <b data-hue="purple">gap</b> by 1 − 2η. The gap shrinks only when this factor is between −1 and 1.</p></div><nav class="u-steps" aria-label="Scenes"><button type="button" data-go="0" aria-current="step"><span>1</span>Loss</button><button type="button" data-go="1"><span>2</span>Slope</button><button type="button" data-go="2"><span>3</span>One step</button><button type="button" data-go="3"><span>4</span>Too small</button><button type="button" data-go="4"><span>5</span>About right</button><button type="button" data-go="5"><span>6</span>Too big</button><button type="button" data-go="6"><span>7</span>Any η</button></nav><div class="u-key"><span data-hue="yellow"><i></i>weight w</span><span data-hue="blue"><i></i>loss L</span><span data-hue="red"><i></i>slope L′</span><span data-hue="green"><i></i>learning rate η and step</span><span data-hue="purple"><i></i>gap w − 3</span><span><i class="u-solid"></i>positive</span><span><i class="u-hollow"></i>negative</span></div></div></div><figcaption class="iso-legend"><span class="iso-caption">The loss (w − 3)², the start w = 1 and the learning rates were chosen by hand to keep the numbers short. The script model.mjs computes every value in full precision. The page prints 3 places, so a hand check can differ in the last digit. A value closer than 0.0005 to 3 or 0 gets more digits, so rounding never shows a false 3 or 0.</span></figcaption></figure><section class="u-notes"><h2>Why the learning rate decides</h2><p>For this loss, each step multiplies the gap by 1 − 2η. So η = 0.5 lands on 3 in one step, and any η above 1 makes the gap grow.</p><svg viewBox="0 0 640 64" role="img" aria-label="The learning rate on a line from 0 to 1.2, with what each region does to the gap." style="font-family:var(--anatomy-mono)">
+<rect x="30" y="22" width="241.66666666666669" height="10" fill="var(--unfold-green)" fill-opacity="0.5"/><text x="150.83333333333334" y="52" text-anchor="middle" fill="var(--anatomy-text)" font-size="11">one side, smaller each step</text>
+<rect x="271.6666666666667" y="22" width="241.66666666666669" height="10" fill="var(--unfold-green)" fill-opacity="0.25"/><text x="392.5" y="52" text-anchor="middle" fill="var(--anatomy-text)" font-size="11">jumps past 3, still shrinks</text>
+<rect x="513.3333333333334" y="22" width="96.66666666666663" height="10" fill="var(--unfold-green)" fill-opacity="0.08"/><text x="561.6666666666667" y="52" text-anchor="middle" fill="var(--anatomy-text)" font-size="11">grows</text>
+<text x="12" y="31" font-size="14" font-style="italic" fill="var(--unfold-green)">η</text><path d="M30 18V36" stroke="var(--anatomy-mid)" stroke-width="1"/><text x="30" y="12" text-anchor="middle" font-size="11" fill="var(--anatomy-muted)">0</text><path d="M54.16666666666667 18V36" stroke="var(--unfold-green)" stroke-width="2"/><text x="54.16666666666667" y="12" text-anchor="middle" font-size="11" fill="var(--unfold-green)">0.05</text><path d="M150.83333333333334 18V36" stroke="var(--unfold-green)" stroke-width="2"/><text x="150.83333333333334" y="12" text-anchor="middle" font-size="11" fill="var(--unfold-green)">0.25</text><path d="M271.6666666666667 18V36" stroke="var(--anatomy-mid)" stroke-width="1"/><text x="271.6666666666667" y="12" text-anchor="middle" font-size="11" fill="var(--anatomy-muted)">0.5</text><path d="M513.3333333333334 18V36" stroke="var(--anatomy-mid)" stroke-width="1"/><text x="513.3333333333334" y="12" text-anchor="middle" font-size="11" fill="var(--anatomy-muted)">1</text><path d="M537.5 18V36" stroke="var(--unfold-green)" stroke-width="2"/><text x="537.5" y="12" text-anchor="middle" font-size="11" fill="var(--unfold-green)">1.05</text>
+</svg><p>For a real loss, nobody knows the best η in advance, so people try several values.</p><table><thead><tr><th>η</th><th>Gap factor 1 − 2η</th><th>w after 6 steps</th><th>L after 6 steps</th><th>What happens</th></tr></thead><tbody><tr><td data-th="η">0.05</td><td data-th="Gap factor 1 − 2η">0.90</td><td data-th="w after 6 steps">1.937</td><td data-th="L after 6 steps">1.130</td><td data-th="What happens">moves toward 3 from one side</td></tr><tr><td data-th="η">0.25</td><td data-th="Gap factor 1 − 2η">0.50</td><td data-th="w after 6 steps">2.969</td><td data-th="L after 6 steps">0.001</td><td data-th="What happens">moves toward 3 from one side</td></tr><tr><td data-th="η">0.50</td><td data-th="Gap factor 1 − 2η">0.00</td><td data-th="w after 6 steps">3.000</td><td data-th="L after 6 steps">0.000</td><td data-th="What happens">lands on 3 in one step</td></tr><tr><td data-th="η">0.75</td><td data-th="Gap factor 1 − 2η">−0.50</td><td data-th="w after 6 steps">2.969</td><td data-th="L after 6 steps">0.001</td><td data-th="What happens">jumps past 3, but each gap is smaller</td></tr><tr><td data-th="η">1.00</td><td data-th="Gap factor 1 − 2η">−1.00</td><td data-th="w after 6 steps">1.000</td><td data-th="L after 6 steps">4.000</td><td data-th="What happens">bounces between 1 and 5 forever</td></tr><tr><td data-th="η">1.05</td><td data-th="Gap factor 1 − 2η">−1.10</td><td data-th="w after 6 steps">−0.543</td><td data-th="L after 6 steps">12.554</td><td data-th="What happens">jumps past 3 and lands further away each time</td></tr></tbody></table><h2>What the figure leaves out</h2><table><thead><tr><th>Left out</th><th>What really happens</th></tr></thead><tbody><tr><td data-th="Left out">Many weights</td><td data-th="What really happens">A model has millions of weights. The gradient holds one slope per weight, and each weight takes its own step.</td></tr><tr><td data-th="Left out">Curved losses</td><td data-th="What really happens">A real loss has hills, flat areas and more than one low point. The slope changes at a different rate in each place.</td></tr><tr><td data-th="Left out">Mini-batches</td><td data-th="What really happens">Stochastic gradient descent (SGD) computes the slope on a small sample of the data. Each step is then a little noisy.</td></tr><tr><td data-th="Left out">Changing η</td><td data-th="What really happens">A schedule makes η smaller during training. Momentum and Adam also change the step size for each weight.</td></tr><tr><td data-th="Left out">When to stop</td><td data-th="What really happens">Training stops after a fixed number of steps, or when the loss stops falling.</td></tr></tbody></table><h2>Words used here</h2><table><thead><tr><th>Term</th><th>Meaning</th></tr></thead><tbody><tr><td data-th="Term">Weight w</td><td data-th="Meaning">the number the model learns</td></tr><tr><td data-th="Term">Loss L(w)</td><td data-th="Meaning">how wrong the model is with weight w</td></tr><tr><td data-th="Term">Slope L′(w)</td><td data-th="Meaning">how fast the loss changes as w grows. With many weights: the gradient.</td></tr><tr><td data-th="Term">Learning rate η</td><td data-th="Meaning">the number that scales each step</td></tr><tr><td data-th="Term">Step −η·L′(w)</td><td data-th="Meaning">how much w changes in one update</td></tr><tr><td data-th="Term">Gap w − 3</td><td data-th="Meaning">how far w is from the lowest loss</td></tr><tr><td data-th="Term">Converge</td><td data-th="Meaning">move closer to the lowest loss at every step</td></tr><tr><td data-th="Term">Diverge</td><td data-th="Meaning">move further away at every step, as with <code>η = 1.05</code></td></tr></tbody></table></section></main><script type="module">function cellLook(value, max) {
+  const masked = value === -Infinity;
+  const s = masked ? 0 : Math.min(1, Math.abs(value) / max);
+  return { masked, neg: !masked && value < 0, hot: !masked && value > 0 && s > 0.55, alpha: 0.1 + 0.8 * s };
+}
+function fmt(value, places = 1) {
+  if (value === -Infinity) return "−∞";
+  const text = value.toFixed(places);
+  return Number(text) === 0 ? (0).toFixed(places) : text.replace("-", "−");
+}
+function setGrid(grid, values, max = Number(grid.dataset.max)) {
+  const places = Number(grid.dataset.places);
+  grid.querySelectorAll(".u-cell").forEach((cell) => {
+    const value = values[Number(cell.dataset.r)][Number(cell.dataset.c)];
+    const look = cellLook(value, max);
+    cell.toggleAttribute("data-masked", look.masked);
+    cell.toggleAttribute("data-neg", look.neg);
+    cell.toggleAttribute("data-hot", look.hot);
+    cell.querySelector(".u-cell-bg").style.setProperty("--a", look.alpha.toFixed(2));
+    cell.querySelector(".u-num").textContent = fmt(value, places);
+  });
+}
+function showRows(grid, t) {
+  grid.querySelectorAll(".u-cell,.u-mark").forEach((el) => el.toggleAttribute("data-later", Number(el.dataset.r) > t));
+}
+function setBars(group, values) {
+  const h = Number(group.dataset.h);
+  const max = Number(group.dataset.max);
+  const places = Number(group.dataset.places);
+  group.querySelectorAll(".u-bar").forEach((bar) => {
+    const v = values[Number(bar.dataset.i)] ?? 0;
+    const share = Math.max(0, Math.min(1, v / max));
+    bar.style.setProperty("--v", share.toFixed(3));
+    const text = bar.querySelector(".u-bar-value");
+    text.setAttribute("y", String(h - h * share - 6));
+    text.textContent = fmt(v, places);
+  });
+}
+function mark(root, i, selector = ".u-mark") {
+  root.querySelectorAll(`${selector}[data-r],${selector}[data-i]`).forEach((el) => el.toggleAttribute("data-on", Number(el.dataset.r ?? el.dataset.i) === i));
+}
+function showSpans(root, t) {
+  const box = root.querySelector(".u-lanes");
+  const px = Number(box.dataset.px);
+  box.querySelector(".u-now").style.transform = `translateX(${(t - Number(box.dataset.from)) * px}px)`;
+  root.querySelectorAll(".u-span").forEach((el) => {
+    const from = Number(el.dataset.from);
+    const to = Number(el.dataset.to);
+    const v = Math.max(0, Math.min(1, (t - from) / (to - from)));
+    el.style.setProperty("--v", v.toFixed(3));
+    el.toggleAttribute("data-labeled", v * (to - from) * px >= Number(el.dataset.need));
+  });
+}
+function runtime() {
+  const stage = document.querySelector(".u-stage");
+  const count = Number(stage.dataset.count);
+  const dwell = Number(stage.dataset.dwell);
+  const still = matchMedia("(prefers-reduced-motion: reduce)");
+  let scene = 0;
+  let visible = false;
+  let hovering = false;
+  let pausedUntil = 0;
+  let held = false;
+  let next = 0;
+  const beats = [];
+  const go = (i, by = "user") => {
+    scene = Math.max(0, Math.min(count - 1, i));
+    stage.dataset.scene = String(scene);
+    stage.querySelectorAll("[data-go]").forEach((b) => (Number(b.dataset.go) === scene ? b.setAttribute("aria-current", "step") : b.removeAttribute("aria-current")));
+    stage.querySelectorAll("[data-ds]").forEach((el) => {
+      const d = JSON.parse(el.dataset.ds)[scene];
+      el.toggleAttribute("data-off", !d);
+      if (!d) return;
+      if (CSS.supports("d", 'path("M0 0")')) el.style.d = `path("${d}")`;
+      else el.setAttribute("d", d);
+    });
+    stage.dispatchEvent(new CustomEvent("unfold:scene", { detail: { scene, by } }));
+    if (by === "user") pausedUntil = performance.now() + 20000;
+    held = false;
+    next = performance.now() + dwell;
+    for (const b of beats) {
+      b.n = 0;
+      b.at = performance.now() + b.wait - b.ms;
+      if (still.matches && b.scene === scene) b.fn(-1);
+    }
+  };
+  const tour = (now) => {
+    if (visible && !hovering && !still.matches && now > pausedUntil && now > next) go((scene + 1) % count, "tour");
+    for (const b of beats) {
+      if (b.scene === scene && visible && !held && !still.matches && now - b.at >= b.ms) {
+        b.at = now;
+        b.fn(b.n++);
+      }
+    }
+    requestAnimationFrame(tour);
+  };
+  stage.querySelector(".u-steps").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-go]");
+    if (b) go(Number(b.dataset.go));
+  });
+  stage.addEventListener("keydown", (e) => {
+    const to = { ArrowRight: scene + 1, ArrowLeft: scene - 1, Home: 0, End: count - 1 }[e.key];
+    if (to === undefined) return;
+    e.preventDefault();
+    go(to);
+  });
+  // Time by hand: the step control and the "," and "." keys call the page's onTime(t). Its keys stay inside it.
+  const timer = stage.querySelector(".u-time");
+  let onTime = () => {};
+  const range = timer?.querySelector("input");
+  const byHand = (t) => {
+    pause();
+    onTime(Math.max(0, Math.min(Number(range.max), t)));
+  };
+  if (timer) {
+    range.addEventListener("input", () => byHand(Number(range.value)));
+    range.addEventListener("keydown", (e) => e.stopPropagation());
+    timer.addEventListener("click", (e) => {
+      const b = e.target.closest("[data-step]");
+      if (b) byHand(Number(range.value) + Number(b.dataset.step));
+    });
+    stage.addEventListener("keydown", (e) => {
+      const by = { ",": -1, ".": 1 }[e.key];
+      if (by === undefined) return;
+      e.preventDefault();
+      byHand(Number(range.value) + by);
+    });
+  }
+  const timeAt = (t) => {
+    if (!timer) return;
+    range.value = String(t);
+    timer.querySelector("output").textContent = `${timer.dataset.label} ${t} / ${range.max}`;
+  };
+  // Narrow layout: below 560 px the drawing takes its second viewBox and the stage gets data-narrow.
+  const svg = stage.querySelector("svg");
+  const wide = svg?.getAttribute("viewBox");
+  if (stage.dataset.narrowBox)
+    new ResizeObserver(([entry]) => {
+      const on = entry.contentRect.width < 560;
+      if (on === stage.hasAttribute("data-narrow")) return;
+      stage.toggleAttribute("data-narrow", on);
+      svg.setAttribute("viewBox", on ? stage.dataset.narrowBox : wide);
+      stage.dispatchEvent(new CustomEvent("unfold:layout", { detail: { narrow: on } }));
+    }).observe(stage);
+  stage.addEventListener("pointerenter", () => (hovering = true));
+  stage.addEventListener("pointerleave", () => (hovering = false));
+  new IntersectionObserver((entries) => (visible = entries[entries.length - 1].isIntersecting), { rootMargin: "120px 0px" }).observe(stage);
+  next = performance.now() + dwell;
+  requestAnimationFrame(tour);
+  // beat(scene, ms, fn, wait): call fn(0), fn(1), … every ms while that scene shows, starting `wait` ms after it opens.
+  // Under reduced motion fn(-1) is called once instead: show the resting state.
+  const beat = (sceneIndex, ms, fn, wait = 1000) => beats.push({ scene: sceneIndex, ms, fn, wait, n: 0, at: performance.now() + wait - ms });
+  // pause(): the user took control. The tour waits 20 s, and the sweeps hold until the scene changes.
+  const pause = () => {
+    pausedUntil = performance.now() + 20000;
+    held = true;
+  };
+  return { stage, go, beat, pause, scene: () => scene, onTime: (fn) => (onTime = fn), timeAt, narrow: () => stage.hasAttribute("data-narrow") };
+}
+const UNFOLD = runtime();
+
+const RUNS = {"1":[{"t":0,"w":1,"g":-4,"step":0.2,"L":4,"gap":-2,"text":{"w":"1.000","g":"−4.000","step":"0.200","L":"4.000","gap":"−2.000"}},{"t":1,"w":1.2,"g":-3.6,"step":0.18000000000000002,"L":3.24,"gap":-1.8,"text":{"w":"1.200","g":"−3.600","step":"0.180","L":"3.240","gap":"−1.800"}},{"t":2,"w":1.38,"g":-3.24,"step":0.16200000000000003,"L":2.6244000000000005,"gap":-1.62,"text":{"w":"1.380","g":"−3.240","step":"0.162","L":"2.624","gap":"−1.620"}},{"t":3,"w":1.5419999999999998,"g":-2.9160000000000004,"step":0.1458,"L":2.1257640000000007,"gap":-1.4580000000000002,"text":{"w":"1.542","g":"−2.916","step":"0.146","L":"2.126","gap":"−1.458"}},{"t":4,"w":1.6877999999999997,"g":-2.6244000000000005,"step":0.13122000000000003,"L":1.7218688400000006,"gap":-1.3122000000000003,"text":{"w":"1.688","g":"−2.624","step":"0.131","L":"1.722","gap":"−1.312"}},{"t":5,"w":1.8190199999999999,"g":-2.3619600000000003,"step":0.11809800000000002,"L":1.3947137604000004,"gap":-1.1809800000000001,"text":{"w":"1.819","g":"−2.362","step":"0.118","L":"1.395","gap":"−1.181"}},{"t":6,"w":1.937118,"g":-2.125764,"step":0.10628820000000001,"L":1.1297181459240002,"gap":-1.062882,"text":{"w":"1.937","g":"−2.126","step":"0.106","L":"1.130","gap":"−1.063"}}],"2":[{"t":0,"w":1,"g":-4,"step":0.4,"L":4,"gap":-2,"text":{"w":"1.000","g":"−4.000","step":"0.400","L":"4.000","gap":"−2.000"}},{"t":1,"w":1.4,"g":-3.2,"step":0.32000000000000006,"L":2.5600000000000005,"gap":-1.6,"text":{"w":"1.400","g":"−3.200","step":"0.320","L":"2.560","gap":"−1.600"}},{"t":2,"w":1.72,"g":-2.56,"step":0.256,"L":1.6384,"gap":-1.28,"text":{"w":"1.720","g":"−2.560","step":"0.256","L":"1.638","gap":"−1.280"}},{"t":3,"w":1.976,"g":-2.048,"step":0.2048,"L":1.048576,"gap":-1.024,"text":{"w":"1.976","g":"−2.048","step":"0.205","L":"1.049","gap":"−1.024"}},{"t":4,"w":2.1808,"g":-1.6383999999999999,"step":0.16383999999999999,"L":0.6710886399999999,"gap":-0.8191999999999999,"text":{"w":"2.181","g":"−1.638","step":"0.164","L":"0.671","gap":"−0.819"}},{"t":5,"w":2.34464,"g":-1.3107199999999999,"step":0.131072,"L":0.4294967295999999,"gap":-0.6553599999999999,"text":{"w":"2.345","g":"−1.311","step":"0.131","L":"0.429","gap":"−0.655"}},{"t":6,"w":2.475712,"g":-1.0485759999999997,"step":0.10485759999999998,"L":0.2748779069439999,"gap":-0.5242879999999999,"text":{"w":"2.476","g":"−1.049","step":"0.105","L":"0.275","gap":"−0.524"}}],"3":[{"t":0,"w":1,"g":-4,"step":0.6,"L":4,"gap":-2,"text":{"w":"1.000","g":"−4.000","step":"0.600","L":"4.000","gap":"−2.000"}},{"t":1,"w":1.6,"g":-2.8,"step":0.42,"L":1.9599999999999997,"gap":-1.4,"text":{"w":"1.600","g":"−2.800","step":"0.420","L":"1.960","gap":"−1.400"}},{"t":2,"w":2.02,"g":-1.96,"step":0.294,"L":0.9603999999999999,"gap":-0.98,"text":{"w":"2.020","g":"−1.960","step":"0.294","L":"0.960","gap":"−0.980"}},{"t":3,"w":2.314,"g":-1.3719999999999999,"step":0.20579999999999998,"L":0.4705959999999999,"gap":-0.6859999999999999,"text":{"w":"2.314","g":"−1.372","step":"0.206","L":"0.471","gap":"−0.686"}},{"t":4,"w":2.5198,"g":-0.9603999999999999,"step":0.14406,"L":0.23059203999999997,"gap":-0.48019999999999996,"text":{"w":"2.520","g":"−0.960","step":"0.144","L":"0.231","gap":"−0.480"}},{"t":5,"w":2.66386,"g":-0.6722799999999998,"step":0.10084199999999996,"L":0.11299009959999992,"gap":-0.3361399999999999,"text":{"w":"2.664","g":"−0.672","step":"0.101","L":"0.113","gap":"−0.336"}},{"t":6,"w":2.764702,"g":-0.47059599999999957,"step":0.07058939999999993,"L":0.0553651488039999,"gap":-0.23529799999999979,"text":{"w":"2.765","g":"−0.471","step":"0.071","L":"0.055","gap":"−0.235"}}],"4":[{"t":0,"w":1,"g":-4,"step":0.8,"L":4,"gap":-2,"text":{"w":"1.000","g":"−4.000","step":"0.800","L":"4.000","gap":"−2.000"}},{"t":1,"w":1.8,"g":-2.4,"step":0.48,"L":1.44,"gap":-1.2,"text":{"w":"1.800","g":"−2.400","step":"0.480","L":"1.440","gap":"−1.200"}},{"t":2,"w":2.2800000000000002,"g":-1.4399999999999995,"step":0.2879999999999999,"L":0.5183999999999996,"gap":-0.7199999999999998,"text":{"w":"2.280","g":"−1.440","step":"0.288","L":"0.518","gap":"−0.720"}},{"t":3,"w":2.568,"g":-0.8639999999999999,"step":0.17279999999999998,"L":0.18662399999999996,"gap":-0.43199999999999994,"text":{"w":"2.568","g":"−0.864","step":"0.173","L":"0.187","gap":"−0.432"}},{"t":4,"w":2.7408,"g":-0.5183999999999997,"step":0.10367999999999995,"L":0.06718463999999993,"gap":-0.2591999999999999,"text":{"w":"2.741","g":"−0.518","step":"0.104","L":"0.067","gap":"−0.259"}},{"t":5,"w":2.84448,"g":-0.3110400000000002,"step":0.06220800000000004,"L":0.02418647040000003,"gap":-0.1555200000000001,"text":{"w":"2.844","g":"−0.311","step":"0.062","L":"0.024","gap":"−0.156"}},{"t":6,"w":2.906688,"g":-0.18662400000000012,"step":0.037324800000000026,"L":0.008707129344000012,"gap":-0.09331200000000006,"text":{"w":"2.907","g":"−0.187","step":"0.037","L":"0.009","gap":"−0.093"}}],"5":[{"t":0,"w":1,"g":-4,"step":1,"L":4,"gap":-2,"text":{"w":"1.000","g":"−4.000","step":"1.000","L":"4.000","gap":"−2.000"}},{"t":1,"w":2,"g":-2,"step":0.5,"L":1,"gap":-1,"text":{"w":"2.000","g":"−2.000","step":"0.500","L":"1.000","gap":"−1.000"}},{"t":2,"w":2.5,"g":-1,"step":0.25,"L":0.25,"gap":-0.5,"text":{"w":"2.500","g":"−1.000","step":"0.250","L":"0.250","gap":"−0.500"}},{"t":3,"w":2.75,"g":-0.5,"step":0.125,"L":0.0625,"gap":-0.25,"text":{"w":"2.750","g":"−0.500","step":"0.125","L":"0.063","gap":"−0.250"}},{"t":4,"w":2.875,"g":-0.25,"step":0.0625,"L":0.015625,"gap":-0.125,"text":{"w":"2.875","g":"−0.250","step":"0.063","L":"0.016","gap":"−0.125"}},{"t":5,"w":2.9375,"g":-0.125,"step":0.03125,"L":0.00390625,"gap":-0.0625,"text":{"w":"2.938","g":"−0.125","step":"0.031","L":"0.004","gap":"−0.063"}},{"t":6,"w":2.96875,"g":-0.0625,"step":0.015625,"L":0.0009765625,"gap":-0.03125,"text":{"w":"2.969","g":"−0.063","step":"0.016","L":"0.001","gap":"−0.031"}}],"6":[{"t":0,"w":1,"g":-4,"step":1.2,"L":4,"gap":-2,"text":{"w":"1.000","g":"−4.000","step":"1.200","L":"4.000","gap":"−2.000"}},{"t":1,"w":2.2,"g":-1.5999999999999996,"step":0.47999999999999987,"L":0.6399999999999997,"gap":-0.7999999999999998,"text":{"w":"2.200","g":"−1.600","step":"0.480","L":"0.640","gap":"−0.800"}},{"t":2,"w":2.68,"g":-0.6399999999999997,"step":0.1919999999999999,"L":0.1023999999999999,"gap":-0.31999999999999984,"text":{"w":"2.680","g":"−0.640","step":"0.192","L":"0.102","gap":"−0.320"}},{"t":3,"w":2.872,"g":-0.2560000000000002,"step":0.07680000000000006,"L":0.01638400000000003,"gap":-0.1280000000000001,"text":{"w":"2.872","g":"−0.256","step":"0.077","L":"0.016","gap":"−0.128"}},{"t":4,"w":2.9488,"g":-0.10240000000000027,"step":0.03072000000000008,"L":0.002621440000000014,"gap":-0.051200000000000134,"text":{"w":"2.949","g":"−0.102","step":"0.031","L":"0.003","gap":"−0.051"}},{"t":5,"w":2.97952,"g":-0.04096000000000011,"step":0.012288000000000032,"L":0.0004194304000000022,"gap":-0.020480000000000054,"text":{"w":"2.980","g":"−0.041","step":"0.012","L":"4.2e−4","gap":"−0.020"}},{"t":6,"w":2.991808,"g":-0.016384000000000398,"step":0.0049152000000001195,"L":0.00006710886400000326,"gap":-0.008192000000000199,"text":{"w":"2.992","g":"−0.016","step":"0.005","L":"6.7e−5","gap":"−0.008"}}],"7":[{"t":0,"w":1,"g":-4,"step":1.4,"L":4,"gap":-2,"text":{"w":"1.000","g":"−4.000","step":"1.400","L":"4.000","gap":"−2.000"}},{"t":1,"w":2.4,"g":-1.2000000000000002,"step":0.42000000000000004,"L":0.3600000000000001,"gap":-0.6000000000000001,"text":{"w":"2.400","g":"−1.200","step":"0.420","L":"0.360","gap":"−0.600"}},{"t":2,"w":2.82,"g":-0.3600000000000003,"step":0.1260000000000001,"L":0.03240000000000006,"gap":-0.18000000000000016,"text":{"w":"2.820","g":"−0.360","step":"0.126","L":"0.032","gap":"−0.180"}},{"t":3,"w":2.9459999999999997,"g":-0.10800000000000054,"step":0.03780000000000019,"L":0.0029160000000000292,"gap":-0.05400000000000027,"text":{"w":"2.946","g":"−0.108","step":"0.038","L":"0.003","gap":"−0.054"}},{"t":4,"w":2.9838,"g":-0.032399999999999984,"step":0.011339999999999994,"L":0.00026243999999999974,"gap":-0.016199999999999992,"text":{"w":"2.984","g":"−0.032","step":"0.011","L":"2.6e−4","gap":"−0.016"}},{"t":5,"w":2.99514,"g":-0.009719999999999729,"step":0.003401999999999905,"L":0.000023619599999998682,"gap":-0.004859999999999864,"text":{"w":"2.995","g":"−0.010","step":"0.003","L":"2.4e−5","gap":"−0.005"}},{"t":6,"w":2.998542,"g":-0.0029159999999999187,"step":0.0010205999999999716,"L":0.0000021257639999998813,"gap":-0.0014579999999999593,"text":{"w":"2.999","g":"−0.003","step":"0.001","L":"2.1e−6","gap":"−0.001"}}],"8":[{"t":0,"w":1,"g":-4,"step":1.6,"L":4,"gap":-2,"text":{"w":"1.000","g":"−4.000","step":"1.600","L":"4.000","gap":"−2.000"}},{"t":1,"w":2.6,"g":-0.7999999999999998,"step":0.31999999999999995,"L":0.15999999999999992,"gap":-0.3999999999999999,"text":{"w":"2.600","g":"−0.800","step":"0.320","L":"0.160","gap":"−0.400"}},{"t":2,"w":2.92,"g":-0.16000000000000014,"step":0.06400000000000006,"L":0.006400000000000012,"gap":-0.08000000000000007,"text":{"w":"2.920","g":"−0.160","step":"0.064","L":"0.006","gap":"−0.080"}},{"t":3,"w":2.984,"g":-0.03200000000000003,"step":0.012800000000000013,"L":0.0002560000000000005,"gap":-0.016000000000000014,"text":{"w":"2.984","g":"−0.032","step":"0.013","L":"2.6e−4","gap":"−0.016"}},{"t":4,"w":2.9968,"g":-0.006400000000000183,"step":0.0025600000000000735,"L":0.000010240000000000586,"gap":-0.0032000000000000917,"text":{"w":"2.997","g":"−0.006","step":"0.003","L":"1.0e−5","gap":"−0.003"}},{"t":5,"w":2.99936,"g":-0.001280000000000392,"step":0.0005120000000001568,"L":4.0960000000025084e-7,"gap":-0.000640000000000196,"text":{"w":"2.999","g":"−0.001","step":"0.001","L":"4.1e−7","gap":"−0.001"}},{"t":6,"w":2.999872,"g":-0.000256000000000256,"step":0.00010240000000010241,"L":1.6384000000032773e-8,"gap":-0.000128000000000128,"text":{"w":"2.9999","g":"−2.6e−4","step":"1.0e−4","L":"1.6e−8","gap":"−1.3e−4"}}],"9":[{"t":0,"w":1,"g":-4,"step":1.8,"L":4,"gap":-2,"text":{"w":"1.000","g":"−4.000","step":"1.800","L":"4.000","gap":"−2.000"}},{"t":1,"w":2.8,"g":-0.40000000000000036,"step":0.18000000000000016,"L":0.04000000000000007,"gap":-0.20000000000000018,"text":{"w":"2.800","g":"−0.400","step":"0.180","L":"0.040","gap":"−0.200"}},{"t":2,"w":2.98,"g":-0.040000000000000036,"step":0.018000000000000016,"L":0.0004000000000000007,"gap":-0.020000000000000018,"text":{"w":"2.980","g":"−0.040","step":"0.018","L":"4.0e−4","gap":"−0.020"}},{"t":3,"w":2.998,"g":-0.0039999999999995595,"step":0.0017999999999998018,"L":0.000003999999999999119,"gap":-0.0019999999999997797,"text":{"w":"2.998","g":"−0.004","step":"0.002","L":"4.0e−6","gap":"−0.002"}},{"t":4,"w":2.9998,"g":-0.00039999999999995595,"step":0.00017999999999998017,"L":3.9999999999991186e-8,"gap":-0.00019999999999997797,"text":{"w":"2.9998","g":"−4.0e−4","step":"1.8e−4","L":"4.0e−8","gap":"−2.0e−4"}},{"t":5,"w":2.99998,"g":-0.00004000000000026205,"step":0.00001800000000011792,"L":4.00000000005241e-10,"gap":-0.000020000000000131024,"text":{"w":"2.99998","g":"−4.0e−5","step":"1.8e−5","L":"4.0e−10","gap":"−2.0e−5"}},{"t":6,"w":2.999998,"g":-0.0000039999999996709334,"step":0.0000017999999998519201,"L":3.999999999341867e-12,"gap":-0.0000019999999998354667,"text":{"w":"2.999998","g":"−4.0e−6","step":"1.8e−6","L":"4.0e−12","gap":"−2.0e−6"}}],"10":[{"t":0,"w":1,"g":-4,"step":2,"L":4,"gap":-2,"text":{"w":"1.000","g":"−4.000","step":"2.000","L":"4.000","gap":"−2.000"}},{"t":1,"w":3,"g":0,"step":0,"L":0,"gap":0,"text":{"w":"3.000","g":"0.000","step":"0.000","L":"0.000","gap":"0.000"}},{"t":2,"w":3,"g":0,"step":0,"L":0,"gap":0,"text":{"w":"3.000","g":"0.000","step":"0.000","L":"0.000","gap":"0.000"}},{"t":3,"w":3,"g":0,"step":0,"L":0,"gap":0,"text":{"w":"3.000","g":"0.000","step":"0.000","L":"0.000","gap":"0.000"}},{"t":4,"w":3,"g":0,"step":0,"L":0,"gap":0,"text":{"w":"3.000","g":"0.000","step":"0.000","L":"0.000","gap":"0.000"}},{"t":5,"w":3,"g":0,"step":0,"L":0,"gap":0,"text":{"w":"3.000","g":"0.000","step":"0.000","L":"0.000","gap":"0.000"}},{"t":6,"w":3,"g":0,"step":0,"L":0,"gap":0,"text":{"w":"3.000","g":"0.000","step":"0.000","L":"0.000","gap":"0.000"}}],"11":[{"t":0,"w":1,"g":-4,"step":2.2,"L":4,"gap":-2,"text":{"w":"1.000","g":"−4.000","step":"2.200","L":"4.000","gap":"−2.000"}},{"t":1,"w":3.2,"g":0.40000000000000036,"step":-0.22000000000000022,"L":0.04000000000000007,"gap":0.20000000000000018,"text":{"w":"3.200","g":"0.400","step":"−0.220","L":"0.040","gap":"0.200"}},{"t":2,"w":2.98,"g":-0.040000000000000036,"step":0.022000000000000023,"L":0.0004000000000000007,"gap":-0.020000000000000018,"text":{"w":"2.980","g":"−0.040","step":"0.022","L":"4.0e−4","gap":"−0.020"}},{"t":3,"w":3.0020000000000002,"g":0.004000000000000448,"step":-0.0022000000000002465,"L":0.000004000000000000895,"gap":0.002000000000000224,"text":{"w":"3.002","g":"0.004","step":"−0.002","L":"4.0e−6","gap":"0.002"}},{"t":4,"w":2.9998,"g":-0.00039999999999995595,"step":0.00021999999999997578,"L":3.9999999999991186e-8,"gap":-0.00019999999999997797,"text":{"w":"2.9998","g":"−4.0e−4","step":"2.2e−4","L":"4.0e−8","gap":"−2.0e−4"}},{"t":5,"w":3.00002,"g":0.00004000000000026205,"step":-0.000022000000000144127,"L":4.00000000005241e-10,"gap":0.000020000000000131024,"text":{"w":"3.00002","g":"4.0e−5","step":"−2.2e−5","L":"4.0e−10","gap":"2.0e−5"}},{"t":6,"w":2.999998,"g":-0.0000039999999996709334,"step":0.0000021999999998190137,"L":3.999999999341867e-12,"gap":-0.0000019999999998354667,"text":{"w":"2.999998","g":"−4.0e−6","step":"2.2e−6","L":"4.0e−12","gap":"−2.0e−6"}}],"12":[{"t":0,"w":1,"g":-4,"step":2.4,"L":4,"gap":-2,"text":{"w":"1.000","g":"−4.000","step":"2.400","L":"4.000","gap":"−2.000"}},{"t":1,"w":3.4,"g":0.7999999999999998,"step":-0.47999999999999987,"L":0.15999999999999992,"gap":0.3999999999999999,"text":{"w":"3.400","g":"0.800","step":"−0.480","L":"0.160","gap":"0.400"}},{"t":2,"w":2.92,"g":-0.16000000000000014,"step":0.09600000000000009,"L":0.006400000000000012,"gap":-0.08000000000000007,"text":{"w":"2.920","g":"−0.160","step":"0.096","L":"0.006","gap":"−0.080"}},{"t":3,"w":3.016,"g":0.03200000000000003,"step":-0.019200000000000016,"L":0.0002560000000000005,"gap":0.016000000000000014,"text":{"w":"3.016","g":"0.032","step":"−0.019","L":"2.6e−4","gap":"0.016"}},{"t":4,"w":2.9968,"g":-0.006400000000000183,"step":0.00384000000000011,"L":0.000010240000000000586,"gap":-0.0032000000000000917,"text":{"w":"2.997","g":"−0.006","step":"0.004","L":"1.0e−5","gap":"−0.003"}},{"t":5,"w":3.00064,"g":0.001280000000000392,"step":-0.0007680000000002352,"L":4.0960000000025084e-7,"gap":0.000640000000000196,"text":{"w":"3.001","g":"0.001","step":"−0.001","L":"4.1e−7","gap":"0.001"}},{"t":6,"w":2.999872,"g":-0.000256000000000256,"step":0.0001536000000001536,"L":1.6384000000032773e-8,"gap":-0.000128000000000128,"text":{"w":"2.9999","g":"−2.6e−4","step":"1.5e−4","L":"1.6e−8","gap":"−1.3e−4"}}],"13":[{"t":0,"w":1,"g":-4,"step":2.6,"L":4,"gap":-2,"text":{"w":"1.000","g":"−4.000","step":"2.600","L":"4.000","gap":"−2.000"}},{"t":1,"w":3.6,"g":1.2000000000000002,"step":-0.7800000000000001,"L":0.3600000000000001,"gap":0.6000000000000001,"text":{"w":"3.600","g":"1.200","step":"−0.780","L":"0.360","gap":"0.600"}},{"t":2,"w":2.82,"g":-0.3600000000000003,"step":0.2340000000000002,"L":0.03240000000000006,"gap":-0.18000000000000016,"text":{"w":"2.820","g":"−0.360","step":"0.234","L":"0.032","gap":"−0.180"}},{"t":3,"w":3.0540000000000003,"g":0.10800000000000054,"step":-0.07020000000000036,"L":0.0029160000000000292,"gap":0.05400000000000027,"text":{"w":"3.054","g":"0.108","step":"−0.070","L":"0.003","gap":"0.054"}},{"t":4,"w":2.9838,"g":-0.032399999999999984,"step":0.021059999999999992,"L":0.00026243999999999974,"gap":-0.016199999999999992,"text":{"w":"2.984","g":"−0.032","step":"0.021","L":"2.6e−4","gap":"−0.016"}},{"t":5,"w":3.00486,"g":0.009719999999999729,"step":-0.006317999999999824,"L":0.000023619599999998682,"gap":0.004859999999999864,"text":{"w":"3.005","g":"0.010","step":"−0.006","L":"2.4e−5","gap":"0.005"}},{"t":6,"w":2.998542,"g":-0.0029159999999999187,"step":0.001895399999999947,"L":0.0000021257639999998813,"gap":-0.0014579999999999593,"text":{"w":"2.999","g":"−0.003","step":"0.002","L":"2.1e−6","gap":"−0.001"}}],"14":[{"t":0,"w":1,"g":-4,"step":2.8,"L":4,"gap":-2,"text":{"w":"1.000","g":"−4.000","step":"2.800","L":"4.000","gap":"−2.000"}},{"t":1,"w":3.8,"g":1.5999999999999996,"step":-1.1199999999999997,"L":0.6399999999999997,"gap":0.7999999999999998,"text":{"w":"3.800","g":"1.600","step":"−1.120","L":"0.640","gap":"0.800"}},{"t":2,"w":2.68,"g":-0.6399999999999997,"step":0.44799999999999973,"L":0.1023999999999999,"gap":-0.31999999999999984,"text":{"w":"2.680","g":"−0.640","step":"0.448","L":"0.102","gap":"−0.320"}},{"t":3,"w":3.128,"g":0.2560000000000002,"step":-0.17920000000000014,"L":0.01638400000000003,"gap":0.1280000000000001,"text":{"w":"3.128","g":"0.256","step":"−0.179","L":"0.016","gap":"0.128"}},{"t":4,"w":2.9488,"g":-0.10240000000000027,"step":0.07168000000000019,"L":0.002621440000000014,"gap":-0.051200000000000134,"text":{"w":"2.949","g":"−0.102","step":"0.072","L":"0.003","gap":"−0.051"}},{"t":5,"w":3.02048,"g":0.04096000000000011,"step":-0.028672000000000072,"L":0.0004194304000000022,"gap":0.020480000000000054,"text":{"w":"3.020","g":"0.041","step":"−0.029","L":"4.2e−4","gap":"0.020"}},{"t":6,"w":2.991808,"g":-0.016384000000000398,"step":0.011468800000000279,"L":0.00006710886400000326,"gap":-0.008192000000000199,"text":{"w":"2.992","g":"−0.016","step":"0.011","L":"6.7e−5","gap":"−0.008"}}],"15":[{"t":0,"w":1,"g":-4,"step":3,"L":4,"gap":-2,"text":{"w":"1.000","g":"−4.000","step":"3.000","L":"4.000","gap":"−2.000"}},{"t":1,"w":4,"g":2,"step":-1.5,"L":1,"gap":1,"text":{"w":"4.000","g":"2.000","step":"−1.500","L":"1.000","gap":"1.000"}},{"t":2,"w":2.5,"g":-1,"step":0.75,"L":0.25,"gap":-0.5,"text":{"w":"2.500","g":"−1.000","step":"0.750","L":"0.250","gap":"−0.500"}},{"t":3,"w":3.25,"g":0.5,"step":-0.375,"L":0.0625,"gap":0.25,"text":{"w":"3.250","g":"0.500","step":"−0.375","L":"0.063","gap":"0.250"}},{"t":4,"w":2.875,"g":-0.25,"step":0.1875,"L":0.015625,"gap":-0.125,"text":{"w":"2.875","g":"−0.250","step":"0.188","L":"0.016","gap":"−0.125"}},{"t":5,"w":3.0625,"g":0.125,"step":-0.09375,"L":0.00390625,"gap":0.0625,"text":{"w":"3.063","g":"0.125","step":"−0.094","L":"0.004","gap":"0.063"}},{"t":6,"w":2.96875,"g":-0.0625,"step":0.046875,"L":0.0009765625,"gap":-0.03125,"text":{"w":"2.969","g":"−0.063","step":"0.047","L":"0.001","gap":"−0.031"}}],"16":[{"t":0,"w":1,"g":-4,"step":3.2,"L":4,"gap":-2,"text":{"w":"1.000","g":"−4.000","step":"3.200","L":"4.000","gap":"−2.000"}},{"t":1,"w":4.2,"g":2.4000000000000004,"step":-1.9200000000000004,"L":1.4400000000000004,"gap":1.2000000000000002,"text":{"w":"4.200","g":"2.400","step":"−1.920","L":"1.440","gap":"1.200"}},{"t":2,"w":2.28,"g":-1.4400000000000004,"step":1.1520000000000004,"L":0.5184000000000003,"gap":-0.7200000000000002,"text":{"w":"2.280","g":"−1.440","step":"1.152","L":"0.518","gap":"−0.720"}},{"t":3,"w":3.4320000000000004,"g":0.8640000000000008,"step":-0.6912000000000007,"L":0.18662400000000035,"gap":0.4320000000000004,"text":{"w":"3.432","g":"0.864","step":"−0.691","L":"0.187","gap":"0.432"}},{"t":4,"w":2.7407999999999997,"g":-0.5184000000000006,"step":0.41472000000000053,"L":0.06718464000000017,"gap":-0.2592000000000003,"text":{"w":"2.741","g":"−0.518","step":"0.415","L":"0.067","gap":"−0.259"}},{"t":5,"w":3.15552,"g":0.3110400000000002,"step":-0.24883200000000016,"L":0.02418647040000003,"gap":0.1555200000000001,"text":{"w":"3.156","g":"0.311","step":"−0.249","L":"0.024","gap":"0.156"}},{"t":6,"w":2.906688,"g":-0.18662400000000012,"step":0.1492992000000001,"L":0.008707129344000012,"gap":-0.09331200000000006,"text":{"w":"2.907","g":"−0.187","step":"0.149","L":"0.009","gap":"−0.093"}}],"17":[{"t":0,"w":1,"g":-4,"step":3.4,"L":4,"gap":-2,"text":{"w":"1.000","g":"−4.000","step":"3.400","L":"4.000","gap":"−2.000"}},{"t":1,"w":4.4,"g":2.8000000000000007,"step":-2.3800000000000003,"L":1.960000000000001,"gap":1.4000000000000004,"text":{"w":"4.400","g":"2.800","step":"−2.380","L":"1.960","gap":"1.400"}},{"t":2,"w":2.02,"g":-1.96,"step":1.666,"L":0.9603999999999999,"gap":-0.98,"text":{"w":"2.020","g":"−1.960","step":"1.666","L":"0.960","gap":"−0.980"}},{"t":3,"w":3.686,"g":1.3719999999999999,"step":-1.1662,"L":0.4705959999999999,"gap":0.6859999999999999,"text":{"w":"3.686","g":"1.372","step":"−1.166","L":"0.471","gap":"0.686"}},{"t":4,"w":2.5198,"g":-0.9603999999999999,"step":0.81634,"L":0.23059203999999997,"gap":-0.48019999999999996,"text":{"w":"2.520","g":"−0.960","step":"0.816","L":"0.231","gap":"−0.480"}},{"t":5,"w":3.33614,"g":0.6722799999999998,"step":-0.5714379999999998,"L":0.11299009959999992,"gap":0.3361399999999999,"text":{"w":"3.336","g":"0.672","step":"−0.571","L":"0.113","gap":"0.336"}},{"t":6,"w":2.764702,"g":-0.47059599999999957,"step":0.4000065999999996,"L":0.0553651488039999,"gap":-0.23529799999999979,"text":{"w":"2.765","g":"−0.471","step":"0.400","L":"0.055","gap":"−0.235"}}],"18":[{"t":0,"w":1,"g":-4,"step":3.6,"L":4,"gap":-2,"text":{"w":"1.000","g":"−4.000","step":"3.600","L":"4.000","gap":"−2.000"}},{"t":1,"w":4.6,"g":3.1999999999999993,"step":-2.8799999999999994,"L":2.5599999999999987,"gap":1.5999999999999996,"text":{"w":"4.600","g":"3.200","step":"−2.880","L":"2.560","gap":"1.600"}},{"t":2,"w":1.7200000000000002,"g":-2.5599999999999996,"step":2.304,"L":1.6383999999999994,"gap":-1.2799999999999998,"text":{"w":"1.720","g":"−2.560","step":"2.304","L":"1.638","gap":"−1.280"}},{"t":3,"w":4.024,"g":2.048,"step":-1.8432000000000002,"L":1.048576,"gap":1.024,"text":{"w":"4.024","g":"2.048","step":"−1.843","L":"1.049","gap":"1.024"}},{"t":4,"w":2.1807999999999996,"g":-1.6384000000000007,"step":1.4745600000000008,"L":0.6710886400000006,"gap":-0.8192000000000004,"text":{"w":"2.181","g":"−1.638","step":"1.475","L":"0.671","gap":"−0.819"}},{"t":5,"w":3.6553600000000004,"g":1.3107200000000008,"step":-1.1796480000000007,"L":0.4294967296000005,"gap":0.6553600000000004,"text":{"w":"3.655","g":"1.311","step":"−1.180","L":"0.429","gap":"0.655"}},{"t":6,"w":2.4757119999999997,"g":-1.0485760000000006,"step":0.9437184000000006,"L":0.2748779069440003,"gap":-0.5242880000000003,"text":{"w":"2.476","g":"−1.049","step":"0.944","L":"0.275","gap":"−0.524"}}],"19":[{"t":0,"w":1,"g":-4,"step":3.8,"L":4,"gap":-2,"text":{"w":"1.000","g":"−4.000","step":"3.800","L":"4.000","gap":"−2.000"}},{"t":1,"w":4.8,"g":3.5999999999999996,"step":-3.4199999999999995,"L":3.2399999999999993,"gap":1.7999999999999998,"text":{"w":"4.800","g":"3.600","step":"−3.420","L":"3.240","gap":"1.800"}},{"t":2,"w":1.3800000000000003,"g":-3.2399999999999993,"step":3.0779999999999994,"L":2.6243999999999987,"gap":-1.6199999999999997,"text":{"w":"1.380","g":"−3.240","step":"3.078","L":"2.624","gap":"−1.620"}},{"t":3,"w":4.458,"g":2.9160000000000004,"step":-2.7702000000000004,"L":2.1257640000000007,"gap":1.4580000000000002,"text":{"w":"4.458","g":"2.916","step":"−2.770","L":"2.126","gap":"1.458"}},{"t":4,"w":1.6877999999999997,"g":-2.6244000000000005,"step":2.49318,"L":1.7218688400000006,"gap":-1.3122000000000003,"text":{"w":"1.688","g":"−2.624","step":"2.493","L":"1.722","gap":"−1.312"}},{"t":5,"w":4.18098,"g":2.36196,"step":-2.2438619999999996,"L":1.3947137603999997,"gap":1.18098,"text":{"w":"4.181","g":"2.362","step":"−2.244","L":"1.395","gap":"1.181"}},{"t":6,"w":1.9371180000000003,"g":-2.1257639999999993,"step":2.019475799999999,"L":1.1297181459239993,"gap":-1.0628819999999997,"text":{"w":"1.937","g":"−2.126","step":"2.019","L":"1.130","gap":"−1.063"}}],"20":[{"t":0,"w":1,"g":-4,"step":4,"L":4,"gap":-2,"text":{"w":"1.000","g":"−4.000","step":"4.000","L":"4.000","gap":"−2.000"}},{"t":1,"w":5,"g":4,"step":-4,"L":4,"gap":2,"text":{"w":"5.000","g":"4.000","step":"−4.000","L":"4.000","gap":"2.000"}},{"t":2,"w":1,"g":-4,"step":4,"L":4,"gap":-2,"text":{"w":"1.000","g":"−4.000","step":"4.000","L":"4.000","gap":"−2.000"}},{"t":3,"w":5,"g":4,"step":-4,"L":4,"gap":2,"text":{"w":"5.000","g":"4.000","step":"−4.000","L":"4.000","gap":"2.000"}},{"t":4,"w":1,"g":-4,"step":4,"L":4,"gap":-2,"text":{"w":"1.000","g":"−4.000","step":"4.000","L":"4.000","gap":"−2.000"}},{"t":5,"w":5,"g":4,"step":-4,"L":4,"gap":2,"text":{"w":"5.000","g":"4.000","step":"−4.000","L":"4.000","gap":"2.000"}},{"t":6,"w":1,"g":-4,"step":4,"L":4,"gap":-2,"text":{"w":"1.000","g":"−4.000","step":"4.000","L":"4.000","gap":"−2.000"}}],"21":[{"t":0,"w":1,"g":-4,"step":4.2,"L":4,"gap":-2,"text":{"w":"1.000","g":"−4.000","step":"4.200","L":"4.000","gap":"−2.000"}},{"t":1,"w":5.2,"g":4.4,"step":-4.620000000000001,"L":4.840000000000001,"gap":2.2,"text":{"w":"5.200","g":"4.400","step":"−4.620","L":"4.840","gap":"2.200"}},{"t":2,"w":0.5799999999999992,"g":-4.840000000000002,"step":5.082000000000002,"L":5.856400000000004,"gap":-2.420000000000001,"text":{"w":"0.580","g":"−4.840","step":"5.082","L":"5.856","gap":"−2.420"}},{"t":3,"w":5.662000000000001,"g":5.324000000000002,"step":-5.590200000000002,"L":7.086244000000004,"gap":2.662000000000001,"text":{"w":"5.662","g":"5.324","step":"−5.590","L":"7.086","gap":"2.662"}},{"t":4,"w":0.07179999999999875,"g":-5.8564000000000025,"step":6.149220000000003,"L":8.574355240000008,"gap":-2.9282000000000012,"text":{"w":"0.072","g":"−5.856","step":"6.149","L":"8.574","gap":"−2.928"}},{"t":5,"w":6.221020000000002,"g":6.442040000000004,"step":-6.764142000000004,"L":10.374969840400013,"gap":3.221020000000002,"text":{"w":"6.221","g":"6.442","step":"−6.764","L":"10.375","gap":"3.221"}},{"t":6,"w":-0.5431220000000021,"g":-7.086244000000004,"step":7.440556200000005,"L":12.553713506884016,"gap":-3.543122000000002,"text":{"w":"−0.543","g":"−7.086","step":"7.441","L":"12.554","gap":"−3.543"}}]};
+const VERDICT = {"1":"moves toward 3 from one side","2":"moves toward 3 from one side","3":"moves toward 3 from one side","4":"moves toward 3 from one side","5":"moves toward 3 from one side","6":"moves toward 3 from one side","7":"moves toward 3 from one side","8":"moves toward 3 from one side","9":"moves toward 3 from one side","10":"lands on 3 in one step","11":"jumps past 3, but each gap is smaller","12":"jumps past 3, but each gap is smaller","13":"jumps past 3, but each gap is smaller","14":"jumps past 3, but each gap is smaller","15":"jumps past 3, but each gap is smaller","16":"jumps past 3, but each gap is smaller","17":"jumps past 3, but each gap is smaller","18":"jumps past 3, but each gap is smaller","19":"jumps past 3, but each gap is smaller","20":"bounces between 1 and 5 forever","21":"jumps past 3 and lands further away each time"};
+const P = {"x":40,"y":26,"w":340,"h":262,"xr":[-1,7],"yr":[0,13]};
+const AXIS = 288;
+const STEPS = 6;
+const SCENE_K = { 0: 5, 1: 5, 2: 5, 3: 1, 4: 5, 5: 21 };
+const COLS = [{"id":"gW","key":"w","max":7},{"id":"gG","key":"g","max":8},{"id":"gS","key":"step","max":8},{"id":"gL","key":"L","max":13}];
+const root = UNFOLD.stage;
+const readout = document.querySelector("[data-readout]");
+const slider = root.querySelector(".el-eta input");
+const sliderOut = root.querySelector(".el-eta output");
+const $ = (id) => root.querySelector("#" + id);
+const sx = (v) => P.x + ((v - P.xr[0]) / (P.xr[1] - P.xr[0])) * P.w;
+const sy = (v) => P.y + P.h - ((v - P.yr[0]) / (P.yr[1] - P.yr[0])) * P.h;
+const r1 = (v) => Math.round(v * 10) / 10;
+const etaText = (k) => fmt(k / 20, 2);
+const setD = (el, d) => (el.style.d = 'path("' + (d || "M0 0") + '")');
+const move = (el, x, y) => (el.style.transform = "translate(" + r1(x) + "px," + r1(y) + "px)");
+const clampX = (x) => Math.max(P.x + 30, Math.min(P.x + P.w - 10, x));
+let k = SCENE_K[0];
+let exploreK = 15;
+let t = 0;
+
+function draw() {
+  const scene = UNFOLD.scene();
+  const rows = RUNS[k];
+  const r = rows[t];
+  const x = sx(r.w), y = sy(r.L);
+  move($("point"), x, y);
+  setD($("height"), "M" + r1(x) + " " + AXIS + "V" + r1(y));
+  const hlab = $("hlab");
+  hlab.style.opacity = AXIS - y > 18 ? 1 : 0;
+  hlab.querySelector("text").setAttribute("text-anchor", r.w <= 3 ? "end" : "start");
+  move(hlab, x + (r.w <= 3 ? -6 : 6), (AXIS + y) / 2);
+  move($("wlab"), clampX(x), AXIS + 30);
+  $("wlab").querySelector("text").textContent = "w = " + r.text.w;
+
+  // Tangent: direction (1, slope) in data units, 46 px each way on screen.
+  const dx = P.w / (P.xr[1] - P.xr[0]), dy = -(r.g * P.h) / (P.yr[1] - P.yr[0]);
+  const n = Math.hypot(dx, dy), ux = (dx / n) * 36, uy = (dy / n) * 36;
+  setD($("tangent"), "M" + r1(x - ux) + " " + r1(y - uy) + "L" + r1(x + ux) + " " + r1(y + uy));
+  const low = uy > 0.5 ? 1 : uy < -0.5 ? -1 : 1;
+  const ex = x + low * ux, ey = y + low * uy;
+  const slab = $("slab").querySelector("text");
+    slab.setAttribute("text-anchor", ex >= x ? "start" : "end");
+  move($("slab"), ex + (ex >= x ? 4 : -4), ey + (Math.abs(uy) > 8 ? 12 : -8));
+
+  // The step from t to t + 1, on the w axis, and the next point as a dashed ghost.
+  const next = rows[Math.min(t + 1, STEPS)];
+  const showStep = t < STEPS;
+  const x2 = sx(next.w), ay = AXIS - 10, dir = Math.sign(x2 - x) || 1, head = Math.min(6, Math.abs(x2 - x));
+  setD($("sline"), "M" + r1(x) + " " + ay + "H" + r1(x2 - dir * head));
+  setD($("shead"), "M" + r1(x2) + " " + ay + "L" + r1(x2 - dir * head) + " " + (ay - 3.5) + "L" + r1(x2 - dir * head) + " " + (ay + 3.5) + "Z");
+  root.querySelector(".el-step").style.opacity = showStep ? 1 : 0;
+    move($("slab2"), Math.max(P.x + 50, Math.min(P.x + P.w - 50, (x + x2) / 2)), ay - 9);
+  move($("ghost"), x2, sy(next.L));
+  $("ghost").style.opacity = showStep ? 1 : 0;
+
+  // Trail through points 0..t; later points wait on point t, so the path keeps 7 points and morphs.
+  const pts = rows.map((p, i) => rows[Math.min(i, t)]).map((p) => r1(sx(p.w)) + " " + r1(sy(p.L)));
+  setD($("trail"), "M" + pts.join("L"));
+  root.querySelectorAll(".el-dot").forEach((d) => {
+    const i = Number(d.dataset.i), p = rows[Math.min(i, t)];
+    move(d, sx(p.w), sy(p.L));
+    d.style.opacity = i < t ? 1 : 0;
+  });
+
+  // Gap w - 3 under the w axis.
+  const gx = sx(3), gy = AXIS + 44;
+  setD($("gap"), "M" + r1(x) + " " + (gy - 4) + "V" + gy + "H" + r1(gx) + "V" + (gy - 4));
+  $("glab").querySelector("text").textContent = "gap " + r.text.gap;
+  move($("glab"), Math.max(P.x + 40, Math.min(P.x + P.w - 40, (x + gx) / 2)), gy + 13);
+
+  // Table: rows 0..t (row 1 too in "One step"), the current row marked.
+  const shown = scene === 2 ? 1 : scene < 2 ? 0 : t;
+  for (const c of COLS) {
+    const g = $(c.id);
+    setGrid(g, rows.map((row) => [row[c.key]]), c.max);
+    g.querySelectorAll(".u-num").forEach((el) => (el.textContent = rows[Number(el.parentNode.dataset.r)].text[c.key]));
+    showRows(g, shown);
+  }
+  root.querySelectorAll(".el-t").forEach((el) => el.toggleAttribute("data-later", Number(el.dataset.r) > shown));
+  mark(root, scene < 3 ? 0 : t);
+  const f = 1 - 2 * (k / 20);
+  $("verdict").textContent = VERDICT[k];
+  $("ttl").textContent = "η = " + etaText(k) + (scene >= 3 ? " · gap × " + fmt(f, 2) + " per step" : "");
+
+  // Readout: the arithmetic for this scene and step.
+  let text;
+  if (scene === 0) text = "L(1) = (1 − 3)² = 4";
+  else if (scene === 1) text = "L′(1) = 2 × (1 − 3) = −4";
+  else if (scene === 2) text = "w₁ = 1 − 0.25 × (−4) = 2";
+  else if (t === 0) text = "t 0 · w = 1 · L = 4" + (scene === 6 ? " · η = " + etaText(k) + ": " + VERDICT[k] : "");
+  else {
+    const p = rows[t - 1].text;
+    text = "t " + t + " · w = " + p.w + " − " + etaText(k) + " × (" + p.g + ") = " + r.text.w + " · L = " + r.text.L;
+  }
+  if (readout.textContent !== text) readout.textContent = text;
+  UNFOLD.timeAt(scene >= 3 ? t : 0);
+}
+
+function setEta(next) {
+  exploreK = Math.max(1, Math.min(21, next));
+  slider.value = String(exploreK);
+  sliderOut.textContent = etaText(exploreK);
+  if (UNFOLD.scene() !== 6) UNFOLD.go(6);
+  else {
+    k = exploreK;
+    draw();
+  }
+  UNFOLD.pause();
+}
+
+root.addEventListener("unfold:scene", (e) => {
+  const s = e.detail.scene;
+  k = s === 6 ? exploreK : SCENE_K[s];
+  t = 0;
+  draw();
+});
+for (let s = 3; s <= 6; s++) UNFOLD.beat(s, 1000, (n) => ((t = n < 0 ? STEPS : Math.min(n + 1, STEPS)), draw()), 1200);
+UNFOLD.onTime((to) => {
+  if (UNFOLD.scene() < 3) UNFOLD.go(3);
+  t = to;
+  draw();
+});
+slider.addEventListener("input", () => setEta(Number(slider.value)));
+slider.addEventListener("keydown", (e) => e.stopPropagation());
+root.addEventListener("keydown", (e) => {
+  const by = { ArrowUp: 1, ArrowDown: -1 }[e.key];
+  if (by === undefined) return;
+  e.preventDefault();
+  setEta(exploreK + by);
+});
+root.addEventListener("unfold:layout", draw);
+draw();
+</script></body></html>

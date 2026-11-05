@@ -1,0 +1,137 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 840 800" width="840" height="800" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" fill="#1f2933">
+  <title>NFA for a(b|c)*d matching "abcbd"</title>
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#1f2933"/>
+    </marker>
+    <marker id="arr-eps" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#6b7280"/>
+    </marker>
+  </defs>
+  <rect width="840" height="800" fill="#ffffff"/>
+
+  <!-- Legend: edge kinds -->
+  <g font-size="13">
+    <line x1="620" y1="50" x2="660" y2="50" stroke="#1f2933" stroke-width="1.8" marker-end="url(#arr)"/>
+    <text x="670" y="55">reads a symbol</text>
+    <line x1="620" y1="76" x2="660" y2="76" stroke="#6b7280" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#arr-eps)"/>
+    <text x="670" y="81">&#949; (no input read)</text>
+  </g>
+
+  <!-- Symbol edges -->
+  <g stroke="#1f2933" stroke-width="1.8" fill="none" marker-end="url(#arr)">
+    <line x1="10" y1="230" x2="44" y2="230"/>
+    <line x1="96" y1="230" x2="194" y2="230"/>
+    <line x1="366" y1="120" x2="464" y2="120"/>
+    <line x1="366" y1="340" x2="464" y2="340"/>
+    <line x1="646" y1="230" x2="744" y2="230"/>
+  </g>
+  <g font-family="ui-monospace, Menlo, Consolas, monospace" font-weight="700" font-size="17" text-anchor="middle">
+    <text x="145" y="220">a</text>
+    <text x="415" y="110">b</text>
+    <text x="415" y="330">c</text>
+    <text x="695" y="220">d</text>
+  </g>
+
+  <!-- Epsilon edges -->
+  <g stroke="#6b7280" stroke-width="1.6" stroke-dasharray="5 4" fill="none" marker-end="url(#arr-eps)">
+    <line x1="239.2" y1="212.4" x2="320.8" y2="137.6"/>
+    <line x1="239.2" y1="247.6" x2="320.8" y2="322.4"/>
+    <line x1="246" y1="230" x2="594" y2="230"/>
+    <path d="M490,94 C480,10 200,10 207,207.5"/>
+    <path d="M490,366 C480,450 200,450 207,252.5"/>
+  </g>
+  <g fill="#6b7280" font-size="17" text-anchor="middle">
+    <text x="266" y="166">&#949;</text>
+    <text x="266" y="306">&#949;</text>
+    <text x="440" y="220">&#949;</text>
+    <text x="345" y="34">&#949;</text>
+    <text x="345" y="440">&#949;</text>
+  </g>
+
+  <!-- States -->
+  <g stroke="#1f2933" stroke-width="1.8" fill="#ffffff">
+    <circle cx="70" cy="230" r="26"/>
+    <circle cx="220" cy="230" r="26"/>
+    <circle cx="340" cy="120" r="26"/>
+    <circle cx="490" cy="120" r="26"/>
+    <circle cx="340" cy="340" r="26"/>
+    <circle cx="490" cy="340" r="26"/>
+    <circle cx="620" cy="230" r="26"/>
+    <circle cx="770" cy="230" r="26" stroke="#15803d" stroke-width="2.2"/>
+    <circle cx="770" cy="230" r="20" stroke="#15803d" stroke-width="2.2"/>
+  </g>
+  <g text-anchor="middle" font-size="15">
+    <text x="70" y="235">q0</text>
+    <text x="220" y="235">q1</text>
+    <text x="340" y="125">q2</text>
+    <text x="490" y="125">q3</text>
+    <text x="340" y="345">q4</text>
+    <text x="490" y="345">q5</text>
+    <text x="620" y="235">q6</text>
+    <text x="770" y="235">q7</text>
+  </g>
+  <text x="770" y="278" text-anchor="middle" font-size="12" fill="#15803d">accept</text>
+
+  <!-- Trace grid: active states after each input symbol -->
+  <g font-size="13" fill="#6b7280" text-anchor="middle">
+    <text x="40" y="500">step</text>
+    <text x="100" y="500">read</text>
+    <text x="195" y="500">q0</text>
+    <text x="265" y="500">q1</text>
+    <text x="335" y="500">q2</text>
+    <text x="405" y="500">q3</text>
+    <text x="475" y="500">q4</text>
+    <text x="545" y="500">q5</text>
+    <text x="615" y="500">q6</text>
+    <text x="685" y="500">q7</text>
+  </g>
+  <line x1="20" y1="508" x2="720" y2="508" stroke="#e5e7eb"/>
+
+  <!-- Empty-cell outlines (6 rows x 8 columns) -->
+  <g fill="none" stroke="#e5e7eb">
+    <rect x="166" y="515" width="58" height="26" rx="6"/><rect x="236" y="515" width="58" height="26" rx="6"/><rect x="306" y="515" width="58" height="26" rx="6"/><rect x="376" y="515" width="58" height="26" rx="6"/><rect x="446" y="515" width="58" height="26" rx="6"/><rect x="516" y="515" width="58" height="26" rx="6"/><rect x="586" y="515" width="58" height="26" rx="6"/><rect x="656" y="515" width="58" height="26" rx="6"/>
+    <rect x="166" y="551" width="58" height="26" rx="6"/><rect x="236" y="551" width="58" height="26" rx="6"/><rect x="306" y="551" width="58" height="26" rx="6"/><rect x="376" y="551" width="58" height="26" rx="6"/><rect x="446" y="551" width="58" height="26" rx="6"/><rect x="516" y="551" width="58" height="26" rx="6"/><rect x="586" y="551" width="58" height="26" rx="6"/><rect x="656" y="551" width="58" height="26" rx="6"/>
+    <rect x="166" y="587" width="58" height="26" rx="6"/><rect x="236" y="587" width="58" height="26" rx="6"/><rect x="306" y="587" width="58" height="26" rx="6"/><rect x="376" y="587" width="58" height="26" rx="6"/><rect x="446" y="587" width="58" height="26" rx="6"/><rect x="516" y="587" width="58" height="26" rx="6"/><rect x="586" y="587" width="58" height="26" rx="6"/><rect x="656" y="587" width="58" height="26" rx="6"/>
+    <rect x="166" y="623" width="58" height="26" rx="6"/><rect x="236" y="623" width="58" height="26" rx="6"/><rect x="306" y="623" width="58" height="26" rx="6"/><rect x="376" y="623" width="58" height="26" rx="6"/><rect x="446" y="623" width="58" height="26" rx="6"/><rect x="516" y="623" width="58" height="26" rx="6"/><rect x="586" y="623" width="58" height="26" rx="6"/><rect x="656" y="623" width="58" height="26" rx="6"/>
+    <rect x="166" y="659" width="58" height="26" rx="6"/><rect x="236" y="659" width="58" height="26" rx="6"/><rect x="306" y="659" width="58" height="26" rx="6"/><rect x="376" y="659" width="58" height="26" rx="6"/><rect x="446" y="659" width="58" height="26" rx="6"/><rect x="516" y="659" width="58" height="26" rx="6"/><rect x="586" y="659" width="58" height="26" rx="6"/><rect x="656" y="659" width="58" height="26" rx="6"/>
+    <rect x="166" y="695" width="58" height="26" rx="6"/><rect x="236" y="695" width="58" height="26" rx="6"/><rect x="306" y="695" width="58" height="26" rx="6"/><rect x="376" y="695" width="58" height="26" rx="6"/><rect x="446" y="695" width="58" height="26" rx="6"/><rect x="516" y="695" width="58" height="26" rx="6"/><rect x="586" y="695" width="58" height="26" rx="6"/><rect x="656" y="695" width="58" height="26" rx="6"/>
+  </g>
+
+  <!-- Row labels -->
+  <g text-anchor="middle">
+    <text x="40" y="533">0</text><text x="100" y="533" fill="#6b7280" font-size="13">start</text>
+    <text x="40" y="569">1</text><text x="100" y="569" font-family="ui-monospace, Menlo, Consolas, monospace" font-weight="700">a</text>
+    <text x="40" y="605">2</text><text x="100" y="605" font-family="ui-monospace, Menlo, Consolas, monospace" font-weight="700">b</text>
+    <text x="40" y="641">3</text><text x="100" y="641" font-family="ui-monospace, Menlo, Consolas, monospace" font-weight="700">c</text>
+    <text x="40" y="677">4</text><text x="100" y="677" font-family="ui-monospace, Menlo, Consolas, monospace" font-weight="700">b</text>
+    <text x="40" y="713">5</text><text x="100" y="713" font-family="ui-monospace, Menlo, Consolas, monospace" font-weight="700">d</text>
+  </g>
+
+  <!-- Reached by reading the symbol (dark) -->
+  <g fill="#2563eb">
+    <rect x="166" y="515" width="58" height="26" rx="6"/>
+    <rect x="236" y="551" width="58" height="26" rx="6"/>
+    <rect x="376" y="587" width="58" height="26" rx="6"/>
+    <rect x="516" y="623" width="58" height="26" rx="6"/>
+    <rect x="376" y="659" width="58" height="26" rx="6"/>
+    <rect x="656" y="695" width="58" height="26" rx="6" fill="#15803d"/>
+  </g>
+  <!-- Added by epsilon-closure (light): q1 q2 q4 q6 on rows 1-4 (q1 is dark on row 1) -->
+  <g fill="#bfdbfe">
+    <rect x="306" y="551" width="58" height="26" rx="6"/><rect x="446" y="551" width="58" height="26" rx="6"/><rect x="586" y="551" width="58" height="26" rx="6"/>
+    <rect x="236" y="587" width="58" height="26" rx="6"/><rect x="306" y="587" width="58" height="26" rx="6"/><rect x="446" y="587" width="58" height="26" rx="6"/><rect x="586" y="587" width="58" height="26" rx="6"/>
+    <rect x="236" y="623" width="58" height="26" rx="6"/><rect x="306" y="623" width="58" height="26" rx="6"/><rect x="446" y="623" width="58" height="26" rx="6"/><rect x="586" y="623" width="58" height="26" rx="6"/>
+    <rect x="236" y="659" width="58" height="26" rx="6"/><rect x="306" y="659" width="58" height="26" rx="6"/><rect x="446" y="659" width="58" height="26" rx="6"/><rect x="586" y="659" width="58" height="26" rx="6"/>
+  </g>
+  <text x="730" y="713" font-size="13" fill="#15803d" font-weight="700">match</text>
+
+  <!-- Legend: cell colors -->
+  <g font-size="13">
+    <rect x="20" y="746" width="22" height="16" rx="4" fill="#2563eb"/>
+    <text x="50" y="759">start state, or reached by reading the symbol</text>
+    <rect x="370" y="746" width="22" height="16" rx="4" fill="#bfdbfe"/>
+    <text x="400" y="759">added by &#949;-closure (no input read)</text>
+    <text x="20" y="787" fill="#4b5563">After the last symbol, the accept state q7 is active, so "abcbd" matches.</text>
+  </g>
+</svg>

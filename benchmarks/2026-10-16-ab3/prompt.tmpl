@@ -1,0 +1,41 @@
+You are an expert judge of technical explainers. Compare two web pages, A and B. Both were made for the same request:
+
+"__REQUEST__"
+
+Files in the current directory:
+- A/page.html and B/page.html: the full source of each page. Each is one self-contained HTML file.
+
+There are no screenshots. You must use each page yourself, like a reader, in a real headless Chrome. Use this driver:
+
+  node __DRIVER__
+
+Run it with no arguments first and read its usage. It loads a page, runs a list of actions (click, key, move, drag, wait, eval, shot) and prints the page's console errors. Useful options: --width 1440 or --width 390 (phone), --height, --reduced (reduced motion), --theme dark|light. Put long action lists in a JSON file and pass it with --actions. Save your screenshots in shots-A/ and shots-B/, and open every screenshot you take with view_file. A screenshot you do not open does not count.
+
+Steps:
+1. Read both HTML files, including the scripts, so you know every control each page has.
+2. Use page A and then page B as a reader would. On each page, at least:
+   - open it at 1440 px and look at the first view;
+   - press every main control (play, next, step, scene buttons, presets) and look at the result;
+   - use each live input with your own value (type a key or a number, click a cell, drag a slider), then look at whether the drawing, the numbers and the text all follow your value;
+   - try the keyboard (Tab, arrows, Enter);
+   - open it at 390 px and look at it;
+   - open it once with --reduced.
+   Spend the same effort on both pages.
+3. Check the technical claims and the numbers you saw on screen. Report every factual error, and every place where the drawing, the math and the text disagree.
+4. Score each page from 1 to 10 on each criterion below. Use the whole scale. A 10 means nothing could be better.
+
+Criteria:
+- accuracy: the technical claims and numbers are correct.
+- core_idea_clarity: after one viewing, a newcomer could explain the core idea in their own words.
+- visual_explanation: the visuals show the real mechanism, not only text next to pictures.
+- interactivity: the reader can explore, step and change things, and the motion helps understanding.
+- request_coverage: how fully the page answers every part of the request.
+- depth: useful insight beyond the basics.
+- visual_design: polish, layout, typography, colour use and consistency.
+- mobile_and_accessibility: works at phone width, keyboard use, readable text, reduced motion.
+
+For each page, list in "interactions_tried" what you did (one short line each), and write "interaction_feedback": what worked, what broke or confused you, and what a reader would want to do but cannot.
+
+Then pick an overall winner: "A", "B" or "tie". Judge which page better serves a reader who asked this request. Do not prefer a page because it is longer, and do not prefer A or B because of its position. Give your reasons in a few short sentences, and name the single biggest strength and the single biggest weakness of each page.
+
+In "screenshots_viewed", list every screenshot file you took and opened.

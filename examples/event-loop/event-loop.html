@@ -1,0 +1,627 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>The event loop</title><style>
+.iso{
+  --anatomy-page:#0b0b0b;--anatomy-card:#131313;--anatomy-text:#a3a3a3;--anatomy-strong:#e6e6e6;--anatomy-muted:#6e6e6e;
+  --anatomy-paper:#131313;--anatomy-face:#1b1b1b;--anatomy-top:#1c1c1c;
+  --anatomy-shade-0:#0f0f0f;--anatomy-shade-1:#121212;--anatomy-shade-2:#151515;--anatomy-shade-3:#181818;
+  --anatomy-lit-top:#262626;--anatomy-lit-shade:#1d1d1d;
+  --anatomy-hi:#d4d4d4;--anatomy-mid:#6a6a6a;--anatomy-lo:#3e3e3e;--anatomy-faint:#2a2a2a;--anatomy-lit:#ffffff;
+  --anatomy-halo:#050505;--anatomy-halo-opacity:.9;--anatomy-dot:#e6e6e6;
+  --anatomy-red:#ff6b6b;--anatomy-green:#6be0a0;--anatomy-blue:#6b9bff;
+  --anatomy-weight:.6px;--anatomy-ease:cubic-bezier(.32,.72,0,1);
+  --anatomy-mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --anatomy-lift:inset 0 1px 0 0 #ffffff0a,inset 0 0 0 1px #ffffff06,0 0 0 1px #00000026,0 1px 1px -.5px #00000014,0 3px 3px -1.5px #00000014,0 6px 6px -3px #00000014,0 12px 12px -6px #00000014;
+}
+.iso[data-theme="light"]{
+  --anatomy-page:#f2f2ef;--anatomy-card:#fbfbfa;--anatomy-text:#57575a;--anatomy-strong:#18181a;--anatomy-muted:#8c8c90;
+  --anatomy-paper:#fbfbfa;--anatomy-face:#ffffff;--anatomy-top:#ffffff;
+  --anatomy-shade-0:#dcdcd9;--anatomy-shade-1:#e5e5e2;--anatomy-shade-2:#ededea;--anatomy-shade-3:#f4f4f1;
+  --anatomy-lit-top:#ffffff;--anatomy-lit-shade:#eeeeeb;
+  --anatomy-hi:#26262a;--anatomy-mid:#8a8a8f;--anatomy-lo:#b4b4b8;--anatomy-faint:#d4d4d6;--anatomy-lit:#000000;
+  --anatomy-halo:#8a8a80;--anatomy-halo-opacity:.32;--anatomy-dot:#3a3a3e;
+  --anatomy-red:#e5484d;--anatomy-green:#30a46c;--anatomy-blue:#3e63dd;
+  --anatomy-lift:inset 0 1px 0 0 #ffffff,0 0 0 1px #0000000f,0 1px 1px -.5px #0000000a,0 3px 3px -1.5px #0000000a,0 6px 6px -3px #0000000a,0 12px 12px -6px #0000000a;
+}
+.iso-svg{display:block;width:100%;height:auto;overflow:visible}
+.iso-svg path,.iso-svg circle{vector-effect:non-scaling-stroke}
+.iso-fill{fill:var(--anatomy-paper);stroke:none}
+.iso-solid[data-lit]>.iso-fill{fill:var(--anatomy-face)}
+.iso-shade,.iso-top{stroke:none}
+.iso-shade[data-shade="0"]{fill:var(--anatomy-shade-0)}
+.iso-shade[data-shade="1"]{fill:var(--anatomy-shade-1)}
+.iso-shade[data-shade="2"]{fill:var(--anatomy-shade-2)}
+.iso-shade[data-shade="3"]{fill:var(--anatomy-shade-3)}
+.iso-top{fill:var(--anatomy-top)}
+.iso-solid[data-lit]>.iso-top{fill:var(--anatomy-lit-top)}
+.iso-solid[data-lit]>.iso-shade{fill:var(--anatomy-lit-shade)}
+.iso-solid[data-seamless]>.iso-shade,.iso-solid[data-seamless]>.iso-top{stroke-width:.4;stroke-linejoin:round}
+.iso-solid[data-seamless]>.iso-shade[data-shade="0"]{stroke:var(--anatomy-shade-0)}
+.iso-solid[data-seamless]>.iso-shade[data-shade="1"]{stroke:var(--anatomy-shade-1)}
+.iso-solid[data-seamless]>.iso-shade[data-shade="2"]{stroke:var(--anatomy-shade-2)}
+.iso-solid[data-seamless]>.iso-shade[data-shade="3"]{stroke:var(--anatomy-shade-3)}
+.iso-solid[data-seamless]>.iso-top{stroke:var(--anatomy-top)}
+.iso-solid[data-seamless][data-lit]>.iso-top{stroke:var(--anatomy-lit-top)}
+.iso-solid[data-seamless][data-lit]>.iso-shade{stroke:var(--anatomy-lit-shade)}
+.iso-solid[data-lit]>.iso-edge{stroke:var(--anatomy-lit)}
+.iso-halo{fill:var(--anatomy-halo);stroke:none;filter:blur(9px);opacity:var(--anatomy-halo-opacity);transform:translateY(3px)}
+.iso-line{fill:none;stroke:var(--anatomy-lo);stroke-width:var(--anatomy-weight);stroke-linecap:round;stroke-linejoin:round}
+.iso-line[data-tone="hi"]{stroke:var(--anatomy-hi)}
+.iso-line[data-tone="mid"]{stroke:var(--anatomy-mid)}
+.iso-line[data-tone="lo"]{stroke:var(--anatomy-lo)}
+.iso-line[data-tone="faint"]{stroke:var(--anatomy-faint)}
+.iso-line[data-tone="lit"]{stroke:var(--anatomy-lit)}
+.iso-line[data-tone="red"]{stroke:var(--anatomy-red)}
+.iso-line[data-tone="green"]{stroke:var(--anatomy-green)}
+.iso-line[data-tone="blue"]{stroke:var(--anatomy-blue)}
+.iso-line[data-dotted]{stroke-dasharray:.01 3.5;stroke-width:1}
+.iso-line[data-dashed]{stroke-dasharray:3 3}
+.iso-line[data-flow]{stroke-dasharray:2 6}
+.iso-wire-end{fill:var(--anatomy-paper);stroke:var(--anatomy-lo);stroke-width:var(--anatomy-weight)}
+.iso-wire[data-tone="hi"] .iso-wire-end{stroke:var(--anatomy-hi)}
+.iso-wire[data-tone="mid"] .iso-wire-end{stroke:var(--anatomy-mid)}
+.iso-wire[data-tone="faint"] .iso-wire-end{stroke:var(--anatomy-faint)}
+.iso-wire[data-tone="lit"] .iso-wire-end{stroke:var(--anatomy-lit)}
+.iso-dots circle{fill:var(--anatomy-dot);stroke:none;opacity:.32}
+.iso-dots[data-tone="hi"] circle{opacity:.85}
+.iso-dots[data-tone="mid"] circle{opacity:.45}
+.iso-dots[data-tone="lo"] circle{opacity:.22}
+.iso-dots[data-tone="faint"] circle{opacity:.12}
+.iso-face-text{fill:var(--anatomy-mid);font-family:var(--anatomy-mono);letter-spacing:.04em}
+.iso-face-text[data-tone="hi"]{fill:var(--anatomy-hi)}
+.iso-face-text[data-tone="lo"]{fill:var(--anatomy-lo)}
+.iso-face-text[data-tone="faint"]{fill:var(--anatomy-faint)}
+.tb-body{fill:var(--anatomy-shade-2);stroke:none}
+.tb-shine{fill:var(--anatomy-top);stroke:none}
+.tb-shade{fill:var(--anatomy-shade-0);stroke:none}
+.tb-ring{fill:none;stroke:var(--anatomy-lo);stroke-width:.45;stroke-linecap:butt;stroke-linejoin:round}
+.tb-ring[data-tone="mid"]{stroke:var(--anatomy-mid)}
+.tb-ring[data-tone="faint"]{stroke:var(--anatomy-faint)}
+.tb-ring[data-tone="hi"]{stroke:var(--anatomy-hi)}
+@keyframes iso-flow{to{stroke-dashoffset:-32}}
+@keyframes iso-pulse{0%,100%{opacity:.18}12%{opacity:1}40%{opacity:.18}}
+.iso-line[data-flow]{animation:iso-flow 1600ms linear infinite}
+.iso-dots circle[data-pulse]{animation:iso-pulse 1600ms steps(1,end) infinite;animation-delay:var(--pulse-at,0ms)}
+.iso-figure{margin:32px 0 36px}
+.iso-plate{position:relative;padding:52px 24px;border-radius:0;background:var(--anatomy-card);box-shadow:0 0 0 1px var(--anatomy-mid);--anatomy-paper:var(--anatomy-card)}
+.iso-plate-corners{position:absolute;inset:18px 20px;pointer-events:none}
+.iso-plate-corner{position:absolute;color:var(--anatomy-muted);font-family:var(--anatomy-mono);font-size:10.5px;line-height:1;letter-spacing:.04em;white-space:nowrap}
+.iso-plate-corner[data-corner="fig"]{top:0;left:0;color:var(--anatomy-text)}
+.iso-plate-corner[data-corner="title"]{top:0;right:0;text-transform:uppercase;letter-spacing:.1em}
+.iso-plate-corner[data-corner="hint"]{bottom:0;left:0;text-transform:uppercase;letter-spacing:.1em}
+.iso-plate-corner[data-corner="readout"]{right:0;bottom:0;color:var(--anatomy-text);font-variant-numeric:tabular-nums}
+.iso-plate .iso-svg{margin:0 auto}
+.iso-legend{display:grid;gap:8px;margin-top:12px;color:var(--anatomy-muted);font-size:13px;line-height:1.55}
+.iso-keys{display:flex;flex-wrap:wrap;gap:6px 18px}
+.iso-key{display:inline-flex;align-items:center;gap:7px}
+.iso-swatch{width:16px;height:10px;flex:none;overflow:visible}
+.iso-swatch path{fill:none;stroke:var(--anatomy-hi);stroke-width:1;vector-effect:non-scaling-stroke;stroke-linejoin:round;stroke-linecap:round}
+.iso-swatch[data-mark="raised"] path,.iso-swatch[data-mark="flat"] path{stroke:var(--anatomy-mid)}
+.iso-swatch[data-mark="lit"] path{stroke:var(--anatomy-lit)}
+.iso-swatch[data-mark="dim"] path{stroke:var(--anatomy-lo)}
+.iso-swatch[data-mark="dotted"] path{stroke-dasharray:.01 3;stroke-width:1.4}
+.iso-swatch[data-mark="dashed"] path{stroke-dasharray:3 2.5}
+.iso-swatch[data-mark="red"] path{stroke:var(--anatomy-red)}
+.iso-swatch[data-mark="green"] path{stroke:var(--anatomy-green)}
+.iso-swatch[data-mark="blue"] path{stroke:var(--anatomy-blue)}
+.iso-swatch-crease{stroke:var(--anatomy-lo)!important}
+@media (max-width:560px){.iso-plate{padding:48px 12px 70px}.iso-plate-corner[data-corner="hint"]{bottom:18px}}
+@media (prefers-reduced-motion:reduce){.iso-line[data-flow],.iso-dots circle[data-pulse]{animation:none}}
+
+*{box-sizing:border-box}
+html{color-scheme:dark}
+body[data-theme="light"]{color-scheme:light}
+body{margin:0;background:var(--anatomy-page);color:var(--anatomy-text);font:14px/1.6 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+.iso-page{width:min(900px,100% - 32px);margin:64px auto 96px}
+</style></head><body class="iso" data-theme="dark"><main class="iso-page"><style>
+.iso{--unfold-blue:#58c4dd;--unfold-yellow:#f4d345;--unfold-red:#fc6255;--unfold-green:#83c167;--unfold-teal:#5cd0b3;--unfold-purple:#b48ad1;--unfold-gold:#f0ac5f;--unfold-on-hot:#0b0b0b;--unfold-serif:"Latin Modern Math","STIX Two Math","Cambria Math",math,serif}
+.iso[data-theme="light"]{--unfold-blue:#1f78a4;--unfold-yellow:#a67c00;--unfold-red:#cf3b2e;--unfold-green:#3e8a2a;--unfold-teal:#16866b;--unfold-purple:#7a4fa3;--unfold-gold:#b8661a;--unfold-on-hot:#ffffff}
+[data-hue="blue"]{--hue:var(--unfold-blue)}[data-hue="yellow"]{--hue:var(--unfold-yellow)}[data-hue="red"]{--hue:var(--unfold-red)}[data-hue="green"]{--hue:var(--unfold-green)}[data-hue="teal"]{--hue:var(--unfold-teal)}[data-hue="purple"]{--hue:var(--unfold-purple)}[data-hue="gold"]{--hue:var(--unfold-gold)}[data-hue="ink"]{--hue:var(--anatomy-hi)}
+.u-key{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 16px;margin-top:10px;color:var(--anatomy-muted);font-size:12px}
+.u-key>span{display:inline-flex;align-items:center;gap:6px}
+.u-key i{width:10px;height:10px;border-radius:2px;background:var(--hue)}
+.u-key i.u-hollow{background:none;box-shadow:inset 0 0 0 1.2px var(--anatomy-mid)}
+.u-key i.u-solid{background:var(--anatomy-mid)}
+.u-stage{position:relative;outline:none;container-type:inline-size;--u-fade:.5s;--u-fade-at:.22s}
+.u-stage:focus-visible{outline:1px solid var(--anatomy-faint);outline-offset:8px}
+.u-stage .iso-svg{overflow:visible}
+.u-eq,.u-say,.u-cc{display:grid;align-items:center}
+.u-eq>.u-at,.u-say>.u-at,.u-cc>.u-at{grid-area:1/1;opacity:0;visibility:hidden;transition:opacity .2s var(--anatomy-ease),visibility 0s .2s;margin:0}
+.u-eq{min-height:44px;margin-bottom:8px;overflow-x:auto;overflow-y:hidden}
+.u-eq math{font-family:var(--unfold-serif);font-size:20px;color:var(--anatomy-strong)}
+.u-eq [data-hue]{color:var(--hue)}
+.u-say{min-height:48px;margin-top:6px;color:var(--anatomy-text);font-size:14px;line-height:1.55;text-align:center}
+.u-cc{margin-top:6px;color:var(--anatomy-text);font-size:14px;line-height:1.55;text-align:center}
+.u-stage[data-voice] .u-cc{display:none}
+:is(.u-say,.u-cc)>.u-at{max-width:62ch;justify-self:center}
+:is(.u-say,.u-cc) b{color:var(--anatomy-strong);font-weight:500}
+:is(.u-say,.u-cc) [data-hue]{color:var(--hue)}
+.u-steps{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin-top:14px}
+.u-steps button{display:inline-flex;align-items:center;gap:6px;padding:5px 10px 5px 6px;border:0;border-radius:999px;background:transparent;color:var(--anatomy-muted);font:11px/1 var(--anatomy-mono);letter-spacing:.04em;cursor:pointer;box-shadow:0 0 0 1px var(--anatomy-faint);transition:color .2s,box-shadow .2s}
+.u-steps button span{display:inline-grid;place-items:center;width:16px;height:16px;border-radius:50%;background:var(--anatomy-faint);color:var(--anatomy-text);font-size:10px}
+.u-steps button:hover{color:var(--anatomy-text)}
+.u-steps button[aria-current]{color:var(--anatomy-strong);box-shadow:0 0 0 1px var(--anatomy-mid)}
+.u-steps button[aria-current] span{background:var(--anatomy-strong);color:var(--anatomy-card)}
+.u-steps :is(.u-play,.u-voice){margin-right:6px}.u-steps :is(.u-play,.u-voice)[aria-pressed="true"]{color:var(--anatomy-strong);box-shadow:0 0 0 1px var(--anatomy-mid)}
+.u-move{transition:transform .9s var(--anatomy-ease),opacity var(--u-fade) var(--anatomy-ease) var(--u-fade-at)}
+.u-grid text,.u-chip text,.u-bars text,.u-arrow text{dominant-baseline:central;text-anchor:middle}
+.u-cell{transform:translate(var(--x),var(--y));transition:transform .9s var(--anatomy-ease) calc(var(--i) * 18ms),opacity .35s}
+.u-cell-bg{fill:var(--hue);fill-opacity:var(--a);stroke:none;transition:fill-opacity .35s,stroke-width .3s}
+.u-cell[data-neg]>.u-cell-bg,.u-cell-bg[data-neg]{fill-opacity:calc(var(--a) * .18);stroke:var(--hue);stroke-opacity:var(--a);stroke-width:1.2}
+.u-cell[data-masked]>.u-cell-bg,.u-cell-bg[data-masked]{fill:none;stroke:var(--anatomy-faint);stroke-width:.8;stroke-dasharray:2 2}
+.u-num{font:500 10px var(--anatomy-mono);font-variant-numeric:tabular-nums;fill:var(--anatomy-strong)}
+.u-cell[data-hot] .u-num{fill:var(--unfold-on-hot)}
+.u-cell[data-masked] .u-num{fill:var(--anatomy-lo)}
+.u-name{font:italic 600 17px var(--unfold-serif);fill:var(--hue);dominant-baseline:auto!important;text-anchor:start!important}
+.u-dims{font:400 10px var(--anatomy-mono);font-style:normal;fill:var(--anatomy-muted)}
+.u-T,.u-dims-T{display:none}
+.u-mark{fill:none;stroke:var(--anatomy-strong);stroke-width:1.2;opacity:0;transition:opacity .3s}
+.u-mark[data-on]{opacity:.9}
+.u-chip rect{fill:var(--anatomy-card);stroke:var(--anatomy-mid);stroke-width:.8;transition:stroke .25s,fill .25s}
+.u-chip text{font:500 11px var(--anatomy-mono);fill:var(--anatomy-text);transition:fill .25s}
+.u-chip[data-hue] rect{stroke:var(--hue)}
+.u-chip[data-hue] text{fill:var(--hue)}
+.u-cell[data-later],.u-mark[data-later]{opacity:0!important;transition:opacity .3s}
+.u-plot-axis{stroke:var(--anatomy-mid);stroke-width:.9;fill:none}
+.u-plot-grid{stroke:var(--anatomy-faint);stroke-width:.6;fill:none}
+.u-tick-label{font:10px var(--anatomy-mono);fill:var(--anatomy-muted)}
+.u-plot-name{font:italic 600 15px var(--unfold-serif);fill:var(--hue,var(--anatomy-text))}
+.u-curve{fill:none;stroke:var(--hue,var(--anatomy-hi));stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.u-chip[data-on] rect{fill:var(--anatomy-strong);stroke:var(--anatomy-strong)}
+.u-chip[data-on] text{fill:var(--anatomy-card)}
+.u-chip[data-i]{cursor:pointer}
+.u-arrow{--w:1.1;color:var(--anatomy-mid)}
+.u-arrow[data-hue]{color:var(--hue)}
+.u-arrow-line{fill:none;stroke:currentColor;stroke-width:var(--w);stroke-linecap:round;transition:stroke-width .4s,opacity .4s}
+.u-arrow-head{fill:currentColor}
+.u-bar-fill{fill:var(--hue);transform-box:fill-box;transform-origin:50% 100%;transform:scaleY(var(--v));transition:transform .6s var(--anatomy-ease)}
+.u-bar-value{font:500 10px var(--anatomy-mono);fill:var(--anatomy-strong);transition:y .6s var(--anatomy-ease)}
+.u-bar-label{font:11px var(--anatomy-mono);fill:var(--anatomy-muted)}
+.u-axis{stroke:var(--anatomy-mid);stroke-width:.8;fill:none}
+.u-link{fill:none;stroke:var(--hue,var(--anatomy-mid));stroke-width:1.1;stroke-linecap:round;transition:d .9s var(--anatomy-ease),opacity .5s var(--anatomy-ease),stroke .3s}
+.u-link[data-off]{opacity:0}
+.u-eq>.u-at{text-align:center}
+.u-eq .u-rule{font:500 14px/1.5 var(--anatomy-mono);color:var(--anatomy-strong);letter-spacing:.01em}
+.u-lane-bg{fill:var(--anatomy-faint);fill-opacity:.18;stroke:var(--anatomy-faint);stroke-width:.6}
+.u-lane-name{font:11px var(--anatomy-mono);fill:var(--hue,var(--anatomy-muted));text-anchor:end;dominant-baseline:central}
+.u-tick{stroke:var(--anatomy-faint);stroke-width:.6}
+.u-lanes .u-tick-label{text-anchor:middle;dominant-baseline:central}
+.u-now{stroke:var(--anatomy-strong);stroke-width:1.2;transition:transform .5s var(--anatomy-ease)}
+.u-span-bar{fill:var(--hue,var(--anatomy-mid));fill-opacity:.9;transform-box:fill-box;transform-origin:0 50%;transform:scaleX(var(--v,1));transition:transform .5s var(--anatomy-ease)}
+.u-span-label{opacity:0;transition:opacity .3s}
+.u-span[data-labeled] .u-span-label{opacity:1}
+.u-span-label text{font:500 10px var(--anatomy-mono);fill:var(--unfold-on-hot);dominant-baseline:central}
+.u-face .u-cell-bg{stroke-width:.5}
+.u-cell-bg{transform-box:fill-box;transform-origin:50% 50%}
+.u-cell[data-hl]>.u-cell-bg{stroke:var(--anatomy-strong);stroke-opacity:1;stroke-width:1.6;animation:u-ping .5s var(--anatomy-ease)}
+.u-pulse{fill:var(--hue,var(--anatomy-strong));filter:drop-shadow(0 0 3px var(--hue,var(--anatomy-strong)))}
+.u-rise{transform-box:fill-box}
+@keyframes u-pop{from{opacity:0;transform:scale(.4)}}
+@keyframes u-fade{from{opacity:0}}
+@keyframes u-rise{from{opacity:0;transform:translateY(-14px)}}
+@keyframes u-grow{from{transform:scaleY(0)}}
+@keyframes u-draw{from{stroke-dasharray:1;stroke-dashoffset:1}to{stroke-dasharray:1;stroke-dashoffset:0}}
+@keyframes u-ping{from{stroke-width:4;stroke-opacity:0}}
+.u-floor-text{font-family:var(--unfold-serif);font-style:italic;font-weight:600;fill:var(--hue,var(--anatomy-text))}
+.u-floor-label{font-family:var(--anatomy-mono);fill:var(--anatomy-muted)}
+.u-guide{fill:none;stroke:var(--anatomy-lo);stroke-width:.8;stroke-dasharray:2 3}
+.u-controls{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px 18px;margin-top:10px}
+.u-controls button{border:0;border-radius:999px;background:transparent;color:var(--anatomy-muted);font:11px/1 var(--anatomy-mono);letter-spacing:.04em;padding:6px 10px;cursor:pointer;box-shadow:0 0 0 1px var(--anatomy-faint);transition:color .2s,box-shadow .2s}
+.u-controls button:hover{color:var(--anatomy-text)}
+.u-controls button[aria-pressed="true"]{color:var(--anatomy-strong);box-shadow:0 0 0 1px var(--anatomy-mid)}
+.u-time{display:flex;align-items:center;gap:8px;flex:1 1 260px;max-width:440px;transition:opacity .4s}
+.u-time button{width:28px;height:28px;padding:0;font-size:15px}
+.u-time input{flex:1;min-width:80px;accent-color:var(--anatomy-hi)}
+.u-ctl{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px 12px;transition:opacity .4s}
+.u-controls [data-scenes]{transition:opacity .4s}.u-controls [data-idle]{opacity:.4}
+.u-sub{font-size:72%}
+.u-line rect{fill:var(--hue,var(--anatomy-hi));fill-opacity:0;transition:fill-opacity .25s}
+.u-line[data-on] rect{fill-opacity:.18}
+.u-line-num{font:10px var(--anatomy-mono);fill:var(--anatomy-lo);text-anchor:end;dominant-baseline:central}
+.u-line-text{font:11.5px var(--anatomy-mono);fill:var(--anatomy-text);dominant-baseline:central;white-space:pre}
+.u-line[data-on] .u-line-text{fill:var(--anatomy-strong)}
+.u-controls label{display:inline-flex;align-items:center;gap:6px;color:var(--anatomy-muted);font:11px var(--anatomy-mono)}
+.u-controls :is(input[type=number],input[type=text]){width:calc(5ch + 28px);padding:4px 6px;border:0;border-radius:6px;background:transparent;color:var(--anatomy-text);font:12px var(--anatomy-mono);font-variant-numeric:tabular-nums;box-shadow:0 0 0 1px var(--anatomy-faint)}
+.u-controls input[type=range]{accent-color:var(--anatomy-hi)}
+.u-controls select{max-width:100%;padding:4px 22px 4px 8px;border:0;border-radius:6px;background:var(--anatomy-card);color:var(--anatomy-text);font:11px var(--anatomy-mono);box-shadow:0 0 0 1px var(--anatomy-faint);cursor:pointer}
+.iso-plate-corner[data-corner="readout"]{max-width:62%;white-space:normal;text-align:right;line-height:1.4}
+.u-time output{font:11px var(--anatomy-mono);color:var(--anatomy-muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.u-more{margin-top:48px}
+.u-more>summary{cursor:pointer;color:var(--anatomy-muted);font:500 12px var(--anatomy-mono);letter-spacing:.04em}
+.u-more>summary:hover,.u-more[open]>summary{color:var(--anatomy-strong)}
+.u-notes{color:var(--anatomy-text);font-size:14px;line-height:1.65}
+.u-notes h2{margin:36px 0 10px;font:500 13px var(--anatomy-mono);letter-spacing:.04em;color:var(--anatomy-strong)}
+.u-notes p,.u-notes ul{margin:0 0 12px;max-width:72ch}
+.u-notes li{margin-bottom:6px}
+.u-notes b{color:var(--anatomy-strong);font-weight:500}
+.u-notes code{font:12.5px var(--anatomy-mono);color:var(--anatomy-strong)}
+.u-notes table{width:100%;border-collapse:collapse;font-size:13px;line-height:1.5}
+.u-notes th,.u-notes td{padding:7px 10px 7px 0;border-bottom:1px solid var(--anatomy-faint);text-align:left;vertical-align:top}
+.u-notes th{color:var(--anatomy-muted);font:500 11.5px var(--anatomy-mono);letter-spacing:.03em}
+.u-notes svg{display:block;width:100%;max-width:640px;height:auto;margin:6px 0 14px;overflow:visible}
+.u-notes td:first-child{color:var(--anatomy-strong);white-space:nowrap}
+@media (max-width:560px){.u-notes thead{display:none}.u-notes tr{display:block;padding:8px 0;border-bottom:1px solid var(--anatomy-faint)}.u-notes td{display:block;padding:2px 0;border:0}.u-notes td[data-th]:not(:first-child)::before{content:attr(data-th) ": ";color:var(--anatomy-muted)}}
+@container (max-width:520px){:not([data-keep])>.u-cell .u-num,:not([data-keep])>.u-bar .u-bar-value{display:none}.u-eq math{font-size:14px}.u-steps button{font-size:0;gap:0;padding:4px}.u-controls{gap:8px;flex-direction:column;align-items:stretch}.u-ctl{gap:6px 8px}.u-time{flex:none;max-width:none}.u-controls label{gap:4px}}
+@media (max-width:560px){.iso-plate-corner[data-corner="readout"]{left:0;max-width:none;white-space:normal;text-align:right;line-height:1.4}.iso-plate-corner[data-corner="hint"]{display:none}}
+@media (prefers-reduced-motion:reduce){.u-stage *{transition:none!important;animation:none!important}.u-pulse{display:none}}
+</style><figure class="iso-figure"><div class="iso-plate"><div class="iso-plate-corners" aria-hidden="true"><span class="iso-plate-corner" data-corner="fig">Fig 3</span><span class="iso-plate-corner" data-corner="title">The event loop</span><span class="iso-plate-corner" data-corner="hint">← → chapter · ↑ ↓ step</span><span class="iso-plate-corner" data-corner="readout" data-readout>step 11 · all queues empty · output A D C B</span></div><style>.u-stage[data-scene="0"] .u-at[data-at="0"]{opacity:1;visibility:visible;transition:opacity .4s var(--anatomy-ease) .2s,visibility 0s .2s}
+.u-stage[data-scene="0"] .u-grid[data-t~="0"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="0"] .u-grid[data-t~="0"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="0"] .u-grid[data-t~="0"] .u-dims:not(.u-dims-T),.u-stage[data-scene="0"] .u-grid[data-t~="0"] .u-mark{display:none}
+.u-stage[data-scene="1"] .u-at[data-at="1"]{opacity:1;visibility:visible;transition:opacity .4s var(--anatomy-ease) .2s,visibility 0s .2s}
+.u-stage[data-scene="1"] .u-grid[data-t~="1"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="1"] .u-grid[data-t~="1"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="1"] .u-grid[data-t~="1"] .u-dims:not(.u-dims-T),.u-stage[data-scene="1"] .u-grid[data-t~="1"] .u-mark{display:none}
+.u-stage[data-scene="2"] .u-at[data-at="2"]{opacity:1;visibility:visible;transition:opacity .4s var(--anatomy-ease) .2s,visibility 0s .2s}
+.u-stage[data-scene="2"] .u-grid[data-t~="2"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="2"] .u-grid[data-t~="2"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="2"] .u-grid[data-t~="2"] .u-dims:not(.u-dims-T),.u-stage[data-scene="2"] .u-grid[data-t~="2"] .u-mark{display:none}
+.u-stage[data-scene="3"] .u-at[data-at="3"]{opacity:1;visibility:visible;transition:opacity .4s var(--anatomy-ease) .2s,visibility 0s .2s}
+.u-stage[data-scene="3"] .u-grid[data-t~="3"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="3"] .u-grid[data-t~="3"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="3"] .u-grid[data-t~="3"] .u-dims:not(.u-dims-T),.u-stage[data-scene="3"] .u-grid[data-t~="3"] .u-mark{display:none}
+.u-stage[data-scene="4"] .u-at[data-at="4"]{opacity:1;visibility:visible;transition:opacity .4s var(--anatomy-ease) .2s,visibility 0s .2s}
+.u-stage[data-scene="4"] .u-grid[data-t~="4"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="4"] .u-grid[data-t~="4"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="4"] .u-grid[data-t~="4"] .u-dims:not(.u-dims-T),.u-stage[data-scene="4"] .u-grid[data-t~="4"] .u-mark{display:none}.el-place{fill:var(--anatomy-faint);fill-opacity:.12;stroke:var(--anatomy-lo);stroke-width:.8;transition:stroke .4s}
+.u-stage[data-scene="1"] :is(#box-code,#box-stack) .el-place{stroke:var(--anatomy-strong)}
+.u-stage[data-scene="2"] :is(#box-webapi,#box-tasks,#box-micro) .el-place{stroke:var(--anatomy-strong)}
+.u-stage[data-scene="3"] :is(#box-micro,#box-stack) .el-place{stroke:var(--anatomy-strong)}
+.u-stage[data-scene="4"] :is(#box-tasks,#box-stack) .el-place{stroke:var(--anatomy-strong)}
+.u-stage[data-scene="1"] :is(#box-code,#box-stack) .el-label{fill:var(--anatomy-strong)}
+.u-stage[data-scene="2"] :is(#box-webapi,#box-tasks,#box-micro) .el-label{fill:var(--anatomy-strong)}
+.u-stage[data-scene="3"] :is(#box-micro,#box-stack) .el-label{fill:var(--anatomy-strong)}
+.u-stage[data-scene="4"] :is(#box-tasks,#box-stack) .el-label{fill:var(--anatomy-strong)}
+.el-label{font:10.5px var(--anatomy-mono);fill:var(--anatomy-muted);letter-spacing:.06em;text-transform:uppercase;transition:fill .4s}
+.el-num{font:11px var(--anatomy-mono);fill:var(--anatomy-lo);dominant-baseline:central}
+.el-code{font:11px var(--anatomy-mono);fill:var(--anatomy-text);dominant-baseline:central;white-space:pre}
+.el-item{transition:transform .65s var(--anatomy-ease),opacity .4s var(--anatomy-ease)}
+.el-item .u-chip rect{fill:color-mix(in srgb,var(--hue,var(--anatomy-mid)) 16%,var(--anatomy-card))}
+.el-item .u-chip text{fill:var(--anatomy-strong);font-size:10.5px}
+.el-cursor{transition:transform .5s var(--anatomy-ease),opacity .3s}
+.el-cursor rect{fill:var(--hue,var(--anatomy-hi));fill-opacity:.16;stroke:var(--hue,var(--anatomy-hi));stroke-width:1;transition:fill .3s,stroke .3s}
+#timeline{cursor:pointer}</style><div class="u-stage" tabindex="0" role="group" aria-roledescription="explainer" aria-label="Event loop explainer. Left and right arrows change the chapter. Up and down arrows step through time." data-scene="0" data-count="5" data-dwell="8000"><div class="u-eq" aria-live="polite"><div class="u-at" data-at="0"><code class="u-rule">run one <span data-hue="gold">task</span> → run every <span data-hue="blue">microtask</span> → repeat</code></div><div class="u-at" data-at="1"><code class="u-rule">the <span data-hue="ink">script</span> is the first task</code></div><div class="u-at" data-at="2"><code class="u-rule"><span data-hue="gold">setTimeout</span> → timer → task queue · <span data-hue="blue">.then</span> → microtask queue</code></div><div class="u-at" data-at="3"><code class="u-rule">stack empty → run every <span data-hue="blue">microtask</span></code></div><div class="u-at" data-at="4"><code class="u-rule">no microtasks left → take the next <span data-hue="gold">task</span></code></div></div><svg xmlns="http://www.w3.org/2000/svg" class="iso-svg" viewBox="0 0 820 352" role="img" aria-label="The JavaScript event loop running four lines: the code, the call stack, the Web APIs timer, the task and microtask queues, the console, and a timeline of where each callback waits."><g class="el-box" id="box-code"><rect class="el-place" x="0" y="18" width="350" height="96" rx="5"/><text class="el-label" x="0" y="12">script.js</text></g><g class="el-box" id="box-stack"><rect class="el-place" x="370" y="18" width="140" height="164" rx="5"/><text class="el-label" x="370" y="12">call stack</text></g><g class="el-box" id="box-webapi"><rect class="el-place" x="530" y="18" width="290" height="44" rx="5"/><text class="el-label" x="530" y="12">Web APIs</text></g><g class="el-box" id="box-tasks"><rect class="el-place" x="530" y="96" width="290" height="26" rx="5"/><text class="el-label" x="530" y="90">task queue</text></g><g class="el-box" id="box-micro"><rect class="el-place" x="530" y="156" width="290" height="26" rx="5"/><text class="el-label" x="530" y="150">microtask queue</text></g><g class="el-box" id="box-console"><rect class="el-place" x="0" y="136" width="350" height="46" rx="5"/><text class="el-label" x="0" y="130">console</text></g><g class="u-arrow" data-hue="gold"><path class="u-arrow-line" pathLength="1" d="M770 62Q770 79 770 91"/><path class="u-arrow-head" d="M770 96L767.3 91L772.8 91Z"/></g><g class="u-arrow" data-hue="gold"><path class="u-arrow-line" pathLength="1" d="M530 109Q521 109 517 109"/><path class="u-arrow-head" d="M512 109L517 106.3L517 111.8Z"/></g><g class="u-arrow" data-hue="blue"><path class="u-arrow-line" pathLength="1" d="M530 169Q521 169 517 169"/><path class="u-arrow-head" d="M512 169L517 166.3L517 171.8Z"/></g><g class="el-cursor" id="cursor" style="opacity:0"><rect x="4" y="22" width="342" height="20" rx="3"/></g><text class="el-num" x="10" y="32">1</text><text class="el-code" x="28" y="32">console.log("A");</text><text class="el-num" x="10" y="54">2</text><text class="el-code" x="28" y="54">setTimeout(() => console.log("B"), 0);</text><text class="el-num" x="10" y="76">3</text><text class="el-code" x="28" y="76">Promise.resolve().then(() => console.log("C"));</text><text class="el-num" x="10" y="98">4</text><text class="el-code" x="28" y="98">console.log("D");</text><g class="el-item" id="it-script" style="transform:translate(380px,160px);opacity:0"><g class="u-chip " data-hue="ink" transform="translate(0 0)"><rect width="120" height="18" rx="4"/><text x="60" y="9">script</text></g></g><g class="el-item" id="it-call1" style="transform:translate(380px,138px);opacity:0"><g class="u-chip " transform="translate(0 0)"><rect width="120" height="18" rx="4"/><text x="60" y="9">console.log(&quot;A&quot;)</text></g></g><g class="el-item" id="it-outA" style="transform:translate(10px,150px);opacity:1"><g class="u-chip " data-hue="ink" transform="translate(0 0)"><rect width="26" height="18" rx="4"/><text x="13" y="9">A</text></g></g><g class="el-item" id="it-call2" style="transform:translate(380px,138px);opacity:0"><g class="u-chip " transform="translate(0 0)"><rect width="120" height="18" rx="4"/><text x="60" y="9">setTimeout(…)</text></g></g><g class="el-item" id="it-cbB" style="transform:translate(538px,31px);opacity:0"><g class="u-chip " data-hue="gold" transform="translate(0 0)"><rect width="120" height="18" rx="4"/><text x="60" y="9">() =&gt; log(B)</text></g></g><g class="el-item" id="it-call3" style="transform:translate(380px,138px);opacity:0"><g class="u-chip " transform="translate(0 0)"><rect width="120" height="18" rx="4"/><text x="60" y="9">.then(…)</text></g></g><g class="el-item" id="it-cbC" style="transform:translate(536px,160px);opacity:0"><g class="u-chip " data-hue="blue" transform="translate(0 0)"><rect width="120" height="18" rx="4"/><text x="60" y="9">() =&gt; log(C)</text></g></g><g class="el-item" id="it-call4" style="transform:translate(380px,138px);opacity:0"><g class="u-chip " transform="translate(0 0)"><rect width="120" height="18" rx="4"/><text x="60" y="9">console.log(&quot;D&quot;)</text></g></g><g class="el-item" id="it-outD" style="transform:translate(42px,150px);opacity:1"><g class="u-chip " data-hue="ink" transform="translate(0 0)"><rect width="26" height="18" rx="4"/><text x="13" y="9">D</text></g></g><g class="el-item" id="it-call5" style="transform:translate(380px,138px);opacity:0"><g class="u-chip " transform="translate(0 0)"><rect width="120" height="18" rx="4"/><text x="60" y="9">console.log(&quot;C&quot;)</text></g></g><g class="el-item" id="it-outC" style="transform:translate(74px,150px);opacity:1"><g class="u-chip " data-hue="blue" transform="translate(0 0)"><rect width="26" height="18" rx="4"/><text x="13" y="9">C</text></g></g><g class="el-item" id="it-call6" style="transform:translate(380px,138px);opacity:0"><g class="u-chip " transform="translate(0 0)"><rect width="120" height="18" rx="4"/><text x="60" y="9">console.log(&quot;B&quot;)</text></g></g><g class="el-item" id="it-outB" style="transform:translate(106px,150px);opacity:1"><g class="u-chip " data-hue="gold" transform="translate(0 0)"><rect width="26" height="18" rx="4"/><text x="13" y="9">B</text></g></g><g class="u-lanes" id="timeline" data-x0="120" data-px="58.333333333333336" data-from="0"><g class="u-lane" data-i="0"><rect class="u-lane-bg" x="120" y="228" width="700" height="24"/><text class="u-lane-name" x="110" y="240">call stack</text></g><g class="u-lane" data-i="1"><rect class="u-lane-bg" x="120" y="252" width="700" height="24"/><text class="u-lane-name" x="110" y="264">Web APIs</text></g><g class="u-lane" data-i="2"><rect class="u-lane-bg" x="120" y="276" width="700" height="24"/><text class="u-lane-name" x="110" y="288">task queue</text></g><g class="u-lane" data-i="3"><rect class="u-lane-bg" x="120" y="300" width="700" height="24"/><text class="u-lane-name" x="110" y="312">microtasks</text></g><path class="u-tick" d="M120 228V327"/><text class="u-tick-label" x="120" y="336">0</text><path class="u-tick" d="M178.3 228V327"/><text class="u-tick-label" x="178.3" y="336">1</text><path class="u-tick" d="M236.7 228V327"/><text class="u-tick-label" x="236.7" y="336">2</text><path class="u-tick" d="M295 228V327"/><text class="u-tick-label" x="295" y="336">3</text><path class="u-tick" d="M353.3 228V327"/><text class="u-tick-label" x="353.3" y="336">4</text><path class="u-tick" d="M411.7 228V327"/><text class="u-tick-label" x="411.7" y="336">5</text><path class="u-tick" d="M470 228V327"/><text class="u-tick-label" x="470" y="336">6</text><path class="u-tick" d="M528.3 228V327"/><text class="u-tick-label" x="528.3" y="336">7</text><path class="u-tick" d="M586.7 228V327"/><text class="u-tick-label" x="586.7" y="336">8</text><path class="u-tick" d="M645 228V327"/><text class="u-tick-label" x="645" y="336">9</text><path class="u-tick" d="M703.3 228V327"/><text class="u-tick-label" x="703.3" y="336">10</text><path class="u-tick" d="M761.7 228V327"/><text class="u-tick-label" x="761.7" y="336">11</text><path class="u-tick" d="M820 228V327"/><text class="u-tick-label" x="820" y="336">12</text><path class="u-now" d="M120 224V328"/></g><g class="u-span" data-hue="ink" data-from="1" data-to="7" data-need="47.2" transform="translate(178.3 228)"><rect class="u-span-bar" x="0.5" y="4" width="349" height="16" rx="3"/><g class="u-span-label"><text x="6" y="12">script</text></g></g><g class="u-span" data-hue="blue" data-from="8" data-to="9" data-need="34.8" transform="translate(586.7 228)"><rect class="u-span-bar" x="0.5" y="4" width="57.3" height="16" rx="3"/><g class="u-span-label"><text x="6" y="12">cb C</text></g></g><g class="u-span" data-hue="gold" data-from="10" data-to="11" data-need="34.8" transform="translate(703.3 228)"><rect class="u-span-bar" x="0.5" y="4" width="57.3" height="16" rx="3"/><g class="u-span-label"><text x="6" y="12">cb B</text></g></g><g class="u-span" data-hue="gold" data-from="3" data-to="4" data-need="34.8" transform="translate(295 252)"><rect class="u-span-bar" x="0.5" y="4" width="57.3" height="16" rx="3"/><g class="u-span-label"><text x="6" y="12">cb B</text></g></g><g class="u-span" data-hue="gold" data-from="4" data-to="10" data-need="34.8" transform="translate(353.3 276)"><rect class="u-span-bar" x="0.5" y="4" width="349" height="16" rx="3"/><g class="u-span-label"><text x="6" y="12">cb B</text></g></g><g class="u-span" data-hue="blue" data-from="5" data-to="8" data-need="34.8" transform="translate(411.7 300)"><rect class="u-span-bar" x="0.5" y="4" width="174" height="16" rx="3"/><g class="u-span-label"><text x="6" y="12">cb C</text></g></g></svg><div class="u-controls"><div class="u-time" data-label="step"><button type="button" data-step="-1" aria-label="Previous step">‹</button><input type="range" min="0" max="11" value="0" aria-label="step"><button type="button" data-step="1" aria-label="Next step">›</button><output>step 0 / 11</output></div></div><div class="u-cc"><p class="u-at" data-at="0">Four lines print <b>A D C B</b>, not A B C D. Each callback waits in a queue until the event loop runs it.</p><p class="u-at" data-at="1">The loop takes the first task, the whole <b data-hue="ink">script</b>, and runs it on the call stack. Line 1 runs at once and prints A.</p><p class="u-at" data-at="2">setTimeout sends its callback to the <b data-hue="gold">task queue</b> through a timer, and .then sends its callback to the <b data-hue="blue">microtask queue</b>. Neither runs while the script is on the stack.</p><p class="u-at" data-at="3">When the script ends, the loop runs every <b data-hue="blue">microtask</b> before it takes another task. That is why C prints before B.</p><p class="u-at" data-at="4">Only now does the loop take the next task, the <b data-hue="gold">timer callback</b>, and B prints. A 0 ms timer still waits for the script and for every microtask.</p></div><nav class="u-steps" aria-label="Scenes"><button type="button" class="u-play" aria-pressed="false"><span>▶</span>Play</button><button type="button" class="u-voice" aria-pressed="true" hidden><span>♪</span>Voice</button><button type="button" data-go="0" aria-current="step"><span>1</span>Overview</button><button type="button" data-go="1"><span>2</span>Run script</button><button type="button" data-go="2"><span>3</span>Queue callbacks</button><button type="button" data-go="3"><span>4</span>Drain microtasks</button><button type="button" data-go="4"><span>5</span>Next task</button></nav><div class="u-key"><span data-hue="ink"><i></i>the script (first task)</span><span data-hue="gold"><i></i>timer callback (task)</span><span data-hue="blue"><i></i>promise callback (microtask)</span></div></div></div><figcaption class="iso-legend"><span class="iso-caption">A browser-style event loop on four lines of JavaScript. Every frame, queue entry and timeline bar comes from a small simulator of the loop. The time axis counts steps of the simulation, not milliseconds. Rendering between tasks is left out.</span></figcaption></figure></main><script type="module">function showSpans(root, t) {
+  const box = root.querySelector(".u-lanes");
+  const px = Number(box.dataset.px);
+  box.querySelector(".u-now").style.transform = `translateX(${(t - Number(box.dataset.from)) * px}px)`;
+  root.querySelectorAll(".u-span").forEach((el) => {
+    const from = Number(el.dataset.from);
+    const to = Number(el.dataset.to);
+    const v = Math.max(0, Math.min(1, (t - from) / (to - from)));
+    el.style.setProperty("--v", v.toFixed(3));
+    el.toggleAttribute("data-labeled", v * (to - from) * px >= Number(el.dataset.need));
+  });
+}
+function runtime() {
+  const stage = document.querySelector(".u-stage");
+  const count = Number(stage.dataset.count);
+  const dwell = Number(stage.dataset.dwell);
+  const still = matchMedia("(prefers-reduced-motion: reduce)");
+  let scene = 0;
+  let visible = false;
+  let playing = false;
+  let held = false;
+  let next = 0;
+  const beats = [];
+  const total = (b) => (typeof b.count === "function" ? b.count() : b.count);
+  // Voice: a scene's narration plays when the scene opens, from its recorded clip (data-audio) or else the browser's
+  // own voice, which reads the current text, live numbers included. Voice off shows the narration as text.
+  // The tour waits until the narration ends. A replay of the same scene (go(scene())) does not restart it.
+  const cc = stage.querySelector(".u-cc");
+  const voiceBtn = stage.querySelector(".u-voice");
+  const synth = window.speechSynthesis;
+  const clips = !!cc?.querySelector("[data-audio]");
+  let voiceOn = !!cc && (clips || !!synth);
+  let speaking = false;
+  let spoken = -1;
+  let talk = 0;
+  let clip = null;
+  let audio = null;
+  const recorded = [...(cc?.children ?? [])].map((p) => p.textContent.trim());
+  // ponytail: name heuristic. Neural and online voices (Edge "Natural", Chrome "Google", Apple "Premium") sound human.
+  const bestVoice = () => {
+    const en = synth.getVoices().filter((v) => v.lang.startsWith("en"));
+    return en.find((v) => /natural|neural|online/i.test(v.name)) ?? en.find((v) => /google|premium|enhanced|siri/i.test(v.name)) ?? en.find((v) => v.default) ?? en[0] ?? null;
+  };
+  // Beats: while the voice says line k of the script, the stage has data-speaking and data-cue="<cue of line k>".
+  // The build's CSS lights what that line talks about. When the narration ends, both go and the full scene shows.
+  let timers = [];
+  const quiet = () => {
+    timers.forEach(clearTimeout);
+    timers = [];
+    stage.removeAttribute("data-speaking");
+    delete stage.dataset.cue;
+  };
+  const followBeats = (p, total) => {
+    const cues = p.dataset.cues?.split("|");
+    if (!cues) return;
+    let times = p.dataset.beats?.split(" ").map(Number);
+    if (!times) {
+      // No times from the build (the browser's voice): spread the beats by text length.
+      const chars = p.dataset.chars.split(" ").map(Number);
+      const sum = chars.reduce((a, b) => a + b, 0);
+      times = chars.map((_, k) => (total * chars.slice(0, k).reduce((a, b) => a + b, 0)) / sum);
+    }
+    stage.toggleAttribute("data-speaking", true);
+    times.forEach((t, k) => timers.push(setTimeout(() => (stage.dataset.cue = cues[k]), t * 1000)));
+  };
+  const hush = () => {
+    talk++;
+    speaking = false;
+    spoken = -1;
+    clip?.stop();
+    clip = null;
+    synth?.cancel();
+    quiet();
+  };
+  const speak = () => {
+    if (!voiceOn || spoken === scene) return;
+    // Browsers play no sound before the reader's first click. Wait for it: Play and the scene buttons start the voice.
+    if (navigator.userActivation && !navigator.userActivation.hasBeenActive) return;
+    hush();
+    spoken = scene;
+    const p = cc.querySelector(`[data-at="${scene}"]`);
+    const text = p?.textContent.trim();
+    if (!text) return;
+    const token = talk;
+    const end = () => {
+      if (token !== talk || !speaking) return;
+      speaking = false;
+      quiet();
+      next = performance.now() + 900;
+    };
+    speaking = true;
+    // The clip was recorded from the build's text. After an input changes a live number, the browser reads the new text.
+    // Web Audio decodes the clip from the page itself, so a sandbox that blocks data: media URLs (a file preview,
+    // an Artifact) still plays it.
+    if (p.dataset.audio && text === recorded[scene] && window.AudioContext) {
+      audio ??= new AudioContext();
+      audio.resume();
+      const bytes = Uint8Array.from(atob(p.dataset.audio.split(",")[1]), (c) => c.charCodeAt(0));
+      audio.decodeAudioData(bytes.buffer).then((buffer) => {
+        if (token !== talk) return;
+        clip = audio.createBufferSource();
+        clip.buffer = buffer;
+        clip.connect(audio.destination);
+        clip.onended = end;
+        clip.start();
+        followBeats(p, buffer.duration);
+      }, end);
+    } else if (synth) {
+      const u = new SpeechSynthesisUtterance(text);
+      u.voice = bestVoice();
+      u.rate = 0.95;
+      u.onend = u.onerror = end;
+      synth.speak(u);
+      // ponytail: a browser voice may never report its end, so the tour stops waiting after 0.6 s a word.
+      setTimeout(end, 3000 + text.split(/\s+/).length * 600);
+      followBeats(p, text.length / 14);
+    } else end();
+  };
+  const setVoice = (on) => {
+    voiceOn = on;
+    stage.toggleAttribute("data-voice", on);
+    voiceBtn?.setAttribute("aria-pressed", String(on));
+    on ? speak() : hush();
+  };
+  if (voiceBtn && voiceOn) voiceBtn.hidden = false;
+  stage.toggleAttribute("data-voice", voiceOn);
+  voiceBtn?.addEventListener("click", () => setVoice(!voiceOn));
+  const go = (i, by = "user") => {
+    scene = Math.max(0, Math.min(count - 1, i));
+    stage.dataset.scene = String(scene);
+    stage.querySelectorAll("[data-go]").forEach((b) => (Number(b.dataset.go) === scene ? b.setAttribute("aria-current", "step") : b.removeAttribute("aria-current")));
+    stage.querySelectorAll("[data-ds]").forEach((el) => {
+      const d = JSON.parse(el.dataset.ds)[scene];
+      el.toggleAttribute("data-off", !d);
+      if (!d) return;
+      if (CSS.supports("d", 'path("M0 0")')) el.style.d = `path("${d}")`;
+      else el.setAttribute("d", d);
+    });
+    scope();
+    fit();
+    stage.dispatchEvent(new CustomEvent("unfold:scene", { detail: { scene, by } }));
+    if (by === "user") setPlaying(false);
+    held = false;
+    next = performance.now() + dwell;
+    if (scene !== spoken) speak();
+    for (const b of beats) {
+      b.n = 0;
+      b.at = performance.now() + b.wait - b.ms;
+      if (still.matches && b.scene === scene) b.fn(-1);
+    }
+    setBusy();
+  };
+  // data-busy is on the stage while a counted sweep of this scene still runs. The tour and shoot.mjs wait for it.
+  // A sweep is done one `ms` after its last call, so the last step has time to move. The tour then holds that
+  // last step for `hold` ms before the next scene, so the reader sees the result.
+  const hold = 1800;
+  const setBusy = (now = performance.now()) => {
+    const busy = !held && !still.matches && beats.some((b) => b.scene === scene && total(b) && (b.n < total(b) || now - b.at < b.ms));
+    if (busy === stage.hasAttribute("data-busy")) return;
+    stage.toggleAttribute("data-busy", busy);
+    if (!busy) next = Math.max(next, now + hold);
+  };
+  // The tour runs only after the reader presses Play, and stops at the last scene or at any input.
+  const playBtn = stage.querySelector(".u-play");
+  const setPlaying = (on) => {
+    playing = on;
+    playBtn.setAttribute("aria-pressed", String(on));
+    playBtn.firstChild.textContent = on ? "❚❚" : "▶";
+    playBtn.lastChild.textContent = on ? "Pause" : "Play";
+  };
+  playBtn.addEventListener("click", () => {
+    if (playing) {
+      hush();
+      return setPlaying(false);
+    }
+    if (scene === count - 1) go(0, "tour");
+    next = performance.now() + dwell;
+    setPlaying(true);
+    // A clip that the browser blocked before this click plays now.
+    if (!speaking) (spoken = -1), speak();
+  });
+  const tour = (now) => {
+    if (playing && visible && now > next && !speaking && !stage.hasAttribute("data-busy")) scene === count - 1 ? setPlaying(false) : go(scene + 1, "tour");
+    for (const b of beats) {
+      if (b.scene === scene && visible && !held && !still.matches && now - b.at >= b.ms && !(total(b) && b.n >= total(b))) {
+        b.at = now;
+        b.fn(b.n++);
+      }
+    }
+    setBusy(now);
+    requestAnimationFrame(tour);
+  };
+  stage.querySelector(".u-steps").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-go]");
+    if (b) go(Number(b.dataset.go));
+  });
+  stage.addEventListener("keydown", (e) => {
+    const to = { ArrowRight: scene + 1, ArrowLeft: scene - 1, Home: 0, End: count - 1 }[e.key];
+    if (to === undefined) return;
+    e.preventDefault();
+    go(to);
+  });
+  // Time by hand: the step control and the "," and "." keys call the page's onTime(t). Its keys stay inside it.
+  const timer = stage.querySelector(".u-time");
+  let onTime = () => {};
+  const range = timer?.querySelector("input");
+  // onTime first: it may call go(), which releases the sweeps. pause() after it holds them again.
+  const byHand = (t) => {
+    onTime(Math.max(0, Math.min(Number(range.max), t)));
+    pause();
+  };
+  if (timer) {
+    range.addEventListener("input", () => byHand(Number(range.value)));
+    timer.addEventListener("click", (e) => {
+      const b = e.target.closest("[data-step]");
+      if (b) byHand(Number(range.value) + Number(b.dataset.step));
+    });
+    stage.addEventListener("keydown", (e) => {
+      const by = { ",": -1, ".": 1 }[e.key];
+      if (by === undefined) return;
+      e.preventDefault();
+      byHand(Number(range.value) + by);
+    });
+  }
+  // Keys typed in a control (a scrubber, a number field) stay in it: no scene or focus change.
+  stage.querySelectorAll(".u-controls :is(input,select,textarea)").forEach((el) => el.addEventListener("keydown", (e) => e.stopPropagation()));
+  // A scene-scoped control (stageHtml controlScenes, or any element in the controls with data-scenes) is dimmed
+  // in the other scenes, and an input there moves to the first scene that uses it.
+  const ownersOf = (el) => el.dataset.scenes.trim().split(/\s+/).map(Number);
+  function scope() {
+    stage.querySelectorAll(".u-controls [data-scenes]").forEach((el) => el.toggleAttribute("data-idle", !ownersOf(el).includes(scene)));
+  }
+  const toOwner = (e) => {
+    const el = e.target.closest(".u-controls [data-scenes]");
+    if (el && !ownersOf(el).includes(scene)) go(ownersOf(el)[0]);
+  };
+  // Capture phase: the move runs before the page's own handler, so a preset applied on scene entry
+  // does not overwrite what the reader just set.
+  const panel = stage.querySelector(".u-controls");
+  panel?.addEventListener("input", toOwner, true);
+  panel?.addEventListener("click", (e) => e.target.closest("button") && toOwner(e), true);
+  // timeAt(t, steps): show step t. Pass steps when the run's length changed (a live input made a longer trace).
+  const timeAt = (t, steps) => {
+    if (!timer) return;
+    if (steps) range.max = String(steps - 1);
+    range.value = String(t);
+    timer.querySelector("output").textContent = `${timer.dataset.label} ${t} / ${range.max}`;
+  };
+  // Narrow layout: below 560 px the drawing takes its second viewBox and the stage gets data-narrow.
+  // With one narrow height per scene (data-narrow-h), the viewBox follows the scene.
+  const svg = stage.querySelector("svg");
+  const wide = svg?.getAttribute("viewBox");
+  const heights = stage.dataset.narrowH?.split(" ");
+  function fit() {
+    if (!stage.dataset.narrowBox) return;
+    const box = stage.dataset.narrowBox.split(" ");
+    if (heights) box[3] = heights[scene] ?? box[3];
+    svg.setAttribute("viewBox", stage.hasAttribute("data-narrow") ? box.join(" ") : wide);
+  }
+  if (stage.dataset.narrowBox)
+    new ResizeObserver(([entry]) => {
+      const on = entry.contentRect.width < 560;
+      if (on === stage.hasAttribute("data-narrow")) return;
+      stage.toggleAttribute("data-narrow", on);
+      fit();
+      stage.dispatchEvent(new CustomEvent("unfold:layout", { detail: { narrow: on } }));
+    }).observe(stage);
+  scope();
+  new IntersectionObserver((entries) => (visible = entries[entries.length - 1].isIntersecting), { rootMargin: "120px 0px" }).observe(stage);
+  next = performance.now() + dwell;
+  requestAnimationFrame(tour);
+  // beat(scene, ms, fn, wait, count): call fn(0), fn(1), … every ms while that scene shows, starting `wait` ms after it opens.
+  // With count, it stops after fn(count - 1) and the stage loses data-busy. Without it, the sweep never ends (a loop).
+  // count may be a function, read on every frame, for a run whose length a live input changes.
+  // Under reduced motion fn(-1) is called once instead: show the resting state.
+  const beat = (sceneIndex, ms, fn, wait = 1000, count = 0) => {
+    // No setBusy() here: the next frame runs it, so a count function may read data the page sets up after this call.
+    beats.push({ scene: sceneIndex, ms, fn, wait, count, n: 0, at: performance.now() + wait - ms });
+    // The scene open at load had no go() after this beat existed: show its resting state too, after the page script ran.
+    requestAnimationFrame(() => still.matches && scene === sceneIndex && fn(-1));
+  };
+  // pause(): the user took control. The tour stops, and the sweeps hold until the scene changes.
+  const pause = () => {
+    setPlaying(false);
+    held = true;
+    setBusy();
+  };
+  return { stage, go, beat, pause, scene: () => scene, onTime: (fn) => (onTime = fn), timeAt, narrow: () => stage.hasAttribute("data-narrow") };
+}
+const UNFOLD = runtime();
+
+const PLACE = {"script":[null,[380,160],[380,160],[380,160],[380,160],[380,160],[380,160],null,null,null,null,null],"call1":[null,null,[380,138],null,null,null,null,null,null,null,null,null],"outA":[null,null,[10,150],[10,150],[10,150],[10,150],[10,150],[10,150],[10,150],[10,150],[10,150],[10,150]],"call2":[null,null,null,[380,138],null,null,null,null,null,null,null,null],"cbB":[null,null,null,[538,31],[536,100],[536,100],[536,100],[536,100],[536,100],[536,100],[380,160],null],"call3":[null,null,null,null,null,[380,138],null,null,null,null,null,null],"cbC":[null,null,null,null,null,[536,160],[536,160],[536,160],[380,160],null,null,null],"call4":[null,null,null,null,null,null,[380,138],null,null,null,null,null],"outD":[null,null,null,null,null,null,[42,150],[42,150],[42,150],[42,150],[42,150],[42,150]],"call5":[null,null,null,null,null,null,null,null,[380,138],null,null,null],"outC":[null,null,null,null,null,null,null,null,[74,150],[74,150],[74,150],[74,150]],"call6":[null,null,null,null,null,null,null,null,null,null,[380,138],null],"outB":[null,null,null,null,null,null,null,null,null,null,[106,150],[106,150]]};
+const STEPS = [{"line":null,"hue":"","say":"nothing has run yet"},{"line":null,"hue":"ink","say":"the loop takes the first task: the script"},{"line":1,"hue":"ink","say":"line 1 prints A at once"},{"line":2,"hue":"ink","say":"line 2 hands its callback to a 0 ms timer"},{"line":2,"hue":"ink","say":"timer done: its callback waits in the task queue"},{"line":3,"hue":"ink","say":"line 3: .then queues its callback as a microtask"},{"line":4,"hue":"ink","say":"line 4 prints D at once"},{"line":null,"hue":"","say":"the script ends: the stack is empty"},{"line":3,"hue":"blue","say":"stack empty, so microtasks run first: it prints C"},{"line":null,"hue":"","say":"no microtasks left"},{"line":2,"hue":"gold","say":"next task: the timer callback: it prints B"},{"line":null,"hue":"","say":"all queues empty · output A D C B"}];
+const RANGES = [[0,11],[1,2],[3,6],[7,9],[10,11]];
+const LAST = 11;
+const root = UNFOLD.stage;
+const readout = document.querySelector("[data-readout]");
+const cursor = root.querySelector("#cursor");
+const timeline = root.querySelector("#timeline");
+let step = LAST;
+let crossing = false;
+function show(t) {
+  step = Math.max(0, Math.min(LAST, t));
+  for (const [id, at] of Object.entries(PLACE)) {
+    const el = root.querySelector("#it-" + id);
+    const here = at[step];
+    if (here) el.style.transform = "translate(" + here[0] + "px," + here[1] + "px)";
+    el.style.opacity = here ? 1 : 0;
+  }
+  const s = STEPS[step];
+  cursor.style.opacity = s.line ? 1 : 0;
+  if (s.line) cursor.style.transform = "translateY(" + (s.line - 1) * 22 + "px)";
+  if (s.hue) cursor.setAttribute("data-hue", s.hue); else cursor.removeAttribute("data-hue");
+  showSpans(root, step + 1);
+  UNFOLD.timeAt(step);
+  const text = "step " + step + " \u00b7 " + s.say;
+  if (readout.textContent !== text) readout.textContent = text;
+}
+// Stepping by hand can cross into the next chapter; the chapter follows the step.
+function stepTo(t) {
+  show(t);
+  const s = UNFOLD.scene();
+  const [a, b] = RANGES[s];
+  if (s > 0 && (step < a || step > b)) {
+    crossing = true;
+    UNFOLD.go(RANGES.findIndex((r, i) => i > 0 && step >= r[0] && step <= r[1]));
+    crossing = false;
+  }
+  UNFOLD.pause();
+}
+root.addEventListener("unfold:scene", (e) => {
+  if (!crossing) show(e.detail.scene === 0 ? LAST : RANGES[e.detail.scene][0]);
+});
+RANGES.forEach(([a, b], s) => UNFOLD.beat(s, s === 0 ? 550 : 1300, (n) => show(n < 0 ? b : a + n), s === 0 ? 900 : 700, b - a + 1));
+UNFOLD.onTime(stepTo);
+root.addEventListener("keydown", (e) => {
+  const to = { ArrowUp: step - 1, ArrowDown: step + 1 }[e.key];
+  if (to === undefined) return;
+  e.preventDefault();
+  stepTo(to);
+});
+timeline.addEventListener("click", (e) => {
+  const p = new DOMPoint(e.clientX, e.clientY).matrixTransform(timeline.ownerSVGElement.getScreenCTM().inverse());
+  stepTo(Math.floor((p.x - Number(timeline.dataset.x0)) / Number(timeline.dataset.px)));
+});
+show(LAST);
+</script></body></html>

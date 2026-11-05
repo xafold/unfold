@@ -1,0 +1,580 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TCP open and close</title><style>
+.iso{
+  --anatomy-page:#0b0b0b;--anatomy-card:#131313;--anatomy-text:#a3a3a3;--anatomy-strong:#e6e6e6;--anatomy-muted:#6e6e6e;
+  --anatomy-paper:#131313;--anatomy-face:#1b1b1b;--anatomy-top:#1c1c1c;
+  --anatomy-shade-0:#0f0f0f;--anatomy-shade-1:#121212;--anatomy-shade-2:#151515;--anatomy-shade-3:#181818;
+  --anatomy-lit-top:#262626;--anatomy-lit-shade:#1d1d1d;
+  --anatomy-hi:#d4d4d4;--anatomy-mid:#6a6a6a;--anatomy-lo:#3e3e3e;--anatomy-faint:#2a2a2a;--anatomy-lit:#ffffff;
+  --anatomy-halo:#050505;--anatomy-halo-opacity:.9;--anatomy-dot:#e6e6e6;
+  --anatomy-red:#ff6b6b;--anatomy-green:#6be0a0;--anatomy-blue:#6b9bff;
+  --anatomy-weight:.6px;--anatomy-ease:cubic-bezier(.32,.72,0,1);
+  --anatomy-mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --anatomy-lift:inset 0 1px 0 0 #ffffff0a,inset 0 0 0 1px #ffffff06,0 0 0 1px #00000026,0 1px 1px -.5px #00000014,0 3px 3px -1.5px #00000014,0 6px 6px -3px #00000014,0 12px 12px -6px #00000014;
+}
+.iso[data-theme="light"]{
+  --anatomy-page:#f2f2ef;--anatomy-card:#fbfbfa;--anatomy-text:#57575a;--anatomy-strong:#18181a;--anatomy-muted:#8c8c90;
+  --anatomy-paper:#fbfbfa;--anatomy-face:#ffffff;--anatomy-top:#ffffff;
+  --anatomy-shade-0:#dcdcd9;--anatomy-shade-1:#e5e5e2;--anatomy-shade-2:#ededea;--anatomy-shade-3:#f4f4f1;
+  --anatomy-lit-top:#ffffff;--anatomy-lit-shade:#eeeeeb;
+  --anatomy-hi:#26262a;--anatomy-mid:#8a8a8f;--anatomy-lo:#b4b4b8;--anatomy-faint:#d4d4d6;--anatomy-lit:#000000;
+  --anatomy-halo:#8a8a80;--anatomy-halo-opacity:.32;--anatomy-dot:#3a3a3e;
+  --anatomy-red:#e5484d;--anatomy-green:#30a46c;--anatomy-blue:#3e63dd;
+  --anatomy-lift:inset 0 1px 0 0 #ffffff,0 0 0 1px #0000000f,0 1px 1px -.5px #0000000a,0 3px 3px -1.5px #0000000a,0 6px 6px -3px #0000000a,0 12px 12px -6px #0000000a;
+}
+.iso-svg{display:block;width:100%;height:auto;overflow:visible}
+.iso-svg path,.iso-svg circle{vector-effect:non-scaling-stroke}
+.iso-fill{fill:var(--anatomy-paper);stroke:none}
+.iso-solid[data-lit]>.iso-fill{fill:var(--anatomy-face)}
+.iso-shade,.iso-top{stroke:none}
+.iso-shade[data-shade="0"]{fill:var(--anatomy-shade-0)}
+.iso-shade[data-shade="1"]{fill:var(--anatomy-shade-1)}
+.iso-shade[data-shade="2"]{fill:var(--anatomy-shade-2)}
+.iso-shade[data-shade="3"]{fill:var(--anatomy-shade-3)}
+.iso-top{fill:var(--anatomy-top)}
+.iso-solid[data-lit]>.iso-top{fill:var(--anatomy-lit-top)}
+.iso-solid[data-lit]>.iso-shade{fill:var(--anatomy-lit-shade)}
+.iso-solid[data-seamless]>.iso-shade,.iso-solid[data-seamless]>.iso-top{stroke-width:.4;stroke-linejoin:round}
+.iso-solid[data-seamless]>.iso-shade[data-shade="0"]{stroke:var(--anatomy-shade-0)}
+.iso-solid[data-seamless]>.iso-shade[data-shade="1"]{stroke:var(--anatomy-shade-1)}
+.iso-solid[data-seamless]>.iso-shade[data-shade="2"]{stroke:var(--anatomy-shade-2)}
+.iso-solid[data-seamless]>.iso-shade[data-shade="3"]{stroke:var(--anatomy-shade-3)}
+.iso-solid[data-seamless]>.iso-top{stroke:var(--anatomy-top)}
+.iso-solid[data-seamless][data-lit]>.iso-top{stroke:var(--anatomy-lit-top)}
+.iso-solid[data-seamless][data-lit]>.iso-shade{stroke:var(--anatomy-lit-shade)}
+.iso-solid[data-lit]>.iso-edge{stroke:var(--anatomy-lit)}
+.iso-halo{fill:var(--anatomy-halo);stroke:none;filter:blur(9px);opacity:var(--anatomy-halo-opacity);transform:translateY(3px)}
+.iso-line{fill:none;stroke:var(--anatomy-lo);stroke-width:var(--anatomy-weight);stroke-linecap:round;stroke-linejoin:round}
+.iso-line[data-tone="hi"]{stroke:var(--anatomy-hi)}
+.iso-line[data-tone="mid"]{stroke:var(--anatomy-mid)}
+.iso-line[data-tone="lo"]{stroke:var(--anatomy-lo)}
+.iso-line[data-tone="faint"]{stroke:var(--anatomy-faint)}
+.iso-line[data-tone="lit"]{stroke:var(--anatomy-lit)}
+.iso-line[data-tone="red"]{stroke:var(--anatomy-red)}
+.iso-line[data-tone="green"]{stroke:var(--anatomy-green)}
+.iso-line[data-tone="blue"]{stroke:var(--anatomy-blue)}
+.iso-line[data-dotted]{stroke-dasharray:.01 3.5;stroke-width:1}
+.iso-line[data-dashed]{stroke-dasharray:3 3}
+.iso-line[data-flow]{stroke-dasharray:2 6}
+.iso-wire-end{fill:var(--anatomy-paper);stroke:var(--anatomy-lo);stroke-width:var(--anatomy-weight)}
+.iso-wire[data-tone="hi"] .iso-wire-end{stroke:var(--anatomy-hi)}
+.iso-wire[data-tone="mid"] .iso-wire-end{stroke:var(--anatomy-mid)}
+.iso-wire[data-tone="faint"] .iso-wire-end{stroke:var(--anatomy-faint)}
+.iso-wire[data-tone="lit"] .iso-wire-end{stroke:var(--anatomy-lit)}
+.iso-dots circle{fill:var(--anatomy-dot);stroke:none;opacity:.32}
+.iso-dots[data-tone="hi"] circle{opacity:.85}
+.iso-dots[data-tone="mid"] circle{opacity:.45}
+.iso-dots[data-tone="lo"] circle{opacity:.22}
+.iso-dots[data-tone="faint"] circle{opacity:.12}
+.iso-face-text{fill:var(--anatomy-mid);font-family:var(--anatomy-mono);letter-spacing:.04em}
+.iso-face-text[data-tone="hi"]{fill:var(--anatomy-hi)}
+.iso-face-text[data-tone="lo"]{fill:var(--anatomy-lo)}
+.iso-face-text[data-tone="faint"]{fill:var(--anatomy-faint)}
+.tb-body{fill:var(--anatomy-shade-2);stroke:none}
+.tb-shine{fill:var(--anatomy-top);stroke:none}
+.tb-shade{fill:var(--anatomy-shade-0);stroke:none}
+.tb-ring{fill:none;stroke:var(--anatomy-lo);stroke-width:.45;stroke-linecap:butt;stroke-linejoin:round}
+.tb-ring[data-tone="mid"]{stroke:var(--anatomy-mid)}
+.tb-ring[data-tone="faint"]{stroke:var(--anatomy-faint)}
+.tb-ring[data-tone="hi"]{stroke:var(--anatomy-hi)}
+@keyframes iso-flow{to{stroke-dashoffset:-32}}
+@keyframes iso-pulse{0%,100%{opacity:.18}12%{opacity:1}40%{opacity:.18}}
+.iso-line[data-flow]{animation:iso-flow 1600ms linear infinite}
+.iso-dots circle[data-pulse]{animation:iso-pulse 1600ms steps(1,end) infinite;animation-delay:var(--pulse-at,0ms)}
+.iso-figure{margin:32px 0 36px}
+.iso-plate{position:relative;padding:52px 24px;border-radius:0;background:var(--anatomy-card);box-shadow:0 0 0 1px var(--anatomy-mid);--anatomy-paper:var(--anatomy-card)}
+.iso-plate-corners{position:absolute;inset:18px 20px;pointer-events:none}
+.iso-plate-corner{position:absolute;color:var(--anatomy-muted);font-family:var(--anatomy-mono);font-size:10.5px;line-height:1;letter-spacing:.04em;white-space:nowrap}
+.iso-plate-corner[data-corner="fig"]{top:0;left:0;color:var(--anatomy-text)}
+.iso-plate-corner[data-corner="title"]{top:0;right:0;text-transform:uppercase;letter-spacing:.1em}
+.iso-plate-corner[data-corner="hint"]{bottom:0;left:0;text-transform:uppercase;letter-spacing:.1em}
+.iso-plate-corner[data-corner="readout"]{right:0;bottom:0;color:var(--anatomy-text);font-variant-numeric:tabular-nums}
+.iso-plate .iso-svg{margin:0 auto}
+.iso-legend{display:grid;gap:8px;margin-top:12px;color:var(--anatomy-muted);font-size:13px;line-height:1.55}
+.iso-keys{display:flex;flex-wrap:wrap;gap:6px 18px}
+.iso-key{display:inline-flex;align-items:center;gap:7px}
+.iso-swatch{width:16px;height:10px;flex:none;overflow:visible}
+.iso-swatch path{fill:none;stroke:var(--anatomy-hi);stroke-width:1;vector-effect:non-scaling-stroke;stroke-linejoin:round;stroke-linecap:round}
+.iso-swatch[data-mark="raised"] path,.iso-swatch[data-mark="flat"] path{stroke:var(--anatomy-mid)}
+.iso-swatch[data-mark="lit"] path{stroke:var(--anatomy-lit)}
+.iso-swatch[data-mark="dim"] path{stroke:var(--anatomy-lo)}
+.iso-swatch[data-mark="dotted"] path{stroke-dasharray:.01 3;stroke-width:1.4}
+.iso-swatch[data-mark="dashed"] path{stroke-dasharray:3 2.5}
+.iso-swatch[data-mark="red"] path{stroke:var(--anatomy-red)}
+.iso-swatch[data-mark="green"] path{stroke:var(--anatomy-green)}
+.iso-swatch[data-mark="blue"] path{stroke:var(--anatomy-blue)}
+.iso-swatch-crease{stroke:var(--anatomy-lo)!important}
+@media (max-width:560px){.iso-plate{padding:48px 12px 70px}.iso-plate-corner[data-corner="hint"]{bottom:18px}}
+@media (prefers-reduced-motion:reduce){.iso-line[data-flow],.iso-dots circle[data-pulse]{animation:none}}
+
+*{box-sizing:border-box}
+html{color-scheme:dark}
+body[data-theme="light"]{color-scheme:light}
+body{margin:0;background:var(--anatomy-page);color:var(--anatomy-text);font:14px/1.6 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+.iso-page{width:min(900px,100% - 32px);margin:64px auto 96px}
+</style></head><body class="iso" data-theme="dark"><main class="iso-page"><style>
+.iso{--unfold-blue:#58c4dd;--unfold-yellow:#f4d345;--unfold-red:#fc6255;--unfold-green:#83c167;--unfold-teal:#5cd0b3;--unfold-purple:#b48ad1;--unfold-gold:#f0ac5f;--unfold-on-hot:#0b0b0b;--unfold-serif:"Latin Modern Math","STIX Two Math","Cambria Math",math,serif}
+.iso[data-theme="light"]{--unfold-blue:#1f78a4;--unfold-yellow:#a67c00;--unfold-red:#cf3b2e;--unfold-green:#3e8a2a;--unfold-teal:#16866b;--unfold-purple:#7a4fa3;--unfold-gold:#b8661a;--unfold-on-hot:#ffffff}
+[data-hue="blue"]{--hue:var(--unfold-blue)}[data-hue="yellow"]{--hue:var(--unfold-yellow)}[data-hue="red"]{--hue:var(--unfold-red)}[data-hue="green"]{--hue:var(--unfold-green)}[data-hue="teal"]{--hue:var(--unfold-teal)}[data-hue="purple"]{--hue:var(--unfold-purple)}[data-hue="gold"]{--hue:var(--unfold-gold)}[data-hue="ink"]{--hue:var(--anatomy-hi)}
+.u-key{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 16px;margin-top:10px;color:var(--anatomy-muted);font-size:12px}
+.u-key>span{display:inline-flex;align-items:center;gap:6px}
+.u-key i{width:10px;height:10px;border-radius:2px;background:var(--hue)}
+.u-key i.u-hollow{background:none;box-shadow:inset 0 0 0 1.2px var(--anatomy-mid)}
+.u-key i.u-solid{background:var(--anatomy-mid)}
+.u-stage{position:relative;outline:none;container-type:inline-size}
+.u-stage:focus-visible{outline:1px solid var(--anatomy-faint);outline-offset:8px}
+.u-stage .iso-svg{overflow:visible}
+.u-eq,.u-say{display:grid;align-items:center}
+.u-eq>.u-at,.u-say>.u-at{grid-area:1/1;opacity:0;visibility:hidden;transition:opacity .45s var(--anatomy-ease),visibility 0s .45s;margin:0}
+.u-eq{min-height:44px;margin-bottom:8px;overflow-x:auto;overflow-y:hidden}
+.u-eq math{font-family:var(--unfold-serif);font-size:20px;color:var(--anatomy-strong)}
+.u-eq [data-hue]{color:var(--hue)}
+.u-say{min-height:48px;margin-top:6px;color:var(--anatomy-text);font-size:14px;line-height:1.55;text-align:center}
+.u-say>.u-at{max-width:62ch;justify-self:center}
+.u-say b{color:var(--anatomy-strong);font-weight:500}
+.u-say [data-hue]{color:var(--hue)}
+.u-steps{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin-top:14px}
+.u-steps button{display:inline-flex;align-items:center;gap:6px;padding:5px 10px 5px 6px;border:0;border-radius:999px;background:transparent;color:var(--anatomy-muted);font:11px/1 var(--anatomy-mono);letter-spacing:.04em;cursor:pointer;box-shadow:0 0 0 1px var(--anatomy-faint);transition:color .2s,box-shadow .2s}
+.u-steps button span{display:inline-grid;place-items:center;width:16px;height:16px;border-radius:50%;background:var(--anatomy-faint);color:var(--anatomy-text);font-size:10px}
+.u-steps button:hover{color:var(--anatomy-text)}
+.u-steps button[aria-current]{color:var(--anatomy-strong);box-shadow:0 0 0 1px var(--anatomy-mid)}
+.u-steps button[aria-current] span{background:var(--anatomy-strong);color:var(--anatomy-card)}
+.u-move{transition:transform .9s var(--anatomy-ease),opacity .6s var(--anatomy-ease)}
+.u-grid text,.u-chip text,.u-bars text,.u-arrow text{dominant-baseline:central;text-anchor:middle}
+.u-cell{transform:translate(var(--x),var(--y));transition:transform .9s var(--anatomy-ease) calc(var(--i) * 18ms)}
+.u-cell-bg{fill:var(--hue);fill-opacity:var(--a);stroke:none;transition:fill-opacity .35s}
+.u-cell[data-neg]>.u-cell-bg,.u-cell-bg[data-neg]{fill-opacity:calc(var(--a) * .18);stroke:var(--hue);stroke-opacity:var(--a);stroke-width:1.2}
+.u-cell[data-masked]>.u-cell-bg,.u-cell-bg[data-masked]{fill:none;stroke:var(--anatomy-faint);stroke-width:.8;stroke-dasharray:2 2}
+.u-num{font:500 10px var(--anatomy-mono);font-variant-numeric:tabular-nums;fill:var(--anatomy-strong)}
+.u-cell[data-hot] .u-num{fill:var(--unfold-on-hot)}
+.u-cell[data-masked] .u-num{fill:var(--anatomy-lo)}
+.u-name{font:italic 600 17px var(--unfold-serif);fill:var(--hue);dominant-baseline:auto!important;text-anchor:start!important}
+.u-dims{font:400 10px var(--anatomy-mono);font-style:normal;fill:var(--anatomy-muted)}
+.u-T,.u-dims-T{display:none}
+.u-mark{fill:none;stroke:var(--anatomy-strong);stroke-width:1.2;opacity:0;transition:opacity .3s}
+.u-mark[data-on]{opacity:.9}
+.u-chip rect{fill:var(--anatomy-card);stroke:var(--anatomy-mid);stroke-width:.8;transition:stroke .25s,fill .25s}
+.u-chip text{font:500 11px var(--anatomy-mono);fill:var(--anatomy-text);transition:fill .25s}
+.u-chip[data-hue] rect{stroke:var(--hue)}
+.u-chip[data-hue] text{fill:var(--hue)}
+.u-cell[data-later],.u-mark[data-later]{opacity:0!important;transition:opacity .3s}
+.u-plot-axis{stroke:var(--anatomy-mid);stroke-width:.9;fill:none}
+.u-plot-grid{stroke:var(--anatomy-faint);stroke-width:.6;fill:none}
+.u-tick-label{font:10px var(--anatomy-mono);fill:var(--anatomy-muted)}
+.u-plot-name{font:italic 600 15px var(--unfold-serif);fill:var(--hue,var(--anatomy-text))}
+.u-curve{fill:none;stroke:var(--hue,var(--anatomy-hi));stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.u-chip[data-on] rect{fill:var(--anatomy-strong);stroke:var(--anatomy-strong)}
+.u-chip[data-on] text{fill:var(--anatomy-card)}
+.u-chip[data-i]{cursor:pointer}
+.u-arrow{--w:1.1;color:var(--anatomy-mid)}
+.u-arrow[data-hue]{color:var(--hue)}
+.u-arrow-line{fill:none;stroke:currentColor;stroke-width:var(--w);stroke-linecap:round;transition:stroke-width .4s,opacity .4s}
+.u-arrow-head{fill:currentColor}
+.u-bar-fill{fill:var(--hue);transform-box:fill-box;transform-origin:50% 100%;transform:scaleY(var(--v));transition:transform .6s var(--anatomy-ease)}
+.u-bar-value{font:500 10px var(--anatomy-mono);fill:var(--anatomy-strong);transition:y .6s var(--anatomy-ease)}
+.u-bar-label{font:11px var(--anatomy-mono);fill:var(--anatomy-muted)}
+.u-axis{stroke:var(--anatomy-mid);stroke-width:.8;fill:none}
+.u-link{fill:none;stroke:var(--hue,var(--anatomy-mid));stroke-width:1.1;stroke-linecap:round;transition:d .9s var(--anatomy-ease),opacity .5s var(--anatomy-ease),stroke .3s}
+.u-link[data-off]{opacity:0}
+.u-eq>.u-at{text-align:center}
+.u-eq .u-rule{font:500 14px/1.5 var(--anatomy-mono);color:var(--anatomy-strong);letter-spacing:.01em}
+.u-lane-bg{fill:var(--anatomy-faint);fill-opacity:.18;stroke:var(--anatomy-faint);stroke-width:.6}
+.u-lane-name{font:11px var(--anatomy-mono);fill:var(--hue,var(--anatomy-muted));text-anchor:end;dominant-baseline:central}
+.u-tick{stroke:var(--anatomy-faint);stroke-width:.6}
+.u-tick-label{font:9px var(--anatomy-mono);fill:var(--anatomy-muted);text-anchor:middle;dominant-baseline:central}
+.u-now{stroke:var(--anatomy-strong);stroke-width:1.2;transition:transform .5s var(--anatomy-ease)}
+.u-span-bar{fill:var(--hue,var(--anatomy-mid));fill-opacity:.9;transform-box:fill-box;transform-origin:0 50%;transform:scaleX(var(--v,1));transition:transform .5s var(--anatomy-ease)}
+.u-span-label{opacity:0;transition:opacity .3s}
+.u-span[data-labeled] .u-span-label{opacity:1}
+.u-span-label text{font:500 10px var(--anatomy-mono);fill:var(--unfold-on-hot);dominant-baseline:central}
+.u-face .u-cell-bg{stroke-width:.5}
+.u-cell-bg{transform-box:fill-box;transform-origin:50% 50%}
+.u-cell[data-hl]>.u-cell-bg{stroke:var(--anatomy-strong);stroke-opacity:1;stroke-width:1.6;animation:u-ping .5s var(--anatomy-ease)}
+.u-pulse{fill:var(--hue,var(--anatomy-strong));filter:drop-shadow(0 0 3px var(--hue,var(--anatomy-strong)))}
+.u-rise{transform-box:fill-box}
+@keyframes u-pop{from{opacity:0;transform:scale(.4)}}
+@keyframes u-fade{from{opacity:0}}
+@keyframes u-rise{from{opacity:0;transform:translateY(-14px)}}
+@keyframes u-grow{from{transform:scaleY(0)}}
+@keyframes u-draw{from{stroke-dasharray:1;stroke-dashoffset:1}to{stroke-dasharray:1;stroke-dashoffset:0}}
+@keyframes u-ping{from{stroke-width:4;stroke-opacity:0}}
+.u-floor-text{font-family:var(--unfold-serif);font-style:italic;font-weight:600;fill:var(--hue,var(--anatomy-text))}
+.u-floor-label{font-family:var(--anatomy-mono);fill:var(--anatomy-muted)}
+.u-guide{fill:none;stroke:var(--anatomy-lo);stroke-width:.8;stroke-dasharray:2 3}
+.u-controls{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px 18px;margin-top:10px}
+.u-controls button{border:0;border-radius:999px;background:transparent;color:var(--anatomy-muted);font:11px/1 var(--anatomy-mono);letter-spacing:.04em;padding:6px 10px;cursor:pointer;box-shadow:0 0 0 1px var(--anatomy-faint);transition:color .2s,box-shadow .2s}
+.u-controls button:hover{color:var(--anatomy-text)}
+.u-controls button[aria-pressed="true"]{color:var(--anatomy-strong);box-shadow:0 0 0 1px var(--anatomy-mid)}
+.u-time{display:flex;align-items:center;gap:8px;flex:1 1 260px;max-width:440px;transition:opacity .4s}
+.u-time button{width:28px;height:28px;padding:0;font-size:15px}
+.u-time input{flex:1;min-width:80px;accent-color:var(--anatomy-hi)}
+.u-time output{font:11px var(--anatomy-mono);color:var(--anatomy-muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.u-notes{margin-top:56px;color:var(--anatomy-text);font-size:14px;line-height:1.65}
+.u-notes h2{margin:36px 0 10px;font:500 12px var(--anatomy-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--anatomy-strong)}
+.u-notes p,.u-notes ul{margin:0 0 12px;max-width:72ch}
+.u-notes li{margin-bottom:6px}
+.u-notes b{color:var(--anatomy-strong);font-weight:500}
+.u-notes code{font:12.5px var(--anatomy-mono);color:var(--anatomy-strong)}
+.u-notes table{width:100%;border-collapse:collapse;font-size:13px;line-height:1.5}
+.u-notes th,.u-notes td{padding:7px 10px 7px 0;border-bottom:1px solid var(--anatomy-faint);text-align:left;vertical-align:top}
+.u-notes th{color:var(--anatomy-muted);font:500 11px var(--anatomy-mono);letter-spacing:.05em;text-transform:uppercase}
+.u-notes td:first-child{color:var(--anatomy-strong);white-space:nowrap}
+@media (max-width:560px){.u-notes thead{display:none}.u-notes tr{display:block;padding:8px 0;border-bottom:1px solid var(--anatomy-faint)}.u-notes td{display:block;padding:2px 0;border:0}.u-notes td[data-th]:not(:first-child)::before{content:attr(data-th) ": ";color:var(--anatomy-muted)}}
+@container (max-width:520px){.u-num,.u-bar-value{display:none}.u-eq math{font-size:14px}.u-steps button{font-size:0;gap:0;padding:4px}}
+@media (max-width:560px){.iso-plate-corner[data-corner="readout"]{left:0;white-space:normal;text-align:right;line-height:1.4}.iso-plate-corner[data-corner="hint"]{display:none}}
+@media (prefers-reduced-motion:reduce){.u-stage *{transition:none!important;animation:none!important}.u-pulse{display:none}}
+</style><figure class="iso-figure"><div class="iso-plate"><div class="iso-plate-corners" aria-hidden="true"><span class="iso-plate-corner" data-corner="fig">Fig 1</span><span class="iso-plate-corner" data-corner="title">TCP open and close</span><span class="iso-plate-corner" data-corner="hint">← → scene · ↑ ↓ segment</span><span class="iso-plate-corner" data-corner="readout" data-readout>step 10 · 2 MSL later: client CLOSED · both sides closed</span></div><style>.u-stage[data-scene="0"] .u-at[data-at="0"]{opacity:1;visibility:visible;transition-delay:.15s}
+.u-stage[data-scene="0"] .u-grid[data-t~="0"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="0"] .u-grid[data-t~="0"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="0"] .u-grid[data-t~="0"] .u-dims:not(.u-dims-T),.u-stage[data-scene="0"] .u-grid[data-t~="0"] .u-mark{display:none}
+.u-stage[data-scene="1"] .u-at[data-at="1"]{opacity:1;visibility:visible;transition-delay:.15s}
+.u-stage[data-scene="1"] .u-grid[data-t~="1"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="1"] .u-grid[data-t~="1"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="1"] .u-grid[data-t~="1"] .u-dims:not(.u-dims-T),.u-stage[data-scene="1"] .u-grid[data-t~="1"] .u-mark{display:none}
+.u-stage[data-scene="2"] .u-at[data-at="2"]{opacity:1;visibility:visible;transition-delay:.15s}
+.u-stage[data-scene="2"] .u-grid[data-t~="2"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="2"] .u-grid[data-t~="2"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="2"] .u-grid[data-t~="2"] .u-dims:not(.u-dims-T),.u-stage[data-scene="2"] .u-grid[data-t~="2"] .u-mark{display:none}
+.u-stage[data-scene="3"] .u-at[data-at="3"]{opacity:1;visibility:visible;transition-delay:.15s}
+.u-stage[data-scene="3"] .u-grid[data-t~="3"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="3"] .u-grid[data-t~="3"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="3"] .u-grid[data-t~="3"] .u-dims:not(.u-dims-T),.u-stage[data-scene="3"] .u-grid[data-t~="3"] .u-mark{display:none}
+.u-stage[data-scene="4"] .u-at[data-at="4"]{opacity:1;visibility:visible;transition-delay:.15s}
+.u-stage[data-scene="4"] .u-grid[data-t~="4"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="4"] .u-grid[data-t~="4"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="4"] .u-grid[data-t~="4"] .u-dims:not(.u-dims-T),.u-stage[data-scene="4"] .u-grid[data-t~="4"] .u-mark{display:none}
+.u-stage[data-scene="5"] .u-at[data-at="5"]{opacity:1;visibility:visible;transition-delay:.15s}
+.u-stage[data-scene="5"] .u-grid[data-t~="5"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="5"] .u-grid[data-t~="5"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="5"] .u-grid[data-t~="5"] .u-dims:not(.u-dims-T),.u-stage[data-scene="5"] .u-grid[data-t~="5"] .u-mark{display:none}
+.u-stage[data-scene="6"] .u-at[data-at="6"]{opacity:1;visibility:visible;transition-delay:.15s}
+.u-stage[data-scene="6"] .u-grid[data-t~="6"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="6"] .u-grid[data-t~="6"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="6"] .u-grid[data-t~="6"] .u-dims:not(.u-dims-T),.u-stage[data-scene="6"] .u-grid[data-t~="6"] .u-mark{display:none}.el-ladder{transform:translate(130px,0)}
+.el-panel{transform:translate(568px,40px)}
+.u-stage[data-narrow] .el-ladder{transform:translate(40px,0)}
+.u-stage[data-narrow] .el-panel{transform:translate(85px,410px)}
+.u-stage[data-narrow] .el-state text{display:none}
+.el-life{stroke:var(--anatomy-lo);stroke-width:1}
+.el-now line{stroke:var(--anatomy-mid);stroke-width:.8;stroke-dasharray:3 3}
+.el-now{transition:transform .5s var(--anatomy-ease)}
+.el-seg{cursor:pointer;transition:opacity .4s}
+.el-seg .u-arrow-line{stroke-dasharray:1 2;stroke-dashoffset:0;transition:stroke-dashoffset .55s var(--anatomy-ease),stroke-width .3s,opacity .2s}
+.el-seg[data-st="later"] .u-arrow-line{stroke-dashoffset:1;opacity:0}
+.el-seg :is(.u-arrow-head,.el-tag){transition:opacity .3s .45s}
+.el-seg[data-st="later"] :is(.u-arrow-head,.el-tag){opacity:0;transition-delay:0s}
+.el-seg[data-st="later"]{pointer-events:none}
+.el-seg[data-st="past"]{opacity:.4}
+.u-stage[data-scene="0"] .el-seg[data-st="past"]{opacity:.85}
+.el-seg[data-st="now"] .u-arrow{--w:1.9}
+.el-tag text{font:500 10px var(--anatomy-mono);fill:var(--anatomy-muted);text-anchor:middle;white-space:pre}
+.el-tag tspan[data-hue]{fill:var(--hue)}
+.el-seg[data-st="now"] .el-tag text{fill:var(--anatomy-text)}
+.el-hit{stroke:transparent;stroke-width:14}
+.el-state{transition:opacity .4s}
+.el-state[data-at="recv"]{transition-delay:.4s}
+.el-state[data-st="later"]{opacity:0}
+.el-state circle{fill:var(--anatomy-mid)}
+.el-state text{font:500 10px var(--anatomy-mono);fill:var(--anatomy-muted);letter-spacing:.04em;dominant-baseline:central}
+.el-state[data-cur] text{fill:var(--anatomy-strong)}
+.el-state[data-cur] circle{fill:var(--anatomy-strong)}
+.el-msl path{fill:none;stroke:var(--anatomy-mid);stroke-width:.9}
+.el-label{font:10.5px var(--anatomy-mono);fill:var(--anatomy-muted);letter-spacing:.06em;text-transform:uppercase}
+.el-cell{fill:var(--anatomy-faint);fill-opacity:.12;stroke:var(--anatomy-lo);stroke-width:.8}
+.el-flabel{font:10px var(--anatomy-mono);fill:var(--anatomy-muted)}
+.el-fval{font:500 12.5px var(--anatomy-mono);fill:var(--anatomy-strong);font-variant-numeric:tabular-nums}
+.el-fval[data-hue],.el-count[data-hue]{fill:var(--hue)}
+.el-fval[data-off]{fill:var(--anatomy-lo)}
+.el-fbit rect{fill:none;stroke:var(--anatomy-lo);stroke-width:.8;transition:fill .3s}
+.el-fbit text{font:500 10px var(--anatomy-mono);fill:var(--anatomy-lo);text-anchor:middle;dominant-baseline:central;transition:fill .3s}
+.el-fbit[data-on] rect{fill:var(--hue,var(--anatomy-hi));fill-opacity:.9}
+.el-fbit[data-on] text{fill:var(--unfold-on-hot)}
+.el-pstate rect{fill:var(--anatomy-card);stroke:var(--anatomy-mid);stroke-width:.8}
+.el-pstate text{font:500 10px var(--anatomy-mono);fill:var(--anatomy-strong);text-anchor:middle;dominant-baseline:central}
+.el-count{font:500 11.5px var(--anatomy-mono);font-variant-numeric:tabular-nums}
+.el-isn{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:6px}
+.el-isn span{font:11px var(--anatomy-mono);color:var(--anatomy-muted);letter-spacing:.06em}</style><div class="u-stage" tabindex="0" role="group" aria-roledescription="explainer" aria-label="TCP handshake and teardown explainer. Left and right arrows change the scene. Up and down arrows step through the segments." data-scene="0" data-count="7" data-dwell="8000" data-narrow-box="0 0 400 712"><div class="u-eq" aria-live="polite"><div class="u-at" data-at="0"><math display="block"><mi>ack</mi><mo>=</mo><mi>seq</mi><mo>+</mo><mi>len</mi><mo>+</mo><mi data-hue="green">SYN</mi><mo>+</mo><mi data-hue="red">FIN</mi></math></div><div class="u-at" data-at="1"><math display="block"><mi data-hue="blue">seq</mi><mo>=</mo><mi data-hue="blue">x</mi></math></div><div class="u-at" data-at="2"><math display="block"><mi data-hue="gold">seq</mi><mo>=</mo><mi data-hue="gold">y</mi><mspace width="1.2em"/><mi data-hue="blue">ack</mi><mo>=</mo><mi data-hue="blue">x</mi><mo>+</mo><mn data-hue="green">1</mn></math></div><div class="u-at" data-at="3"><math display="block"><mi data-hue="blue">seq</mi><mo>=</mo><mi data-hue="blue">x</mi><mo>+</mo><mn data-hue="green">1</mn><mspace width="1.2em"/><mi data-hue="gold">ack</mi><mo>=</mo><mi data-hue="gold">y</mi><mo>+</mo><mn data-hue="green">1</mn></math></div><div class="u-at" data-at="4"><math display="block"><mi data-hue="blue">ack</mi><mo>=</mo><mi data-hue="blue">seq</mi><mo>+</mo><mi data-hue="blue">len</mi><mo>=</mo><mi data-hue="blue">x</mi><mo>+</mo><mn data-hue="green">1</mn><mo>+</mo><mn data-hue="blue">5</mn></math></div><div class="u-at" data-at="5"><math display="block"><mi data-hue="blue">ack</mi><mo>=</mo><mi data-hue="blue">x</mi><mo>+</mo><mn>6</mn><mo>+</mo><mn data-hue="red">1</mn></math></div><div class="u-at" data-at="6"><math display="block"><mi data-hue="gold">ack</mi><mo>=</mo><mi data-hue="gold">y</mi><mo>+</mo><mn data-hue="green">1</mn><mo>+</mo><mn data-hue="red">1</mn><mspace width="1.2em"/><mtext>wait</mtext><mspace width="0.4em"/><mn>2</mn><mo>·</mo><mi>MSL</mi></math></div></div><svg xmlns="http://www.w3.org/2000/svg" class="iso-svg" viewBox="0 0 820 400" role="img" aria-label="A TCP connection as a ladder diagram: the client on the left, the server on the right, time going down. Nine segments open the connection, carry 5 bytes and close it. A panel shows the header of the selected segment and the counters of both sides."><g class="el-ladder"><line class="el-life" x1="0" y1="30" x2="0" y2="396"/><line class="el-life" x1="320" y1="30" x2="320" y2="396"/><g class="el-now" id="now" style="transform:translateY(380px)"><line x1="-6" x2="326" y1="0" y2="0"/></g><g class="u-chip " data-hue="blue" transform="translate(-34 4)"><rect width="68" height="20" rx="4"/><text x="34" y="10">client</text></g><g class="u-chip " data-hue="gold" transform="translate(286 4)"><rect width="68" height="20" rx="4"/><text x="34" y="10">server</text></g><g class="el-state" data-side="client" data-step="0" data-at="start"><circle cx="0" cy="40" r="2.6"/><text x="-12" y="40" text-anchor="end">CLOSED</text></g><g class="el-state" data-side="server" data-step="0" data-at="start"><circle cx="320" cy="40" r="2.6"/><text x="332" y="40" text-anchor="start">LISTEN</text></g><g class="el-state" data-side="client" data-step="1" data-at="send"><circle cx="0" cy="56" r="2.6"/><text x="-12" y="56" text-anchor="end">SYN-SENT</text></g><g class="el-state" data-side="server" data-step="1" data-at="recv"><circle cx="320" cy="80" r="2.6"/><text x="332" y="80" text-anchor="start">SYN-RECEIVED</text></g><g class="el-state" data-side="client" data-step="2" data-at="recv"><circle cx="0" cy="116" r="2.6"/><text x="-12" y="116" text-anchor="end">ESTABLISHED</text></g><g class="el-state" data-side="server" data-step="3" data-at="recv"><circle cx="320" cy="152" r="2.6"/><text x="332" y="152" text-anchor="start">ESTABLISHED</text></g><g class="el-state" data-side="client" data-step="6" data-at="send"><circle cx="0" cy="236" r="2.6"/><text x="-12" y="236" text-anchor="end">FIN-WAIT-1</text></g><g class="el-state" data-side="server" data-step="6" data-at="recv"><circle cx="320" cy="260" r="2.6"/><text x="332" y="260" text-anchor="start">CLOSE-WAIT</text></g><g class="el-state" data-side="client" data-step="7" data-at="recv"><circle cx="0" cy="296" r="2.6"/><text x="-12" y="296" text-anchor="end">FIN-WAIT-2</text></g><g class="el-state" data-side="server" data-step="8" data-at="send"><circle cx="320" cy="308" r="2.6"/><text x="332" y="308" text-anchor="start">LAST-ACK</text></g><g class="el-state" data-side="client" data-step="8" data-at="recv"><circle cx="0" cy="332" r="2.6"/><text x="-12" y="332" text-anchor="end">TIME-WAIT</text></g><g class="el-state" data-side="server" data-step="9" data-at="recv"><circle cx="320" cy="368" r="2.6"/><text x="332" y="368" text-anchor="start">CLOSED</text></g><g class="el-state" data-side="client" data-step="10" data-at="timer"><circle cx="0" cy="380" r="2.6"/><text x="-12" y="380" text-anchor="end">CLOSED</text></g><g class="el-state el-msl" data-side="client" data-step="8" data-at="timer"><path d="M-4 337h-4V375h4"/><text x="-14" y="356" text-anchor="end">2·MSL</text></g><g class="el-seg" id="seg-1" data-n="1" data-st="past"><g class="u-arrow" data-hue="blue"><path class="u-arrow-line" pathLength="1" d="M0 56Q160 68 314 79.6"/><path class="u-arrow-head" d="M320 80L313.8 82.8L314.3 76.3Z"/></g><g class="el-tag" transform="translate(160 68) rotate(4.29)"><text x="0" y="-6"><tspan class="el-flag" data-hue="green">SYN</tspan><tspan> seq=</tspan><tspan class="v-seq" data-hue="blue">1000</tspan></text></g><line class="el-hit" x1="0" y1="56" x2="320" y2="80"/></g><g class="el-seg" id="seg-2" data-n="2" data-st="past"><g class="u-arrow" data-hue="gold"><path class="u-arrow-line" pathLength="1" d="M320 92Q160 104 6 115.6"/><path class="u-arrow-head" d="M0 116L5.7 112.3L6.2 118.8Z"/></g><g class="el-tag" transform="translate(160 104) rotate(-4.29)"><text x="0" y="-6"><tspan class="el-flag" data-hue="green">SYN</tspan><tspan>,</tspan><tspan class="el-flag">ACK</tspan><tspan> seq=</tspan><tspan class="v-seq" data-hue="gold">5000</tspan><tspan> ack=</tspan><tspan class="v-ack" data-hue="blue">1001</tspan></text></g><line class="el-hit" x1="320" y1="92" x2="0" y2="116"/></g><g class="el-seg" id="seg-3" data-n="3" data-st="past"><g class="u-arrow" data-hue="blue"><path class="u-arrow-line" pathLength="1" d="M0 128Q160 140 314 151.6"/><path class="u-arrow-head" d="M320 152L313.8 154.8L314.3 148.3Z"/></g><g class="el-tag" transform="translate(160 140) rotate(4.29)"><text x="0" y="-6"><tspan class="el-flag">ACK</tspan><tspan> seq=</tspan><tspan class="v-seq" data-hue="blue">1001</tspan><tspan> ack=</tspan><tspan class="v-ack" data-hue="gold">5001</tspan></text></g><line class="el-hit" x1="0" y1="128" x2="320" y2="152"/></g><g class="el-seg" id="seg-4" data-n="4" data-st="past"><g class="u-arrow" data-hue="blue"><path class="u-arrow-line" pathLength="1" d="M0 164Q160 176 314 187.6"/><path class="u-arrow-head" d="M320 188L313.8 190.8L314.3 184.3Z"/></g><g class="el-tag" transform="translate(160 176) rotate(4.29)"><text x="0" y="-6"><tspan class="el-flag">PSH</tspan><tspan>,</tspan><tspan class="el-flag">ACK</tspan><tspan> seq=</tspan><tspan class="v-seq" data-hue="blue">1001</tspan><tspan> ack=</tspan><tspan class="v-ack" data-hue="gold">5001</tspan><tspan> len=</tspan><tspan data-hue="blue">5</tspan></text></g><line class="el-hit" x1="0" y1="164" x2="320" y2="188"/></g><g class="el-seg" id="seg-5" data-n="5" data-st="past"><g class="u-arrow" data-hue="gold"><path class="u-arrow-line" pathLength="1" d="M320 200Q160 212 6 223.6"/><path class="u-arrow-head" d="M0 224L5.7 220.3L6.2 226.8Z"/></g><g class="el-tag" transform="translate(160 212) rotate(-4.29)"><text x="0" y="-6"><tspan class="el-flag">ACK</tspan><tspan> seq=</tspan><tspan class="v-seq" data-hue="gold">5001</tspan><tspan> ack=</tspan><tspan class="v-ack" data-hue="blue">1006</tspan></text></g><line class="el-hit" x1="320" y1="200" x2="0" y2="224"/></g><g class="el-seg" id="seg-6" data-n="6" data-st="past"><g class="u-arrow" data-hue="blue"><path class="u-arrow-line" pathLength="1" d="M0 236Q160 248 314 259.6"/><path class="u-arrow-head" d="M320 260L313.8 262.8L314.3 256.3Z"/></g><g class="el-tag" transform="translate(160 248) rotate(4.29)"><text x="0" y="-6"><tspan class="el-flag" data-hue="red">FIN</tspan><tspan>,</tspan><tspan class="el-flag">ACK</tspan><tspan> seq=</tspan><tspan class="v-seq" data-hue="blue">1006</tspan><tspan> ack=</tspan><tspan class="v-ack" data-hue="gold">5001</tspan></text></g><line class="el-hit" x1="0" y1="236" x2="320" y2="260"/></g><g class="el-seg" id="seg-7" data-n="7" data-st="past"><g class="u-arrow" data-hue="gold"><path class="u-arrow-line" pathLength="1" d="M320 272Q160 284 6 295.6"/><path class="u-arrow-head" d="M0 296L5.7 292.3L6.2 298.8Z"/></g><g class="el-tag" transform="translate(160 284) rotate(-4.29)"><text x="0" y="-6"><tspan class="el-flag">ACK</tspan><tspan> seq=</tspan><tspan class="v-seq" data-hue="gold">5001</tspan><tspan> ack=</tspan><tspan class="v-ack" data-hue="blue">1007</tspan></text></g><line class="el-hit" x1="320" y1="272" x2="0" y2="296"/></g><g class="el-seg" id="seg-8" data-n="8" data-st="past"><g class="u-arrow" data-hue="gold"><path class="u-arrow-line" pathLength="1" d="M320 308Q160 320 6 331.6"/><path class="u-arrow-head" d="M0 332L5.7 328.3L6.2 334.8Z"/></g><g class="el-tag" transform="translate(160 320) rotate(-4.29)"><text x="0" y="-6"><tspan class="el-flag" data-hue="red">FIN</tspan><tspan>,</tspan><tspan class="el-flag">ACK</tspan><tspan> seq=</tspan><tspan class="v-seq" data-hue="gold">5001</tspan><tspan> ack=</tspan><tspan class="v-ack" data-hue="blue">1007</tspan></text></g><line class="el-hit" x1="320" y1="308" x2="0" y2="332"/></g><g class="el-seg" id="seg-9" data-n="9" data-st="past"><g class="u-arrow" data-hue="blue"><path class="u-arrow-line" pathLength="1" d="M0 344Q160 356 314 367.6"/><path class="u-arrow-head" d="M320 368L313.8 370.8L314.3 364.3Z"/></g><g class="el-tag" transform="translate(160 356) rotate(4.29)"><text x="0" y="-6"><tspan class="el-flag">ACK</tspan><tspan> seq=</tspan><tspan class="v-seq" data-hue="blue">1007</tspan><tspan> ack=</tspan><tspan class="v-ack" data-hue="gold">5002</tspan></text></g><line class="el-hit" x1="0" y1="344" x2="320" y2="368"/></g></g><g class="el-panel"><text class="el-label" id="p-title" x="0" y="14">segment</text><rect class="el-cell" x="0" y="28" width="115" height="34"/><text class="el-flabel" x="7" y="39">source port</text><text class="el-fval" id="p-src" x="7" y="53">-</text><rect class="el-cell" x="115" y="28" width="115" height="34"/><text class="el-flabel" x="122" y="39">destination port</text><text class="el-fval" id="p-dst" x="122" y="53">-</text><rect class="el-cell" x="0" y="62" width="230" height="34"/><text class="el-flabel" x="7" y="73">sequence number</text><text class="el-fval" id="p-seq" x="7" y="87">-</text><rect class="el-cell" x="0" y="96" width="230" height="34"/><text class="el-flabel" x="7" y="107">acknowledgment number</text><text class="el-fval" id="p-ack" x="7" y="121">-</text><g class="el-fbit" id="p-f-URG"><rect x="0.00" y="130" width="38.33" height="34"/><text x="19.17" y="147">URG</text></g><g class="el-fbit" id="p-f-ACK"><rect x="38.33" y="130" width="38.33" height="34"/><text x="57.50" y="147">ACK</text></g><g class="el-fbit" id="p-f-PSH"><rect x="76.67" y="130" width="38.33" height="34"/><text x="95.83" y="147">PSH</text></g><g class="el-fbit" id="p-f-RST"><rect x="115.00" y="130" width="38.33" height="34"/><text x="134.17" y="147">RST</text></g><g class="el-fbit" id="p-f-SYN" data-hue="green"><rect x="153.33" y="130" width="38.33" height="34"/><text x="172.50" y="147">SYN</text></g><g class="el-fbit" id="p-f-FIN" data-hue="red"><rect x="191.67" y="130" width="38.33" height="34"/><text x="210.83" y="147">FIN</text></g><rect class="el-cell" x="0" y="164" width="230" height="34"/><text class="el-flabel" x="7" y="175">data</text><text class="el-fval" id="p-data" x="7" y="189">-</text><text class="el-flabel" x="0" y="212">⋯ not shown: window, checksum, options</text><text class="el-flabel" x="0" y="248">state</text><text class="el-flabel" x="0" y="276">SND.NXT</text><text class="el-flabel" x="0" y="294">RCV.NXT</text><text class="el-label" x="66" y="230">client</text><g class="el-pstate" id="p-st-client"><rect x="66" y="238" width="80" height="20" rx="4"/><text x="106" y="248">-</text></g><text class="el-count" id="p-snd-client" data-hue="blue" x="66" y="276">-</text><text class="el-count" id="p-rcv-client" data-hue="gold" x="66" y="294">-</text><text class="el-label" x="150" y="230">server</text><g class="el-pstate" id="p-st-server"><rect x="150" y="238" width="80" height="20" rx="4"/><text x="190" y="248">-</text></g><text class="el-count" id="p-snd-server" data-hue="gold" x="150" y="276">-</text><text class="el-count" id="p-rcv-server" data-hue="blue" x="150" y="294">-</text></g></svg><div class="u-controls"><div class="el-isn" role="group" aria-label="Initial sequence numbers"><span>ISN</span><button type="button" data-isn="book" aria-pressed="true">x = 1000, y = 5000</button><button type="button" data-isn="relative" aria-pressed="false">relative (Wireshark)</button><button type="button" data-isn="linux" aria-pressed="false">real Linux capture</button></div><div class="u-time" data-label="step"><button type="button" data-step="-1" aria-label="Previous step">‹</button><input type="range" min="0" max="10" value="0" aria-label="step"><button type="button" data-step="1" aria-label="Next step">›</button><output>step 0 / 10</output></div></div><div class="u-say" aria-live="polite"><p class="u-at" data-at="0">Nine segments open a connection, carry 5 bytes and close it. Each side numbers its own bytes. An ack number means "the next number I expect from you".</p><p class="u-at" data-at="1">The client picks a random first number, the ISN <b data-hue="blue">x</b>. It sends <b data-hue="green">SYN</b> with seq = x. The SYN carries no data, but it uses one sequence number.</p><p class="u-at" data-at="2">The server picks its own ISN <b data-hue="gold">y</b> and sends its own <b data-hue="green">SYN</b>. Its ack is <b data-hue="blue">x + 1</b>: the client's SYN used number x.</p><p class="u-at" data-at="3">The client acknowledges the server's SYN with ack = <b data-hue="gold">y + 1</b>. Both sides are now ESTABLISHED. A pure ACK uses no sequence number.</p><p class="u-at" data-at="4">The client sends 5 bytes from seq = x + 1. The server answers ack = <b data-hue="blue">x + 6</b>. The ack counts bytes, not segments.</p><p class="u-at" data-at="5">The client closes first. Its <b data-hue="red">FIN</b> uses one number, so the server's ack is <b data-hue="blue">x + 7</b>. The server can still send data: this is a half close.</p><p class="u-at" data-at="6">The server sends its own <b data-hue="red">FIN</b>, and the client answers ack = <b data-hue="gold">y + 2</b>. The client then waits 2 MSL. If that last ACK is lost, the server sends its FIN again.</p></div><nav class="u-steps" aria-label="Scenes"><button type="button" data-go="0" aria-current="step"><span>1</span>Overview</button><button type="button" data-go="1"><span>2</span>SYN</button><button type="button" data-go="2"><span>3</span>SYN-ACK</button><button type="button" data-go="3"><span>4</span>ACK</button><button type="button" data-go="4"><span>5</span>Data</button><button type="button" data-go="5"><span>6</span>First FIN</button><button type="button" data-go="6"><span>7</span>Second FIN</button></nav><div class="u-key"><span data-hue="blue"><i></i>client bytes (client seq, server ack)</span><span data-hue="gold"><i></i>server bytes (server seq, client ack)</span><span data-hue="green"><i></i>SYN: uses 1 number</span><span data-hue="red"><i></i>FIN: uses 1 number</span></div></div></div><figcaption class="iso-legend"><span class="iso-caption">A client opens a TCP connection, sends 5 bytes and closes first. The ISNs x = 1000 and y = 5000 were chosen by hand to make the arithmetic easy; real ISNs are random 32-bit numbers. Every segment, number and state comes from a small model of the two endpoints, and the model matches a real Linux capture segment by segment.</span></figcaption></figure><section class="u-notes"><h2>Checked against Linux</h2><p>The figure's numbers come from a small model of two TCP endpoints (<code>model.mjs</code>). To check it, <code>capture.sh</code> runs a real connection on Linux 7.1 over loopback, in a private network namespace, and records it with <code>tcpdump -S</code>. The model, started from the same two ISNs, produces the same 9 segments. Pick <b>real Linux capture</b> under the drawing to see these numbers in the figure.</p><table><thead><tr><th>#</th><th>direction</th><th>tcpdump flags</th><th>seq</th><th>ack</th><th>len</th></tr></thead><tbody><tr><td data-th="#">1</td><td data-th="direction">client → server</td><td data-th="tcpdump flags"><code>[S]</code> SYN</td><td data-th="seq">1681612212</td><td data-th="ack">-</td><td data-th="len">0</td></tr><tr><td data-th="#">2</td><td data-th="direction">server → client</td><td data-th="tcpdump flags"><code>[S.]</code> SYN,ACK</td><td data-th="seq">2877419702</td><td data-th="ack">1681612213</td><td data-th="len">0</td></tr><tr><td data-th="#">3</td><td data-th="direction">client → server</td><td data-th="tcpdump flags"><code>[.]</code> ACK</td><td data-th="seq">1681612213 <span style="color:var(--anatomy-muted)">(tcpdump hides it)</span></td><td data-th="ack">2877419703</td><td data-th="len">0</td></tr><tr><td data-th="#">4</td><td data-th="direction">client → server</td><td data-th="tcpdump flags"><code>[P.]</code> PSH,ACK</td><td data-th="seq">1681612213</td><td data-th="ack">2877419703</td><td data-th="len">5</td></tr><tr><td data-th="#">5</td><td data-th="direction">server → client</td><td data-th="tcpdump flags"><code>[.]</code> ACK</td><td data-th="seq">2877419703 <span style="color:var(--anatomy-muted)">(tcpdump hides it)</span></td><td data-th="ack">1681612218</td><td data-th="len">0</td></tr><tr><td data-th="#">6</td><td data-th="direction">client → server</td><td data-th="tcpdump flags"><code>[F.]</code> FIN,ACK</td><td data-th="seq">1681612218</td><td data-th="ack">2877419703</td><td data-th="len">0</td></tr><tr><td data-th="#">7</td><td data-th="direction">server → client</td><td data-th="tcpdump flags"><code>[.]</code> ACK</td><td data-th="seq">2877419703 <span style="color:var(--anatomy-muted)">(tcpdump hides it)</span></td><td data-th="ack">1681612219</td><td data-th="len">0</td></tr><tr><td data-th="#">8</td><td data-th="direction">server → client</td><td data-th="tcpdump flags"><code>[F.]</code> FIN,ACK</td><td data-th="seq">2877419703</td><td data-th="ack">1681612219</td><td data-th="len">0</td></tr><tr><td data-th="#">9</td><td data-th="direction">client → server</td><td data-th="tcpdump flags"><code>[.]</code> ACK</td><td data-th="seq">1681612219 <span style="color:var(--anatomy-muted)">(tcpdump hides it)</span></td><td data-th="ack">2877419704</td><td data-th="len">0</td></tr></tbody></table><h2>What the figure leaves out</h2><ul>
+<li><b>Header fields</b>: window size, checksum, urgent pointer and options. The real SYNs also carry options: MSS, SACK permitted, window scale and timestamps.</li>
+<li><b>Loss</b>: no segment is lost or sent again. A lost SYN or FIN is sent again after a timeout, with the same sequence number.</li>
+<li><b>Three-segment close</b>: if the server closes at once, it can put its ACK and its FIN in one segment (FIN,ACK). <code>capture.sh</code> waits 0.3 s before the server closes, so the capture has the 4-segment close drawn here.</li>
+<li><b>RST</b>: a reset ends a connection at once, without FIN and without TIME-WAIT.</li>
+<li><b>Simultaneous open and close</b>: both sides send SYN (or FIN) at the same time. The state machine has extra paths for this.</li>
+<li><b>Random ISN</b>: RFC 6528 makes the ISN from a clock plus a keyed hash of the addresses and ports, so an attacker cannot guess it. Sequence numbers are 32-bit and wrap around after 2<sup>32</sup> − 1.</li>
+<li><b>TIME-WAIT length</b>: RFC 793 suggested an MSL of 2 minutes. Linux uses a fixed TIME-WAIT of 60 s.</li>
+</ul><h2>Terms</h2><ul>
+<li><b>Segment</b>: one TCP packet: a header and optional data.</li>
+<li><b>ISN</b> (initial sequence number): the first sequence number a side uses. Each side picks its own.</li>
+<li><b>seq</b>: the number of the first byte in this segment. A SYN or a FIN carries no data, but uses one sequence number.</li>
+<li><b>ack</b>: the next sequence number the sender expects from the other side. It is valid only when the ACK flag is set.</li>
+<li><b>SND.NXT</b> and <b>RCV.NXT</b>: the next number a side will send, and the next number it expects to receive. Every ack is the sender's RCV.NXT.</li>
+<li><b>Relative numbers</b>: Wireshark and tcpdump subtract the ISN by default, so the SYN shows seq 0 and its answer shows ack 1. <code>tcpdump -S</code> shows the real numbers.</li>
+<li><b>MSL</b> (maximum segment lifetime): the longest time a segment can stay in the network. TIME-WAIT lasts 2 MSL, so old copies die before the same ports are used again.</li>
+</ul></section></main><script type="module">function cellLook(value, max) {
+  const masked = value === -Infinity;
+  const s = masked ? 0 : Math.min(1, Math.abs(value) / max);
+  return { masked, neg: !masked && value < 0, hot: !masked && value > 0 && s > 0.55, alpha: 0.1 + 0.8 * s };
+}
+function fmt(value, places = 1) {
+  if (value === -Infinity) return "−∞";
+  const text = value.toFixed(places);
+  return Number(text) === 0 ? (0).toFixed(places) : text.replace("-", "−");
+}
+function setGrid(grid, values, max = Number(grid.dataset.max)) {
+  const places = Number(grid.dataset.places);
+  grid.querySelectorAll(".u-cell").forEach((cell) => {
+    const value = values[Number(cell.dataset.r)][Number(cell.dataset.c)];
+    const look = cellLook(value, max);
+    cell.toggleAttribute("data-masked", look.masked);
+    cell.toggleAttribute("data-neg", look.neg);
+    cell.toggleAttribute("data-hot", look.hot);
+    cell.querySelector(".u-cell-bg").style.setProperty("--a", look.alpha.toFixed(2));
+    cell.querySelector(".u-num").textContent = fmt(value, places);
+  });
+}
+function showRows(grid, t) {
+  grid.querySelectorAll(".u-cell,.u-mark").forEach((el) => el.toggleAttribute("data-later", Number(el.dataset.r) > t));
+}
+function setBars(group, values) {
+  const h = Number(group.dataset.h);
+  const max = Number(group.dataset.max);
+  const places = Number(group.dataset.places);
+  group.querySelectorAll(".u-bar").forEach((bar) => {
+    const v = values[Number(bar.dataset.i)] ?? 0;
+    const share = Math.max(0, Math.min(1, v / max));
+    bar.style.setProperty("--v", share.toFixed(3));
+    const text = bar.querySelector(".u-bar-value");
+    text.setAttribute("y", String(h - h * share - 6));
+    text.textContent = fmt(v, places);
+  });
+}
+function mark(root, i, selector = ".u-mark") {
+  root.querySelectorAll(`${selector}[data-r],${selector}[data-i]`).forEach((el) => el.toggleAttribute("data-on", Number(el.dataset.r ?? el.dataset.i) === i));
+}
+function showSpans(root, t) {
+  const box = root.querySelector(".u-lanes");
+  const px = Number(box.dataset.px);
+  box.querySelector(".u-now").style.transform = `translateX(${(t - Number(box.dataset.from)) * px}px)`;
+  root.querySelectorAll(".u-span").forEach((el) => {
+    const from = Number(el.dataset.from);
+    const to = Number(el.dataset.to);
+    const v = Math.max(0, Math.min(1, (t - from) / (to - from)));
+    el.style.setProperty("--v", v.toFixed(3));
+    el.toggleAttribute("data-labeled", v * (to - from) * px >= Number(el.dataset.need));
+  });
+}
+function runtime() {
+  const stage = document.querySelector(".u-stage");
+  const count = Number(stage.dataset.count);
+  const dwell = Number(stage.dataset.dwell);
+  const still = matchMedia("(prefers-reduced-motion: reduce)");
+  let scene = 0;
+  let visible = false;
+  let hovering = false;
+  let pausedUntil = 0;
+  let held = false;
+  let next = 0;
+  const beats = [];
+  const go = (i, by = "user") => {
+    scene = Math.max(0, Math.min(count - 1, i));
+    stage.dataset.scene = String(scene);
+    stage.querySelectorAll("[data-go]").forEach((b) => (Number(b.dataset.go) === scene ? b.setAttribute("aria-current", "step") : b.removeAttribute("aria-current")));
+    stage.querySelectorAll("[data-ds]").forEach((el) => {
+      const d = JSON.parse(el.dataset.ds)[scene];
+      el.toggleAttribute("data-off", !d);
+      if (!d) return;
+      if (CSS.supports("d", 'path("M0 0")')) el.style.d = `path("${d}")`;
+      else el.setAttribute("d", d);
+    });
+    stage.dispatchEvent(new CustomEvent("unfold:scene", { detail: { scene, by } }));
+    if (by === "user") pausedUntil = performance.now() + 20000;
+    held = false;
+    next = performance.now() + dwell;
+    for (const b of beats) {
+      b.n = 0;
+      b.at = performance.now() + b.wait - b.ms;
+      if (still.matches && b.scene === scene) b.fn(-1);
+    }
+  };
+  const tour = (now) => {
+    if (visible && !hovering && !still.matches && now > pausedUntil && now > next) go((scene + 1) % count, "tour");
+    for (const b of beats) {
+      if (b.scene === scene && visible && !held && !still.matches && now - b.at >= b.ms) {
+        b.at = now;
+        b.fn(b.n++);
+      }
+    }
+    requestAnimationFrame(tour);
+  };
+  stage.querySelector(".u-steps").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-go]");
+    if (b) go(Number(b.dataset.go));
+  });
+  stage.addEventListener("keydown", (e) => {
+    const to = { ArrowRight: scene + 1, ArrowLeft: scene - 1, Home: 0, End: count - 1 }[e.key];
+    if (to === undefined) return;
+    e.preventDefault();
+    go(to);
+  });
+  // Time by hand: the step control and the "," and "." keys call the page's onTime(t). Its keys stay inside it.
+  const timer = stage.querySelector(".u-time");
+  let onTime = () => {};
+  const range = timer?.querySelector("input");
+  const byHand = (t) => {
+    pause();
+    onTime(Math.max(0, Math.min(Number(range.max), t)));
+  };
+  if (timer) {
+    range.addEventListener("input", () => byHand(Number(range.value)));
+    range.addEventListener("keydown", (e) => e.stopPropagation());
+    timer.addEventListener("click", (e) => {
+      const b = e.target.closest("[data-step]");
+      if (b) byHand(Number(range.value) + Number(b.dataset.step));
+    });
+    stage.addEventListener("keydown", (e) => {
+      const by = { ",": -1, ".": 1 }[e.key];
+      if (by === undefined) return;
+      e.preventDefault();
+      byHand(Number(range.value) + by);
+    });
+  }
+  const timeAt = (t) => {
+    if (!timer) return;
+    range.value = String(t);
+    timer.querySelector("output").textContent = `${timer.dataset.label} ${t} / ${range.max}`;
+  };
+  // Narrow layout: below 560 px the drawing takes its second viewBox and the stage gets data-narrow.
+  const svg = stage.querySelector("svg");
+  const wide = svg?.getAttribute("viewBox");
+  if (stage.dataset.narrowBox)
+    new ResizeObserver(([entry]) => {
+      const on = entry.contentRect.width < 560;
+      if (on === stage.hasAttribute("data-narrow")) return;
+      stage.toggleAttribute("data-narrow", on);
+      svg.setAttribute("viewBox", on ? stage.dataset.narrowBox : wide);
+      stage.dispatchEvent(new CustomEvent("unfold:layout", { detail: { narrow: on } }));
+    }).observe(stage);
+  stage.addEventListener("pointerenter", () => (hovering = true));
+  stage.addEventListener("pointerleave", () => (hovering = false));
+  new IntersectionObserver((entries) => (visible = entries[entries.length - 1].isIntersecting), { rootMargin: "120px 0px" }).observe(stage);
+  next = performance.now() + dwell;
+  requestAnimationFrame(tour);
+  // beat(scene, ms, fn, wait): call fn(0), fn(1), … every ms while that scene shows, starting `wait` ms after it opens.
+  // Under reduced motion fn(-1) is called once instead: show the resting state.
+  const beat = (sceneIndex, ms, fn, wait = 1000) => beats.push({ scene: sceneIndex, ms, fn, wait, n: 0, at: performance.now() + wait - ms });
+  // pause(): the user took control. The tour waits 20 s, and the sweeps hold until the scene changes.
+  const pause = () => {
+    pausedUntil = performance.now() + 20000;
+    held = true;
+  };
+  return { stage, go, beat, pause, scene: () => scene, onTime: (fn) => (onTime = fn), timeAt, narrow: () => stage.hasAttribute("data-narrow") };
+}
+const UNFOLD = runtime();
+
+const D = {"segs":[{"n":1,"from":"client","to":"server","flags":["SYN"],"seq":0,"ack":null,"len":0,"data":"","cost":1},{"n":2,"from":"server","to":"client","flags":["SYN","ACK"],"seq":0,"ack":1,"len":0,"data":"","cost":1},{"n":3,"from":"client","to":"server","flags":["ACK"],"seq":1,"ack":1,"len":0,"data":"","cost":0},{"n":4,"from":"client","to":"server","flags":["PSH","ACK"],"seq":1,"ack":1,"len":5,"data":"hello","cost":5},{"n":5,"from":"server","to":"client","flags":["ACK"],"seq":1,"ack":6,"len":0,"data":"","cost":0},{"n":6,"from":"client","to":"server","flags":["FIN","ACK"],"seq":6,"ack":1,"len":0,"data":"","cost":1},{"n":7,"from":"server","to":"client","flags":["ACK"],"seq":1,"ack":7,"len":0,"data":"","cost":0},{"n":8,"from":"server","to":"client","flags":["FIN","ACK"],"seq":1,"ack":7,"len":0,"data":"","cost":1},{"n":9,"from":"client","to":"server","flags":["ACK"],"seq":7,"ack":2,"len":0,"data":"","cost":0}],"steps":[{"client":{"state":"CLOSED","snd":0,"rcv":null},"server":{"state":"LISTEN","snd":0,"rcv":null}},{"client":{"state":"SYN-SENT","snd":1,"rcv":null},"server":{"state":"SYN-RECEIVED","snd":0,"rcv":1}},{"client":{"state":"ESTABLISHED","snd":1,"rcv":1},"server":{"state":"SYN-RECEIVED","snd":1,"rcv":1}},{"client":{"state":"ESTABLISHED","snd":1,"rcv":1},"server":{"state":"ESTABLISHED","snd":1,"rcv":1}},{"client":{"state":"ESTABLISHED","snd":6,"rcv":1},"server":{"state":"ESTABLISHED","snd":1,"rcv":6}},{"client":{"state":"ESTABLISHED","snd":6,"rcv":1},"server":{"state":"ESTABLISHED","snd":1,"rcv":6}},{"client":{"state":"FIN-WAIT-1","snd":7,"rcv":1},"server":{"state":"CLOSE-WAIT","snd":1,"rcv":7}},{"client":{"state":"FIN-WAIT-2","snd":7,"rcv":1},"server":{"state":"CLOSE-WAIT","snd":1,"rcv":7}},{"client":{"state":"TIME-WAIT","snd":7,"rcv":2},"server":{"state":"LAST-ACK","snd":2,"rcv":7}},{"client":{"state":"TIME-WAIT","snd":7,"rcv":2},"server":{"state":"CLOSED","snd":2,"rcv":7}},{"client":{"state":"CLOSED","snd":7,"rcv":2},"server":{"state":"CLOSED","snd":2,"rcv":7}}],"ranges":[[0,10],[0,1],[2,2],[3,3],[4,5],[6,7],[8,10]],"isn":{"book":{"client":1000,"server":5000},"relative":{"client":0,"server":0},"linux":{"client":1681612212,"server":2877419702}},"ports":{"client":50612,"server":8080},"stream":{"client":"blue","server":"gold"},"last":10,"stepY":[40,80,116,152,188,224,260,296,332,368,380]};
+const root = UNFOLD.stage;
+const readout = document.querySelector("[data-readout]");
+const $ = (id) => root.querySelector("#" + id);
+let isn = D.isn.book;
+let step = D.last;
+let crossing = false;
+const num = (v, stream) => (v === null ? null : (isn[stream] + v) % 4294967296);
+const why = (s) => s.len ? s.len + " bytes" : s.flags.includes("SYN") ? "1 (SYN)" : s.flags.includes("FIN") ? "1 (FIN)" : "0 (no data)";
+// The segment before n from one side: the source of n's seq (same side) or of n's ack (other side).
+const before = (n, side) => D.segs.slice(0, n - 1).filter((s) => s.from === side).at(-1);
+function arithmetic(s) {
+  const seq = num(s.seq, s.from);
+  const mine = before(s.n, s.from);
+  const seqText = mine ? "seq " + seq + " = " + num(mine.seq, mine.from) + " + " + why(mine) : "seq " + seq + " = " + s.from + " ISN";
+  if (s.ack === null) return seqText;
+  const theirs = before(s.n, s.to);
+  return seqText + " \u00b7 ack " + num(s.ack, s.to) + " = " + num(theirs.seq, theirs.from) + " + " + why(theirs);
+}
+function setText(id, text, hue) {
+  const el = $(id);
+  el.textContent = text;
+  if (hue) el.setAttribute("data-hue", hue); else el.removeAttribute("data-hue");
+}
+function show(t) {
+  step = Math.max(0, Math.min(D.last, t));
+  root.querySelectorAll(".el-seg").forEach((el) => {
+    const n = Number(el.dataset.n);
+    el.dataset.st = n > step ? "later" : n === Math.min(step, D.segs.length) ? "now" : "past";
+  });
+  for (const side of ["client", "server"]) {
+    const seen = [...root.querySelectorAll('.el-state[data-side="' + side + '"]')].filter((el) => Number(el.dataset.step) <= step);
+    root.querySelectorAll('.el-state[data-side="' + side + '"]').forEach((el) => {
+      el.dataset.st = Number(el.dataset.step) <= step ? "past" : "later";
+      el.toggleAttribute("data-cur", el === seen.filter((e) => !e.classList.contains("el-msl")).at(-1));
+    });
+  }
+  $("now").style.transform = "translateY(" + D.stepY[step] + "px)";
+  // The panel shows the latest segment (none before the first one).
+  const s = D.segs[Math.min(step, D.segs.length) - 1];
+  setText("p-title", s ? "segment " + s.n + " \u00b7 " + s.from + " \u2192 " + s.to : "no segment sent yet");
+  setText("p-src", s ? D.ports[s.from] : "-");
+  setText("p-dst", s ? D.ports[s.to] : "-");
+  setText("p-seq", s ? num(s.seq, s.from) : "-", s && D.stream[s.from]);
+  setText("p-ack", s ? (s.ack === null ? "not used (ACK flag off)" : num(s.ack, s.to)) : "-", s && s.ack !== null && D.stream[s.to]);
+  $("p-ack").toggleAttribute("data-off", !s || s.ack === null);
+  setText("p-data", s ? (s.len ? '"' + s.data + '" \u00b7 ' + s.len + " bytes" : "none") : "-", s && s.len && D.stream[s.from]);
+  $("p-data").toggleAttribute("data-off", !s || !s.len);
+  root.querySelectorAll(".el-fbit").forEach((el) => el.toggleAttribute("data-on", !!s && s.flags.includes(el.id.slice(4))));
+  const sides = D.steps[step];
+  for (const side of ["client", "server"]) {
+    const v = sides[side];
+    const other = side === "client" ? "server" : "client";
+    $("p-st-" + side).querySelector("text").textContent = v.state;
+    setText("p-snd-" + side, num(v.snd, side), D.stream[side]);
+    setText("p-rcv-" + side, v.rcv === null ? "-" : num(v.rcv, other), D.stream[other]);
+  }
+  UNFOLD.timeAt(step);
+  const text = step === 0 ? "step 0 \u00b7 client CLOSED, server LISTEN \u00b7 nothing sent yet"
+    : step === D.last ? "step " + step + " \u00b7 2 MSL later: client CLOSED \u00b7 both sides closed"
+    : "step " + step + " \u00b7 " + s.flags.join(",") + " \u00b7 " + arithmetic(s);
+  if (readout.textContent !== text) readout.textContent = text;
+}
+function relabel() {
+  root.querySelectorAll(".el-seg").forEach((el) => {
+    const s = D.segs[Number(el.dataset.n) - 1];
+    el.querySelector(".v-seq").textContent = num(s.seq, s.from);
+    const ack = el.querySelector(".v-ack");
+    if (ack) ack.textContent = num(s.ack, s.to);
+  });
+  show(step);
+}
+// Stepping by hand can cross into another scene; the scene follows the step.
+function stepTo(t) {
+  show(t);
+  const sc = UNFOLD.scene();
+  const [a, b] = D.ranges[sc];
+  if (sc > 0 && (step < a || step > b)) {
+    crossing = true;
+    UNFOLD.go(D.ranges.findIndex((r, i) => i > 0 && step >= r[0] && step <= r[1]));
+    crossing = false;
+  }
+  UNFOLD.pause();
+}
+root.addEventListener("unfold:scene", (e) => {
+  if (crossing) return;
+  const sc = e.detail.scene;
+  show(sc === 0 ? D.last : Math.max(0, D.ranges[sc][0] - 1));
+});
+D.ranges.forEach(([a, b], sc) => sc > 0 && UNFOLD.beat(sc, 1500, (n) => show(n < 0 ? b : Math.min(a + n, b)), 500));
+UNFOLD.onTime(stepTo);
+root.addEventListener("keydown", (e) => {
+  const to = { ArrowUp: step - 1, ArrowDown: step + 1 }[e.key];
+  if (to === undefined) return;
+  e.preventDefault();
+  stepTo(to);
+});
+root.addEventListener("click", (e) => {
+  const seg = e.target.closest(".el-seg");
+  if (seg) return stepTo(Number(seg.dataset.n));
+  const b = e.target.closest("[data-isn]");
+  if (!b) return;
+  isn = D.isn[b.dataset.isn];
+  root.querySelectorAll("[data-isn]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+  UNFOLD.pause();
+  relabel();
+});
+show(D.last);
+</script></body></html>

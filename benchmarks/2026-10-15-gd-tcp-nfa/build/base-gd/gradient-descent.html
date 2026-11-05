@@ -1,0 +1,374 @@
+<title>Gradient Descent by Hand</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: one reading column for the notes, a wider two-pane "lab" (plot | controls) that stacks on phones. */
+:root {
+  --paper: #f5f7f8; --surface: #ffffff; --ink: #18222b; --muted: #5a6672; --rule: #d6dde2;
+  --accent: #0e6f68; --accent-soft: #d8eeeb;
+  --slow: #5d74a6; --good: #1d8148; --bad: #c2410c;
+  --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --paper: #10161b; --surface: #182128; --ink: #e5eaee; --muted: #98a4ae; --rule: #2a3640;
+  --accent: #3cc7b8; --accent-soft: #163a38;
+  --slow: #9bb0e0; --good: #5bd08b; --bad: #fb8c4c; color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --paper: #10161b; --surface: #182128; --ink: #e5eaee; --muted: #98a4ae; --rule: #2a3640;
+  --accent: #3cc7b8; --accent-soft: #163a38;
+  --slow: #9bb0e0; --good: #5bd08b; --bad: #fb8c4c; color-scheme: dark;
+}
+body {
+  background: var(--paper); color: var(--ink); font: 1.06rem/1.6 var(--body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 2.5rem 4rem;
+}
+main { max-width: 64rem; margin: 0 auto; display: grid; gap: 3rem; }
+.prose { max-width: 40rem; display: grid; gap: 0.9rem; }
+h1, h2, h3 { font-family: var(--display); line-height: 1.1; margin: 0; text-wrap: balance; }
+h1 { font-size: clamp(2.2rem, 6vw, 3.4rem); font-weight: 800; letter-spacing: -0.02em; }
+h2 { font-size: 1.6rem; font-weight: 800; }
+h3 { font-size: 1.1rem; font-weight: 600; }
+p { margin: 0; }
+.eyebrow { font: 600 0.75rem/1 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); }
+.lede { font-size: 1.2rem; color: var(--muted); }
+code, .num { font-family: var(--mono); font-size: 0.9em; font-variant-numeric: tabular-nums; }
+.eq {
+  font: 1.05rem/1.5 var(--mono); background: var(--surface); border: 1px solid var(--rule);
+  border-radius: 6px; padding: 0.8rem 1rem; overflow-x: auto; white-space: nowrap;
+}
+.eq b { color: var(--accent); font-weight: 600; }
+.defs { display: grid; grid-template-columns: max-content 1fr; gap: 0.3rem 1rem; margin: 0; }
+.defs dt { font-family: var(--mono); color: var(--accent); }
+.defs dd { margin: 0; }
+
+/* Lab */
+.lab { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 1.25rem; display: grid; gap: 1.25rem; }
+.lab-top { display: grid; grid-template-columns: minmax(0, 1fr) 17rem; gap: 1.5rem; align-items: start; }
+@media (max-width: 760px) { .lab-top { grid-template-columns: minmax(0, 1fr); } }
+svg { display: block; width: 100%; height: auto; overflow: visible; }
+svg text { font-family: var(--mono); font-size: 11px; fill: var(--muted); }
+.controls { display: grid; gap: 1rem; min-width: 0; }
+.presets { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.4rem; }
+button {
+  font: 600 0.85rem/1.2 var(--display); color: var(--ink); background: var(--paper);
+  border: 1px solid var(--rule); border-radius: 6px; padding: 0.55rem 0.5rem; cursor: pointer;
+}
+button:hover { border-color: var(--accent); }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+button[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); }
+.presets button small { display: block; font: 400 0.75rem/1.3 var(--mono); color: var(--muted); }
+.actions { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+.actions button { flex: 1 1 4.5rem; }
+.actions .primary { background: var(--accent); color: var(--surface); border-color: var(--accent); }
+.field { display: grid; gap: 0.25rem; }
+.field label { display: flex; justify-content: space-between; font: 600 0.85rem/1.2 var(--display); }
+.field label .num { color: var(--accent); }
+input[type="range"] { width: 100%; accent-color: var(--accent); }
+.status { border-left: 4px solid var(--c, var(--muted)); padding: 0.4rem 0 0.4rem 0.75rem; display: grid; gap: 0.2rem; }
+.status strong { font-family: var(--display); color: var(--c, var(--ink)); }
+.status span { font-size: 0.92rem; color: var(--muted); }
+.stats { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin: 0; }
+.stats div { display: grid; gap: 0.1rem; }
+.stats dt { font: 600 0.7rem/1.2 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.stats dd { margin: 0; font: 600 1.05rem/1.2 var(--mono); font-variant-numeric: tabular-nums; }
+.subhead { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; flex-wrap: wrap; }
+.subhead p { font-size: 0.9rem; color: var(--muted); }
+.table-wrap { overflow-x: auto; max-height: 22rem; overflow-y: auto; border: 1px solid var(--rule); border-radius: 6px; }
+table { border-collapse: collapse; width: 100%; font: 0.85rem/1.4 var(--mono); font-variant-numeric: tabular-nums; }
+th, td { padding: 0.35rem 0.7rem; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--rule); }
+th { position: sticky; top: 0; background: var(--surface); font-weight: 600; color: var(--muted); }
+th:first-child, td:first-child { text-align: center; }
+tr:last-child td { background: var(--accent-soft); }
+
+/* Small multiples */
+.trio { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
+@media (max-width: 760px) { .trio { grid-template-columns: minmax(0, 1fr); } }
+.card {
+  text-align: left; font: inherit; display: grid; gap: 0.6rem; padding: 1rem; background: var(--surface);
+  border: 1px solid var(--rule); border-top: 4px solid var(--c); border-radius: 8px; min-width: 0; align-content: start;
+}
+.card h3 { color: var(--c); }
+.card p { font-size: 0.92rem; }
+.card .seq { font: 0.78rem/1.5 var(--mono); color: var(--muted); overflow-wrap: anywhere; }
+.card .go { font: 600 0.8rem/1 var(--display); color: var(--accent); }
+.slow { --c: var(--slow); } .good { --c: var(--good); } .bad { --c: var(--bad); }
+footer { color: var(--muted); font-size: 0.9rem; }
+</style>
+
+<main>
+  <header class="prose">
+    <span class="eyebrow">ML course notes · Optimization</span>
+    <h1>Gradient Descent by Hand</h1>
+    <p class="lede">One parameter, one loss, every number visible. Step through the updates yourself and watch what the learning rate does.</p>
+  </header>
+
+  <section class="prose" aria-labelledby="setup">
+    <h2 id="setup">The setup</h2>
+    <p>We want the value of <i>w</i> that makes the loss as small as possible. The loss is a parabola with its lowest point at <i>w</i> = 3:</p>
+    <div class="eq">L(w) = (w − 3)²&nbsp;&nbsp;&nbsp;&nbsp;L′(w) = 2(w − 3)</div>
+    <p>The derivative <code>L′(w)</code> is the slope. It is negative left of 3 and positive right of 3. Gradient descent moves <i>w</i> a little in the direction opposite to the slope:</p>
+    <div class="eq">w<sub>k+1</sub> = w<sub>k</sub> − <b>η</b> · L′(w<sub>k</sub>)</div>
+    <dl class="defs">
+      <dt>w<sub>k</sub></dt><dd>the parameter after k steps. We start at w<sub>0</sub> = 0.</dd>
+      <dt>η</dt><dd>the learning rate (eta). It scales how far each step goes.</dd>
+    </dl>
+    <p><strong>First step with η = 0.3:</strong> the slope is <code>L′(0) = 2(0 − 3) = −6</code>. The step is <code>0.3 × (−6) = −1.8</code>. So <code>w₁ = 0 − (−1.8) = 1.8</code>, and the loss drops from 9 to <code>(1.8 − 3)² = 1.44</code>.</p>
+  </section>
+
+  <section class="lab" aria-labelledby="lab-title">
+    <div class="subhead">
+      <h2 id="lab-title">Try it</h2>
+      <p>Press <b>Step</b> to take one update. The table shows the arithmetic.</p>
+    </div>
+    <div class="lab-top">
+      <svg id="plot" viewBox="0 0 600 340" role="img" aria-label="Loss curve with the steps taken so far"></svg>
+      <div class="controls">
+        <div class="presets" role="group" aria-label="Learning rate presets">
+          <button type="button" id="p-small" data-eta="0.05">Too small<small>η = 0.05</small></button>
+          <button type="button" id="p-good" data-eta="0.3">About right<small>η = 0.3</small></button>
+          <button type="button" id="p-big" data-eta="1.05">Too big<small>η = 1.05</small></button>
+        </div>
+        <div class="field">
+          <label for="eta">Learning rate η <span class="num" id="eta-out"></span></label>
+          <input type="range" id="eta" min="0.01" max="1.2" step="0.01" value="0.3">
+        </div>
+        <div class="field">
+          <label for="w0">Start w<sub>0</sub> <span class="num" id="w0-out"></span></label>
+          <input type="range" id="w0" min="-3" max="9" step="0.5" value="0">
+        </div>
+        <div class="actions">
+          <button type="button" class="primary" id="step">Step</button>
+          <button type="button" id="run">Run</button>
+          <button type="button" id="reset">Reset</button>
+        </div>
+        <div class="status" id="status" aria-live="polite"><strong></strong><span></span></div>
+        <dl class="stats">
+          <div><dt>Step k</dt><dd id="s-k"></dd></div>
+          <div><dt>w<sub>k</sub></dt><dd id="s-w"></dd></div>
+          <div><dt>Loss</dt><dd id="s-l"></dd></div>
+          <div><dt>Distance × per step</dt><dd id="s-r"></dd></div>
+        </dl>
+      </div>
+    </div>
+    <div>
+      <div class="subhead"><h3>Loss after each step</h3></div>
+      <svg id="lossplot" viewBox="0 0 600 150" role="img" aria-label="Loss against step number"></svg>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>k</th><th>w<sub>k</sub></th><th>L(w<sub>k</sub>)</th><th>L′(w<sub>k</sub>)</th><th>η·L′(w<sub>k</sub>)</th><th>w<sub>k+1</sub></th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section aria-labelledby="compare" style="display:grid;gap:1rem">
+    <div class="prose">
+      <h2 id="compare">Three learning rates, same start</h2>
+      <p>Each panel shows the first 8 steps from w<sub>0</sub> = 0. Select a panel to load it into the lab above.</p>
+    </div>
+    <div class="trio" id="trio"></div>
+  </section>
+
+  <section class="prose" aria-labelledby="why">
+    <h2 id="why">Why this happens</h2>
+    <p>Put the gradient into the update rule and subtract 3 from both sides:</p>
+    <div class="eq">w<sub>k+1</sub> − 3 = (1 − 2<b>η</b>) · (w<sub>k</sub> − 3)</div>
+    <p>So every step multiplies the distance to the minimum by the same number, <code>1 − 2η</code>. That one number explains every case:</p>
+    <dl class="defs">
+      <dt>0 &lt; η &lt; 0.5</dt><dd>The factor is between 0 and 1. <i>w</i> approaches 3 from one side. A small η gives a factor close to 1, so progress is slow. With η = 0.05 the factor is 0.9, and it takes 55 steps to get within 0.01 of the minimum.</dd>
+      <dt>η = 0.5</dt><dd>The factor is 0. One step lands exactly on 3. This only works because the loss is a perfect parabola.</dd>
+      <dt>0.5 &lt; η &lt; 1</dt><dd>The factor is between −1 and 0. <i>w</i> jumps over the minimum each step, but each jump is shorter. It still converges, with a zig-zag.</dd>
+      <dt>η = 1</dt><dd>The factor is −1. <i>w</i> bounces between 0 and 6 forever.</dd>
+      <dt>η &gt; 1</dt><dd>The factor is less than −1. Each jump is longer than the last, so the loss grows without limit. With η = 1.05 the distance grows by 10% every step.</dd>
+    </dl>
+    <p>For a real model the loss is not a perfect parabola, and the safe range of η depends on how sharply the loss curves. The pattern is the same: too small wastes steps, too big makes training unstable.</p>
+  </section>
+
+  <footer class="prose"><p>All numbers are computed live in the page. Values are rounded to 4 decimal places.</p></footer>
+</main>
+
+<script>
+const L = w => (w - 3) ** 2;
+const G = w => 2 * (w - 3);
+const MAX_STEPS = 40;
+const X0 = -4, X1 = 10, YMAX = 50;
+
+function path(eta, w0, n) {
+  const ws = [w0];
+  for (let i = 0; i < n; i++) ws.push(ws[i] - eta * G(ws[i]));
+  return ws;
+}
+
+function fmt(x) {
+  if (!isFinite(x)) return "overflow";
+  if (Math.abs(x) >= 1e5) return x.toExponential(2);
+  const s = x.toFixed(4);
+  return s === "-0.0000" ? "0.0000" : s;
+}
+
+function stepsToConverge(eta, w0) {
+  let w = w0;
+  for (let k = 0; k <= 1000; k++) {
+    if (Math.abs(w - 3) < 0.01) return k;
+    if (Math.abs(w - 3) > 1e6) return null;
+    w -= eta * G(w);
+  }
+  return null;
+}
+
+function regime(eta) {
+  const r = 1 - 2 * eta;
+  if (Math.abs(r) < 1e-9) return { cls: "good", name: "Exact in one step", note: "The factor is 0, so the first step lands on w = 3." };
+  if (r > 0.6) return { cls: "slow", name: "Too small: slow", note: "Every step moves the right way, but only a little." };
+  if (r > 0) return { cls: "good", name: "About right", note: "Steady approach from one side. Close in a few steps." };
+  if (r > -1 + 1e-9) return { cls: "good", name: "Overshoots, still converges", note: "Each step jumps over w = 3, but lands closer than before." };
+  if (Math.abs(r + 1) < 1e-9) return { cls: "bad", name: "Stuck bouncing", note: "Each step jumps to the mirror point. The loss never changes." };
+  return { cls: "bad", name: "Too big: diverges", note: "Each jump overshoots further. The loss grows every step." };
+}
+
+// ponytail: SVG built as strings; fine for <= 40 points per redraw.
+function curvePlot(ws, { h = 340, id = "c", labels = true } = {}) {
+  const m = { l: 36, r: 12, t: 12, b: 28 }, W = 600;
+  const sx = w => m.l + (w - X0) / (X1 - X0) * (W - m.l - m.r);
+  const sy = y => h - m.b - y / YMAX * (h - m.t - m.b);
+  let s = `<defs><clipPath id="clip-${id}"><rect x="${m.l}" y="${m.t}" width="${W - m.l - m.r}" height="${h - m.t - m.b}"/></clipPath></defs>`;
+  for (let w = X0; w <= X1; w += 2) {
+    s += `<line x1="${sx(w)}" x2="${sx(w)}" y1="${m.t}" y2="${h - m.b}" stroke="var(--rule)" stroke-width="1"/>`;
+    s += `<text x="${sx(w)}" y="${h - m.b + 16}" text-anchor="middle">${w}</text>`;
+  }
+  for (let y = 0; y <= YMAX; y += 10) {
+    s += `<line x1="${m.l}" x2="${W - m.r}" y1="${sy(y)}" y2="${sy(y)}" stroke="var(--rule)" stroke-width="1"/>`;
+    s += `<text x="${m.l - 6}" y="${sy(y) + 4}" text-anchor="end">${y}</text>`;
+  }
+  s += `<text x="${W - m.r}" y="${h - m.b - 6}" text-anchor="end">w</text><text x="${m.l + 6}" y="${m.t + 12}">L(w)</text>`;
+  let pts = "";
+  for (let w = X0; w <= X1 + 1e-9; w += 0.1) pts += `${sx(w).toFixed(1)},${sy(L(w)).toFixed(1)} `;
+  s += `<g clip-path="url(#clip-${id})">`;
+  s += `<polyline points="${pts}" fill="none" stroke="var(--ink)" stroke-width="2"/>`;
+  s += `<line x1="${sx(3)}" x2="${sx(3)}" y1="${m.t}" y2="${h - m.b}" stroke="var(--accent)" stroke-dasharray="4 4" stroke-width="1.5"/>`;
+  for (let i = 0; i + 1 < ws.length; i++) {
+    s += `<line x1="${sx(ws[i])}" y1="${sy(L(ws[i]))}" x2="${sx(ws[i + 1])}" y2="${sy(L(ws[i + 1]))}" stroke="var(--accent)" stroke-width="1.5" opacity="0.7"/>`;
+  }
+  const cur = ws[ws.length - 1];
+  if (labels && isFinite(cur)) {
+    // tangent at the current point, fixed on-screen length
+    const pxSlope = G(cur) * ((h - m.t - m.b) / YMAX) / ((W - m.l - m.r) / (X1 - X0));
+    const dx = 45 / Math.sqrt(1 + pxSlope ** 2) / ((W - m.l - m.r) / (X1 - X0));
+    s += `<line x1="${sx(cur - dx)}" y1="${sy(L(cur) - G(cur) * dx)}" x2="${sx(cur + dx)}" y2="${sy(L(cur) + G(cur) * dx)}" stroke="var(--bad)" stroke-width="2"/>`;
+  }
+  ws.forEach((w, i) => {
+    const last = i === ws.length - 1;
+    s += `<circle cx="${sx(w)}" cy="${sy(L(w))}" r="${last ? 6 : 4}" fill="${last ? "var(--accent)" : "var(--surface)"}" stroke="var(--accent)" stroke-width="2"/>`;
+    if (i < 5) s += `<text x="${sx(w)}" y="${sy(L(w)) - 10}" text-anchor="middle" style="fill:var(--ink)">${i}</text>`;
+  });
+  s += `</g>`;
+  s += `<text x="${sx(3) + 5}" y="${h - m.b - 6}" style="fill:var(--accent)">min</text>`;
+  const off = ws.filter(w => !isFinite(w) || w < X0 || w > X1 || L(w) > YMAX).length;
+  if (off) s += `<text x="${W - m.r}" y="${m.t + 12}" text-anchor="end" style="fill:var(--bad)">${off} point${off > 1 ? "s" : ""} off the chart</text>`;
+  return s;
+}
+
+function lossPlot(ws) {
+  const m = { l: 56, r: 12, t: 10, b: 24 }, W = 600, h = 150;
+  const n = Math.max(ws.length - 1, 10);
+  const losses = ws.map(L).filter(isFinite);
+  const top = Math.max(...losses, 1);
+  const sx = k => m.l + k / n * (W - m.l - m.r);
+  const sy = y => h - m.b - y / top * (h - m.t - m.b);
+  let s = `<line x1="${m.l}" x2="${W - m.r}" y1="${sy(0)}" y2="${sy(0)}" stroke="var(--rule)"/>`;
+  s += `<line x1="${m.l}" x2="${W - m.r}" y1="${sy(top)}" y2="${sy(top)}" stroke="var(--rule)" stroke-dasharray="3 3"/>`;
+  s += `<text x="${m.l - 6}" y="${sy(0) + 4}" text-anchor="end">0</text><text x="${m.l - 6}" y="${sy(top) + 4}" text-anchor="end">${fmt(top).replace(/\.?0+$/, "")}</text>`;
+  const tick = n > 20 ? 10 : 5;
+  for (let k = 0; k <= n; k += tick) s += `<text x="${sx(k)}" y="${h - 6}" text-anchor="middle">${k}</text>`;
+  const pts = ws.map((w, k) => `${sx(k).toFixed(1)},${sy(L(w)).toFixed(1)}`).join(" ");
+  s += `<polygon points="${sx(0)},${sy(0)} ${pts} ${sx(ws.length - 1)},${sy(0)}" fill="var(--accent-soft)"/>`;
+  s += `<polyline points="${pts}" fill="none" stroke="var(--accent)" stroke-width="2"/>`;
+  ws.forEach((w, k) => { s += `<circle cx="${sx(k)}" cy="${sy(L(w))}" r="3" fill="var(--accent)"/>`; });
+  return s;
+}
+
+const $ = id => document.getElementById(id);
+const state = { eta: 0.3, w0: 0, k: 3 };
+let timer = null;
+
+function render() {
+  const { eta, w0, k } = state;
+  const ws = path(eta, w0, k);
+  $("eta-out").textContent = eta.toFixed(2);
+  $("w0-out").textContent = w0.toFixed(1);
+  $("eta").value = eta; $("w0").value = w0;
+  $("plot").innerHTML = curvePlot(ws, { id: "main" });
+  $("lossplot").innerHTML = lossPlot(ws);
+
+  const g = regime(eta);
+  const st = $("status");
+  st.className = "status " + g.cls;
+  const n = stepsToConverge(eta, w0);
+  st.querySelector("strong").textContent = g.name;
+  st.querySelector("span").textContent = g.note + (n === null ? " It never gets within 0.01 of w = 3." : ` It gets within 0.01 of w = 3 after ${n} step${n === 1 ? "" : "s"}.`);
+
+  const w = ws[k];
+  $("s-k").textContent = k;
+  $("s-w").textContent = fmt(w);
+  $("s-l").textContent = fmt(L(w));
+  $("s-r").textContent = (1 - 2 * eta).toFixed(2);
+
+  let rows = "";
+  for (let i = 0; i <= k; i++) {
+    const wi = ws[i], gi = G(wi);
+    const next = i < k ? fmt(ws[i + 1]) : "next: " + fmt(wi - eta * gi);
+    rows += `<tr><td>${i}</td><td>${fmt(wi)}</td><td>${fmt(L(wi))}</td><td>${fmt(gi)}</td><td>${fmt(eta * gi)}</td><td>${next}</td></tr>`;
+  }
+  $("rows").innerHTML = rows;
+  $("rows").parentElement.parentElement.scrollTop = 1e9;
+
+  document.querySelectorAll(".presets button").forEach(b => b.setAttribute("aria-pressed", String(Number(b.dataset.eta) === eta)));
+  $("step").disabled = k >= MAX_STEPS;
+}
+
+function stop() { clearInterval(timer); timer = null; $("run").textContent = "Run"; }
+function step() { if (state.k < MAX_STEPS) { state.k++; render(); } if (state.k >= MAX_STEPS) stop(); }
+function load(eta, w0 = state.w0) { stop(); state.eta = eta; state.w0 = w0; state.k = 0; render(); }
+
+$("step").onclick = () => { stop(); step(); };
+$("reset").onclick = () => load(state.eta);
+$("run").onclick = () => {
+  if (timer) return stop();
+  if (state.k >= MAX_STEPS) state.k = 0;
+  $("run").textContent = "Pause";
+  timer = setInterval(step, matchMedia("(prefers-reduced-motion: reduce)").matches ? 250 : 550);
+};
+$("eta").oninput = e => load(Number(e.target.value));
+$("w0").oninput = e => load(state.eta, Number(e.target.value));
+document.querySelectorAll(".presets button").forEach(b => b.onclick = () => load(Number(b.dataset.eta)));
+
+const presets = [
+  { eta: 0.05, cls: "slow", title: "Too small · η = 0.05", text: "Distance to the minimum shrinks by only 10% per step. After 8 steps w is only 1.71, still about 1.3 short of 3." },
+  { eta: 0.3, cls: "good", title: "About right · η = 0.3", text: "Distance shrinks by 60% per step. After 3 steps w is within 0.2 of the minimum." },
+  { eta: 1.05, cls: "bad", title: "Too big · η = 1.05", text: "Each step jumps over the minimum and lands 10% further away. The loss keeps growing." },
+];
+$("trio").innerHTML = presets.map((p, i) => {
+  const ws = path(p.eta, 0, 8);
+  return `<button type="button" class="card ${p.cls}" data-i="${i}">
+    <h3>${p.title}</h3>
+    <svg viewBox="0 0 600 260" aria-hidden="true">${curvePlot(ws, { h: 260, id: "t" + i, labels: false })}</svg>
+    <p>${p.text}</p>
+    <p class="seq">w: ${ws.slice(0, 6).map(w => fmt(w).replace(/(\.\d*?)0+$/, "$1").replace(/\.$/, "")).join(", ")}, …</p>
+    <span class="go">Load into the lab ↑</span>
+  </button>`;
+}).join("");
+document.querySelectorAll(".card").forEach(c => c.onclick = () => {
+  load(presets[c.dataset.i].eta, 0);
+  $("lab-title").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+});
+
+render();
+</script>

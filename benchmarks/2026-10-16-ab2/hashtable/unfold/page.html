@@ -1,0 +1,747 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Hash table</title><style>
+.iso{
+  --anatomy-page:#0b0b0b;--anatomy-card:#131313;--anatomy-text:#a3a3a3;--anatomy-strong:#e6e6e6;--anatomy-muted:#6e6e6e;
+  --anatomy-paper:#131313;--anatomy-face:#1b1b1b;--anatomy-top:#1c1c1c;
+  --anatomy-shade-0:#0f0f0f;--anatomy-shade-1:#121212;--anatomy-shade-2:#151515;--anatomy-shade-3:#181818;
+  --anatomy-lit-top:#262626;--anatomy-lit-shade:#1d1d1d;
+  --anatomy-hi:#d4d4d4;--anatomy-mid:#6a6a6a;--anatomy-lo:#3e3e3e;--anatomy-faint:#2a2a2a;--anatomy-lit:#ffffff;
+  --anatomy-halo:#050505;--anatomy-halo-opacity:.9;--anatomy-dot:#e6e6e6;
+  --anatomy-red:#ff6b6b;--anatomy-green:#6be0a0;--anatomy-blue:#6b9bff;
+  --anatomy-weight:.6px;--anatomy-ease:cubic-bezier(.32,.72,0,1);
+  --anatomy-mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --anatomy-lift:inset 0 1px 0 0 #ffffff0a,inset 0 0 0 1px #ffffff06,0 0 0 1px #00000026,0 1px 1px -.5px #00000014,0 3px 3px -1.5px #00000014,0 6px 6px -3px #00000014,0 12px 12px -6px #00000014;
+}
+.iso[data-theme="light"]{
+  --anatomy-page:#f2f2ef;--anatomy-card:#fbfbfa;--anatomy-text:#57575a;--anatomy-strong:#18181a;--anatomy-muted:#8c8c90;
+  --anatomy-paper:#fbfbfa;--anatomy-face:#ffffff;--anatomy-top:#ffffff;
+  --anatomy-shade-0:#dcdcd9;--anatomy-shade-1:#e5e5e2;--anatomy-shade-2:#ededea;--anatomy-shade-3:#f4f4f1;
+  --anatomy-lit-top:#ffffff;--anatomy-lit-shade:#eeeeeb;
+  --anatomy-hi:#26262a;--anatomy-mid:#8a8a8f;--anatomy-lo:#b4b4b8;--anatomy-faint:#d4d4d6;--anatomy-lit:#000000;
+  --anatomy-halo:#8a8a80;--anatomy-halo-opacity:.32;--anatomy-dot:#3a3a3e;
+  --anatomy-red:#e5484d;--anatomy-green:#30a46c;--anatomy-blue:#3e63dd;
+  --anatomy-lift:inset 0 1px 0 0 #ffffff,0 0 0 1px #0000000f,0 1px 1px -.5px #0000000a,0 3px 3px -1.5px #0000000a,0 6px 6px -3px #0000000a,0 12px 12px -6px #0000000a;
+}
+.iso-svg{display:block;width:100%;height:auto;overflow:visible}
+.iso-svg path,.iso-svg circle{vector-effect:non-scaling-stroke}
+.iso-fill{fill:var(--anatomy-paper);stroke:none}
+.iso-solid[data-lit]>.iso-fill{fill:var(--anatomy-face)}
+.iso-shade,.iso-top{stroke:none}
+.iso-shade[data-shade="0"]{fill:var(--anatomy-shade-0)}
+.iso-shade[data-shade="1"]{fill:var(--anatomy-shade-1)}
+.iso-shade[data-shade="2"]{fill:var(--anatomy-shade-2)}
+.iso-shade[data-shade="3"]{fill:var(--anatomy-shade-3)}
+.iso-top{fill:var(--anatomy-top)}
+.iso-solid[data-lit]>.iso-top{fill:var(--anatomy-lit-top)}
+.iso-solid[data-lit]>.iso-shade{fill:var(--anatomy-lit-shade)}
+.iso-solid[data-seamless]>.iso-shade,.iso-solid[data-seamless]>.iso-top{stroke-width:.4;stroke-linejoin:round}
+.iso-solid[data-seamless]>.iso-shade[data-shade="0"]{stroke:var(--anatomy-shade-0)}
+.iso-solid[data-seamless]>.iso-shade[data-shade="1"]{stroke:var(--anatomy-shade-1)}
+.iso-solid[data-seamless]>.iso-shade[data-shade="2"]{stroke:var(--anatomy-shade-2)}
+.iso-solid[data-seamless]>.iso-shade[data-shade="3"]{stroke:var(--anatomy-shade-3)}
+.iso-solid[data-seamless]>.iso-top{stroke:var(--anatomy-top)}
+.iso-solid[data-seamless][data-lit]>.iso-top{stroke:var(--anatomy-lit-top)}
+.iso-solid[data-seamless][data-lit]>.iso-shade{stroke:var(--anatomy-lit-shade)}
+.iso-solid[data-lit]>.iso-edge{stroke:var(--anatomy-lit)}
+.iso-halo{fill:var(--anatomy-halo);stroke:none;filter:blur(9px);opacity:var(--anatomy-halo-opacity);transform:translateY(3px)}
+.iso-line{fill:none;stroke:var(--anatomy-lo);stroke-width:var(--anatomy-weight);stroke-linecap:round;stroke-linejoin:round}
+.iso-line[data-tone="hi"]{stroke:var(--anatomy-hi)}
+.iso-line[data-tone="mid"]{stroke:var(--anatomy-mid)}
+.iso-line[data-tone="lo"]{stroke:var(--anatomy-lo)}
+.iso-line[data-tone="faint"]{stroke:var(--anatomy-faint)}
+.iso-line[data-tone="lit"]{stroke:var(--anatomy-lit)}
+.iso-line[data-tone="red"]{stroke:var(--anatomy-red)}
+.iso-line[data-tone="green"]{stroke:var(--anatomy-green)}
+.iso-line[data-tone="blue"]{stroke:var(--anatomy-blue)}
+.iso-line[data-dotted]{stroke-dasharray:.01 3.5;stroke-width:1}
+.iso-line[data-dashed]{stroke-dasharray:3 3}
+.iso-line[data-flow]{stroke-dasharray:2 6}
+.iso-wire-end{fill:var(--anatomy-paper);stroke:var(--anatomy-lo);stroke-width:var(--anatomy-weight)}
+.iso-wire[data-tone="hi"] .iso-wire-end{stroke:var(--anatomy-hi)}
+.iso-wire[data-tone="mid"] .iso-wire-end{stroke:var(--anatomy-mid)}
+.iso-wire[data-tone="faint"] .iso-wire-end{stroke:var(--anatomy-faint)}
+.iso-wire[data-tone="lit"] .iso-wire-end{stroke:var(--anatomy-lit)}
+.iso-dots circle{fill:var(--anatomy-dot);stroke:none;opacity:.32}
+.iso-dots[data-tone="hi"] circle{opacity:.85}
+.iso-dots[data-tone="mid"] circle{opacity:.45}
+.iso-dots[data-tone="lo"] circle{opacity:.22}
+.iso-dots[data-tone="faint"] circle{opacity:.12}
+.iso-face-text{fill:var(--anatomy-mid);font-family:var(--anatomy-mono);letter-spacing:.04em}
+.iso-face-text[data-tone="hi"]{fill:var(--anatomy-hi)}
+.iso-face-text[data-tone="lo"]{fill:var(--anatomy-lo)}
+.iso-face-text[data-tone="faint"]{fill:var(--anatomy-faint)}
+.tb-body{fill:var(--anatomy-shade-2);stroke:none}
+.tb-shine{fill:var(--anatomy-top);stroke:none}
+.tb-shade{fill:var(--anatomy-shade-0);stroke:none}
+.tb-ring{fill:none;stroke:var(--anatomy-lo);stroke-width:.45;stroke-linecap:butt;stroke-linejoin:round}
+.tb-ring[data-tone="mid"]{stroke:var(--anatomy-mid)}
+.tb-ring[data-tone="faint"]{stroke:var(--anatomy-faint)}
+.tb-ring[data-tone="hi"]{stroke:var(--anatomy-hi)}
+@keyframes iso-flow{to{stroke-dashoffset:-32}}
+@keyframes iso-pulse{0%,100%{opacity:.18}12%{opacity:1}40%{opacity:.18}}
+.iso-line[data-flow]{animation:iso-flow 1600ms linear infinite}
+.iso-dots circle[data-pulse]{animation:iso-pulse 1600ms steps(1,end) infinite;animation-delay:var(--pulse-at,0ms)}
+.iso-figure{margin:32px 0 36px}
+.iso-plate{position:relative;padding:52px 24px;border-radius:0;background:var(--anatomy-card);box-shadow:0 0 0 1px var(--anatomy-mid);--anatomy-paper:var(--anatomy-card)}
+.iso-plate-corners{position:absolute;inset:18px 20px;pointer-events:none}
+.iso-plate-corner{position:absolute;color:var(--anatomy-muted);font-family:var(--anatomy-mono);font-size:10.5px;line-height:1;letter-spacing:.04em;white-space:nowrap}
+.iso-plate-corner[data-corner="fig"]{top:0;left:0;color:var(--anatomy-text)}
+.iso-plate-corner[data-corner="title"]{top:0;right:0;text-transform:uppercase;letter-spacing:.1em}
+.iso-plate-corner[data-corner="hint"]{bottom:0;left:0;text-transform:uppercase;letter-spacing:.1em}
+.iso-plate-corner[data-corner="readout"]{right:0;bottom:0;color:var(--anatomy-text);font-variant-numeric:tabular-nums}
+.iso-plate .iso-svg{margin:0 auto}
+.iso-legend{display:grid;gap:8px;margin-top:12px;color:var(--anatomy-muted);font-size:13px;line-height:1.55}
+.iso-keys{display:flex;flex-wrap:wrap;gap:6px 18px}
+.iso-key{display:inline-flex;align-items:center;gap:7px}
+.iso-swatch{width:16px;height:10px;flex:none;overflow:visible}
+.iso-swatch path{fill:none;stroke:var(--anatomy-hi);stroke-width:1;vector-effect:non-scaling-stroke;stroke-linejoin:round;stroke-linecap:round}
+.iso-swatch[data-mark="raised"] path,.iso-swatch[data-mark="flat"] path{stroke:var(--anatomy-mid)}
+.iso-swatch[data-mark="lit"] path{stroke:var(--anatomy-lit)}
+.iso-swatch[data-mark="dim"] path{stroke:var(--anatomy-lo)}
+.iso-swatch[data-mark="dotted"] path{stroke-dasharray:.01 3;stroke-width:1.4}
+.iso-swatch[data-mark="dashed"] path{stroke-dasharray:3 2.5}
+.iso-swatch[data-mark="red"] path{stroke:var(--anatomy-red)}
+.iso-swatch[data-mark="green"] path{stroke:var(--anatomy-green)}
+.iso-swatch[data-mark="blue"] path{stroke:var(--anatomy-blue)}
+.iso-swatch-crease{stroke:var(--anatomy-lo)!important}
+@media (max-width:560px){.iso-plate{padding:48px 12px 70px}.iso-plate-corner[data-corner="hint"]{bottom:18px}}
+@media (prefers-reduced-motion:reduce){.iso-line[data-flow],.iso-dots circle[data-pulse]{animation:none}}
+
+*{box-sizing:border-box}
+html{color-scheme:dark}
+body[data-theme="light"]{color-scheme:light}
+body{margin:0;background:var(--anatomy-page);color:var(--anatomy-text);font:14px/1.6 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+.iso-page{width:min(900px,100% - 32px);margin:64px auto 96px}
+</style></head><body class="iso" data-theme="auto"><main class="iso-page"><style>
+.iso{--unfold-blue:#58c4dd;--unfold-yellow:#f4d345;--unfold-red:#fc6255;--unfold-green:#83c167;--unfold-teal:#5cd0b3;--unfold-purple:#b48ad1;--unfold-gold:#f0ac5f;--unfold-on-hot:#0b0b0b;--unfold-serif:"Latin Modern Math","STIX Two Math","Cambria Math",math,serif}
+.iso[data-theme="light"]{--unfold-blue:#1f78a4;--unfold-yellow:#a67c00;--unfold-red:#cf3b2e;--unfold-green:#3e8a2a;--unfold-teal:#16866b;--unfold-purple:#7a4fa3;--unfold-gold:#b8661a;--unfold-on-hot:#ffffff}
+[data-hue="blue"]{--hue:var(--unfold-blue)}[data-hue="yellow"]{--hue:var(--unfold-yellow)}[data-hue="red"]{--hue:var(--unfold-red)}[data-hue="green"]{--hue:var(--unfold-green)}[data-hue="teal"]{--hue:var(--unfold-teal)}[data-hue="purple"]{--hue:var(--unfold-purple)}[data-hue="gold"]{--hue:var(--unfold-gold)}[data-hue="ink"]{--hue:var(--anatomy-hi)}
+.u-key{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 16px;margin-top:10px;color:var(--anatomy-muted);font-size:12px}
+.u-key>span{display:inline-flex;align-items:center;gap:6px}
+.u-key i{width:10px;height:10px;border-radius:2px;background:var(--hue)}
+.u-key i.u-hollow{background:none;box-shadow:inset 0 0 0 1.2px var(--anatomy-mid)}
+.u-key i.u-solid{background:var(--anatomy-mid)}
+.u-stage{position:relative;outline:none;container-type:inline-size}
+.u-stage:focus-visible{outline:1px solid var(--anatomy-faint);outline-offset:8px}
+.u-stage .iso-svg{overflow:visible}
+.u-eq,.u-say{display:grid;align-items:center}
+.u-eq>.u-at,.u-say>.u-at{grid-area:1/1;opacity:0;visibility:hidden;transition:opacity .45s var(--anatomy-ease),visibility 0s .45s;margin:0}
+.u-eq{min-height:44px;margin-bottom:8px;overflow-x:auto;overflow-y:hidden}
+.u-eq math{font-family:var(--unfold-serif);font-size:20px;color:var(--anatomy-strong)}
+.u-eq [data-hue]{color:var(--hue)}
+.u-say{min-height:48px;margin-top:6px;color:var(--anatomy-text);font-size:14px;line-height:1.55;text-align:center}
+.u-say>.u-at{max-width:62ch;justify-self:center}
+.u-say b{color:var(--anatomy-strong);font-weight:500}
+.u-say [data-hue]{color:var(--hue)}
+.u-steps{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin-top:14px}
+.u-steps button{display:inline-flex;align-items:center;gap:6px;padding:5px 10px 5px 6px;border:0;border-radius:999px;background:transparent;color:var(--anatomy-muted);font:11px/1 var(--anatomy-mono);letter-spacing:.04em;cursor:pointer;box-shadow:0 0 0 1px var(--anatomy-faint);transition:color .2s,box-shadow .2s}
+.u-steps button span{display:inline-grid;place-items:center;width:16px;height:16px;border-radius:50%;background:var(--anatomy-faint);color:var(--anatomy-text);font-size:10px}
+.u-steps button:hover{color:var(--anatomy-text)}
+.u-steps button[aria-current]{color:var(--anatomy-strong);box-shadow:0 0 0 1px var(--anatomy-mid)}
+.u-steps button[aria-current] span{background:var(--anatomy-strong);color:var(--anatomy-card)}
+.u-steps .u-play{margin-right:6px}.u-steps .u-play[aria-pressed="true"]{color:var(--anatomy-strong);box-shadow:0 0 0 1px var(--anatomy-mid)}
+.u-move{transition:transform .9s var(--anatomy-ease),opacity .6s var(--anatomy-ease)}
+.u-grid text,.u-chip text,.u-bars text,.u-arrow text{dominant-baseline:central;text-anchor:middle}
+.u-cell{transform:translate(var(--x),var(--y));transition:transform .9s var(--anatomy-ease) calc(var(--i) * 18ms)}
+.u-cell-bg{fill:var(--hue);fill-opacity:var(--a);stroke:none;transition:fill-opacity .35s}
+.u-cell[data-neg]>.u-cell-bg,.u-cell-bg[data-neg]{fill-opacity:calc(var(--a) * .18);stroke:var(--hue);stroke-opacity:var(--a);stroke-width:1.2}
+.u-cell[data-masked]>.u-cell-bg,.u-cell-bg[data-masked]{fill:none;stroke:var(--anatomy-faint);stroke-width:.8;stroke-dasharray:2 2}
+.u-num{font:500 10px var(--anatomy-mono);font-variant-numeric:tabular-nums;fill:var(--anatomy-strong)}
+.u-cell[data-hot] .u-num{fill:var(--unfold-on-hot)}
+.u-cell[data-masked] .u-num{fill:var(--anatomy-lo)}
+.u-name{font:italic 600 17px var(--unfold-serif);fill:var(--hue);dominant-baseline:auto!important;text-anchor:start!important}
+.u-dims{font:400 10px var(--anatomy-mono);font-style:normal;fill:var(--anatomy-muted)}
+.u-T,.u-dims-T{display:none}
+.u-mark{fill:none;stroke:var(--anatomy-strong);stroke-width:1.2;opacity:0;transition:opacity .3s}
+.u-mark[data-on]{opacity:.9}
+.u-chip rect{fill:var(--anatomy-card);stroke:var(--anatomy-mid);stroke-width:.8;transition:stroke .25s,fill .25s}
+.u-chip text{font:500 11px var(--anatomy-mono);fill:var(--anatomy-text);transition:fill .25s}
+.u-chip[data-hue] rect{stroke:var(--hue)}
+.u-chip[data-hue] text{fill:var(--hue)}
+.u-cell[data-later],.u-mark[data-later]{opacity:0!important;transition:opacity .3s}
+.u-plot-axis{stroke:var(--anatomy-mid);stroke-width:.9;fill:none}
+.u-plot-grid{stroke:var(--anatomy-faint);stroke-width:.6;fill:none}
+.u-tick-label{font:10px var(--anatomy-mono);fill:var(--anatomy-muted)}
+.u-plot-name{font:italic 600 15px var(--unfold-serif);fill:var(--hue,var(--anatomy-text))}
+.u-curve{fill:none;stroke:var(--hue,var(--anatomy-hi));stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.u-chip[data-on] rect{fill:var(--anatomy-strong);stroke:var(--anatomy-strong)}
+.u-chip[data-on] text{fill:var(--anatomy-card)}
+.u-chip[data-i]{cursor:pointer}
+.u-arrow{--w:1.1;color:var(--anatomy-mid)}
+.u-arrow[data-hue]{color:var(--hue)}
+.u-arrow-line{fill:none;stroke:currentColor;stroke-width:var(--w);stroke-linecap:round;transition:stroke-width .4s,opacity .4s}
+.u-arrow-head{fill:currentColor}
+.u-bar-fill{fill:var(--hue);transform-box:fill-box;transform-origin:50% 100%;transform:scaleY(var(--v));transition:transform .6s var(--anatomy-ease)}
+.u-bar-value{font:500 10px var(--anatomy-mono);fill:var(--anatomy-strong);transition:y .6s var(--anatomy-ease)}
+.u-bar-label{font:11px var(--anatomy-mono);fill:var(--anatomy-muted)}
+.u-axis{stroke:var(--anatomy-mid);stroke-width:.8;fill:none}
+.u-link{fill:none;stroke:var(--hue,var(--anatomy-mid));stroke-width:1.1;stroke-linecap:round;transition:d .9s var(--anatomy-ease),opacity .5s var(--anatomy-ease),stroke .3s}
+.u-link[data-off]{opacity:0}
+.u-eq>.u-at{text-align:center}
+.u-eq .u-rule{font:500 14px/1.5 var(--anatomy-mono);color:var(--anatomy-strong);letter-spacing:.01em}
+.u-lane-bg{fill:var(--anatomy-faint);fill-opacity:.18;stroke:var(--anatomy-faint);stroke-width:.6}
+.u-lane-name{font:11px var(--anatomy-mono);fill:var(--hue,var(--anatomy-muted));text-anchor:end;dominant-baseline:central}
+.u-tick{stroke:var(--anatomy-faint);stroke-width:.6}
+.u-tick-label{font:9px var(--anatomy-mono);fill:var(--anatomy-muted);text-anchor:middle;dominant-baseline:central}
+.u-now{stroke:var(--anatomy-strong);stroke-width:1.2;transition:transform .5s var(--anatomy-ease)}
+.u-span-bar{fill:var(--hue,var(--anatomy-mid));fill-opacity:.9;transform-box:fill-box;transform-origin:0 50%;transform:scaleX(var(--v,1));transition:transform .5s var(--anatomy-ease)}
+.u-span-label{opacity:0;transition:opacity .3s}
+.u-span[data-labeled] .u-span-label{opacity:1}
+.u-span-label text{font:500 10px var(--anatomy-mono);fill:var(--unfold-on-hot);dominant-baseline:central}
+.u-face .u-cell-bg{stroke-width:.5}
+.u-cell-bg{transform-box:fill-box;transform-origin:50% 50%}
+.u-cell[data-hl]>.u-cell-bg{stroke:var(--anatomy-strong);stroke-opacity:1;stroke-width:1.6;animation:u-ping .5s var(--anatomy-ease)}
+.u-pulse{fill:var(--hue,var(--anatomy-strong));filter:drop-shadow(0 0 3px var(--hue,var(--anatomy-strong)))}
+.u-rise{transform-box:fill-box}
+@keyframes u-pop{from{opacity:0;transform:scale(.4)}}
+@keyframes u-fade{from{opacity:0}}
+@keyframes u-rise{from{opacity:0;transform:translateY(-14px)}}
+@keyframes u-grow{from{transform:scaleY(0)}}
+@keyframes u-draw{from{stroke-dasharray:1;stroke-dashoffset:1}to{stroke-dasharray:1;stroke-dashoffset:0}}
+@keyframes u-ping{from{stroke-width:4;stroke-opacity:0}}
+.u-floor-text{font-family:var(--unfold-serif);font-style:italic;font-weight:600;fill:var(--hue,var(--anatomy-text))}
+.u-floor-label{font-family:var(--anatomy-mono);fill:var(--anatomy-muted)}
+.u-guide{fill:none;stroke:var(--anatomy-lo);stroke-width:.8;stroke-dasharray:2 3}
+.u-controls{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px 18px;margin-top:10px}
+.u-controls button{border:0;border-radius:999px;background:transparent;color:var(--anatomy-muted);font:11px/1 var(--anatomy-mono);letter-spacing:.04em;padding:6px 10px;cursor:pointer;box-shadow:0 0 0 1px var(--anatomy-faint);transition:color .2s,box-shadow .2s}
+.u-controls button:hover{color:var(--anatomy-text)}
+.u-controls button[aria-pressed="true"]{color:var(--anatomy-strong);box-shadow:0 0 0 1px var(--anatomy-mid)}
+.u-time{display:flex;align-items:center;gap:8px;flex:1 1 260px;max-width:440px;transition:opacity .4s}
+.u-time button{width:28px;height:28px;padding:0;font-size:15px}
+.u-time input{flex:1;min-width:80px;accent-color:var(--anatomy-hi)}
+.u-ctl{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px 12px;transition:opacity .4s}
+.u-controls label{display:inline-flex;align-items:center;gap:6px;color:var(--anatomy-muted);font:11px var(--anatomy-mono)}
+.u-controls input[type=number]{width:calc(5ch + 28px);padding:4px 6px;border:0;border-radius:6px;background:transparent;color:var(--anatomy-text);font:12px var(--anatomy-mono);font-variant-numeric:tabular-nums;box-shadow:0 0 0 1px var(--anatomy-faint)}
+.u-controls input[type=range]{accent-color:var(--anatomy-hi)}
+.u-controls select{max-width:100%;padding:4px 22px 4px 8px;border:0;border-radius:6px;background:var(--anatomy-card);color:var(--anatomy-text);font:11px var(--anatomy-mono);box-shadow:0 0 0 1px var(--anatomy-faint);cursor:pointer}
+.iso-plate-corner[data-corner="readout"]{max-width:62%;white-space:normal;text-align:right;line-height:1.4}
+.u-time output{font:11px var(--anatomy-mono);color:var(--anatomy-muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.u-notes{margin-top:56px;color:var(--anatomy-text);font-size:14px;line-height:1.65}
+.u-notes h2{margin:36px 0 10px;font:500 13px var(--anatomy-mono);letter-spacing:.04em;color:var(--anatomy-strong)}
+.u-notes p,.u-notes ul{margin:0 0 12px;max-width:72ch}
+.u-notes li{margin-bottom:6px}
+.u-notes b{color:var(--anatomy-strong);font-weight:500}
+.u-notes code{font:12.5px var(--anatomy-mono);color:var(--anatomy-strong)}
+.u-notes table{width:100%;border-collapse:collapse;font-size:13px;line-height:1.5}
+.u-notes th,.u-notes td{padding:7px 10px 7px 0;border-bottom:1px solid var(--anatomy-faint);text-align:left;vertical-align:top}
+.u-notes th{color:var(--anatomy-muted);font:500 11.5px var(--anatomy-mono);letter-spacing:.03em}
+.u-notes svg{display:block;width:100%;max-width:640px;height:auto;margin:6px 0 14px;overflow:visible}
+.u-notes td:first-child{color:var(--anatomy-strong);white-space:nowrap}
+@media (max-width:560px){.u-notes thead{display:none}.u-notes tr{display:block;padding:8px 0;border-bottom:1px solid var(--anatomy-faint)}.u-notes td{display:block;padding:2px 0;border:0}.u-notes td[data-th]:not(:first-child)::before{content:attr(data-th) ": ";color:var(--anatomy-muted)}}
+@container (max-width:520px){.u-num,.u-bar-value{display:none}.u-eq math{font-size:14px}.u-steps button{font-size:0;gap:0;padding:4px}.u-controls{gap:8px;flex-direction:column;align-items:stretch}.u-ctl{gap:6px 8px}.u-time{flex:none;max-width:none}.u-controls label{gap:4px}}
+@media (max-width:560px){.iso-plate-corner[data-corner="readout"]{left:0;max-width:none;white-space:normal;text-align:right;line-height:1.4}.iso-plate-corner[data-corner="hint"]{display:none}}
+@media (prefers-reduced-motion:reduce){.u-stage *{transition:none!important;animation:none!important}.u-pulse{display:none}}
+@media (prefers-color-scheme:light){html{color-scheme:light}.iso[data-theme="auto"]{
+  --anatomy-page:#f2f2ef;--anatomy-card:#fbfbfa;--anatomy-text:#57575a;--anatomy-strong:#18181a;--anatomy-muted:#8c8c90;
+  --anatomy-paper:#fbfbfa;--anatomy-face:#ffffff;--anatomy-top:#ffffff;
+  --anatomy-shade-0:#dcdcd9;--anatomy-shade-1:#e5e5e2;--anatomy-shade-2:#ededea;--anatomy-shade-3:#f4f4f1;
+  --anatomy-lit-top:#ffffff;--anatomy-lit-shade:#eeeeeb;
+  --anatomy-hi:#26262a;--anatomy-mid:#8a8a8f;--anatomy-lo:#b4b4b8;--anatomy-faint:#d4d4d6;--anatomy-lit:#000000;
+  --anatomy-halo:#8a8a80;--anatomy-halo-opacity:.32;--anatomy-dot:#3a3a3e;
+  --anatomy-red:#e5484d;--anatomy-green:#30a46c;--anatomy-blue:#3e63dd;
+  --anatomy-lift:inset 0 1px 0 0 #ffffff,0 0 0 1px #0000000f,0 1px 1px -.5px #0000000a,0 3px 3px -1.5px #0000000a,0 6px 6px -3px #0000000a,0 12px 12px -6px #0000000a;
+;--unfold-blue:#1f78a4;--unfold-yellow:#a67c00;--unfold-red:#cf3b2e;--unfold-green:#3e8a2a;--unfold-teal:#16866b;--unfold-purple:#7a4fa3;--unfold-gold:#b8661a;--unfold-on-hot:#ffffff}}</style><figure class="iso-figure"><div class="iso-plate"><div class="iso-plate-corners" aria-hidden="true"><span class="iso-plate-corner" data-corner="fig">Fig 1</span><span class="iso-plate-corner" data-corner="title">Hash table</span><span class="iso-plate-corner" data-corner="hint">← → scene · ↑ ↓ key</span><span class="iso-plate-corner" data-corner="readout" data-readout></span></div><style>.u-stage[data-scene="0"] .u-at[data-at="0"]{opacity:1;visibility:visible;transition-delay:.15s}
+.u-stage[data-scene="0"] .u-grid[data-t~="0"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="0"] .u-grid[data-t~="0"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="0"] .u-grid[data-t~="0"] .u-dims:not(.u-dims-T),.u-stage[data-scene="0"] .u-grid[data-t~="0"] .u-mark{display:none}
+.u-stage[data-scene="1"] .u-at[data-at="1"]{opacity:1;visibility:visible;transition-delay:.15s}
+.u-stage[data-scene="1"] .u-grid[data-t~="1"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="1"] .u-grid[data-t~="1"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="1"] .u-grid[data-t~="1"] .u-dims:not(.u-dims-T),.u-stage[data-scene="1"] .u-grid[data-t~="1"] .u-mark{display:none}
+.u-stage[data-scene="2"] .u-at[data-at="2"]{opacity:1;visibility:visible;transition-delay:.15s}
+.u-stage[data-scene="2"] .u-grid[data-t~="2"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="2"] .u-grid[data-t~="2"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="2"] .u-grid[data-t~="2"] .u-dims:not(.u-dims-T),.u-stage[data-scene="2"] .u-grid[data-t~="2"] .u-mark{display:none}
+.u-stage[data-scene="3"] .u-at[data-at="3"]{opacity:1;visibility:visible;transition-delay:.15s}
+.u-stage[data-scene="3"] .u-grid[data-t~="3"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="3"] .u-grid[data-t~="3"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="3"] .u-grid[data-t~="3"] .u-dims:not(.u-dims-T),.u-stage[data-scene="3"] .u-grid[data-t~="3"] .u-mark{display:none}
+.u-stage[data-scene="4"] .u-at[data-at="4"]{opacity:1;visibility:visible;transition-delay:.15s}
+.u-stage[data-scene="4"] .u-grid[data-t~="4"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="4"] .u-grid[data-t~="4"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="4"] .u-grid[data-t~="4"] .u-dims:not(.u-dims-T),.u-stage[data-scene="4"] .u-grid[data-t~="4"] .u-mark{display:none}
+.u-stage[data-scene="5"] .u-at[data-at="5"]{opacity:1;visibility:visible;transition-delay:.15s}
+.u-stage[data-scene="5"] .u-grid[data-t~="5"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="5"] .u-grid[data-t~="5"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="5"] .u-grid[data-t~="5"] .u-dims:not(.u-dims-T),.u-stage[data-scene="5"] .u-grid[data-t~="5"] .u-mark{display:none}.u-stage[data-scene="0"] #b-0{transform:translate(0px,6px) scale(1);opacity:1;pointer-events:auto}
+.u-stage[data-scene="1"] #b-0{transform:translate(0px,6px) scale(1);opacity:1;pointer-events:auto}
+.u-stage[data-scene="2"] #b-0{transform:translate(0px,6px) scale(1);opacity:1;pointer-events:auto}
+.u-stage[data-scene="3"] #b-0{transform:translate(0px,6px) scale(1);opacity:1;pointer-events:auto}
+.u-stage[data-scene="4"] #b-0{transform:translate(0px,6px) scale(1);opacity:1;pointer-events:auto}
+.u-stage[data-scene="5"] #b-0{transform:translate(0px,6px) scale(1);opacity:1;pointer-events:auto}
+.u-stage[data-scene="0"] #b-1{transform:translate(0px,46px) scale(1);opacity:1;pointer-events:auto}
+.u-stage[data-scene="1"] #b-1{transform:translate(0px,46px) scale(1);opacity:1;pointer-events:auto}
+.u-stage[data-scene="2"] #b-1{transform:translate(0px,46px) scale(1);opacity:1;pointer-events:auto}
+.u-stage[data-scene="3"] #b-1{transform:translate(0px,46px) scale(1);opacity:1;pointer-events:auto}
+.u-stage[data-scene="4"] #b-1{transform:translate(0px,46px) scale(1);opacity:1;pointer-events:auto}
+.u-stage[data-scene="5"] #b-1{transform:translate(0px,46px) scale(1);opacity:1;pointer-events:auto}
+.u-stage[data-scene="0"] #b-2{transform:translate(0px,86px) scale(1);opacity:1;pointer-events:auto}
+.u-stage[data-scene="1"] #b-2{transform:translate(0px,86px) scale(1);opacity:1;pointer-events:auto}
+.u-stage[data-scene="2"] #b-2{transform:translate(0px,86px) scale(1);opacity:1;pointer-events:auto}
+.u-stage[data-scene="3"] #b-2{transform:translate(0px,86px) scale(1);opacity:1;pointer-events:auto}
+.u-stage[data-scene="4"] #b-2{transform:translate(0px,86px) scale(1);opacity:1;pointer-events:auto}
+.u-stage[data-scene="5"] #b-2{transform:translate(0px,86px) scale(1);opacity:1;pointer-events:auto}
+.u-stage[data-scene="0"] #b-3{transform:translate(0px,126px) scale(1);opacity:1;pointer-events:auto}
+.u-stage[data-scene="1"] #b-3{transform:translate(0px,126px) scale(1);opacity:1;pointer-events:auto}
+.u-stage[data-scene="2"] #b-3{transform:translate(0px,126px) scale(1);opacity:1;pointer-events:auto}
+.u-stage[data-scene="3"] #b-3{transform:translate(0px,126px) scale(1);opacity:1;pointer-events:auto}
+.u-stage[data-scene="4"] #b-3{transform:translate(0px,126px) scale(1);opacity:1;pointer-events:auto}
+.u-stage[data-scene="5"] #b-3{transform:translate(0px,126px) scale(1);opacity:1;pointer-events:auto}
+.u-stage[data-scene="0"] #b-4{transform:translate(0px,166px) scale(1);opacity:0;pointer-events:none}
+.u-stage[data-scene="1"] #b-4{transform:translate(0px,166px) scale(1);opacity:0;pointer-events:none}
+.u-stage[data-scene="2"] #b-4{transform:translate(0px,166px) scale(1);opacity:0;pointer-events:none}
+.u-stage[data-scene="3"] #b-4{transform:translate(0px,166px) scale(1);opacity:0;pointer-events:none}
+.u-stage[data-scene="4"] #b-4{transform:translate(0px,166px) scale(1);opacity:1;pointer-events:auto}
+.u-stage[data-scene="5"] #b-4{transform:translate(0px,166px) scale(1);opacity:1;pointer-events:auto}
+.u-stage[data-scene="0"] #b-5{transform:translate(0px,206px) scale(1);opacity:0;pointer-events:none}
+.u-stage[data-scene="1"] #b-5{transform:translate(0px,206px) scale(1);opacity:0;pointer-events:none}
+.u-stage[data-scene="2"] #b-5{transform:translate(0px,206px) scale(1);opacity:0;pointer-events:none}
+.u-stage[data-scene="3"] #b-5{transform:translate(0px,206px) scale(1);opacity:0;pointer-events:none}
+.u-stage[data-scene="4"] #b-5{transform:translate(0px,206px) scale(1);opacity:1;pointer-events:auto}
+.u-stage[data-scene="5"] #b-5{transform:translate(0px,206px) scale(1);opacity:1;pointer-events:auto}
+.u-stage[data-scene="0"] #b-6{transform:translate(0px,246px) scale(1);opacity:0;pointer-events:none}
+.u-stage[data-scene="1"] #b-6{transform:translate(0px,246px) scale(1);opacity:0;pointer-events:none}
+.u-stage[data-scene="2"] #b-6{transform:translate(0px,246px) scale(1);opacity:0;pointer-events:none}
+.u-stage[data-scene="3"] #b-6{transform:translate(0px,246px) scale(1);opacity:0;pointer-events:none}
+.u-stage[data-scene="4"] #b-6{transform:translate(0px,246px) scale(1);opacity:1;pointer-events:auto}
+.u-stage[data-scene="5"] #b-6{transform:translate(0px,246px) scale(1);opacity:1;pointer-events:auto}
+.u-stage[data-scene="0"] #b-7{transform:translate(0px,286px) scale(1);opacity:0;pointer-events:none}
+.u-stage[data-scene="1"] #b-7{transform:translate(0px,286px) scale(1);opacity:0;pointer-events:none}
+.u-stage[data-scene="2"] #b-7{transform:translate(0px,286px) scale(1);opacity:0;pointer-events:none}
+.u-stage[data-scene="3"] #b-7{transform:translate(0px,286px) scale(1);opacity:0;pointer-events:none}
+.u-stage[data-scene="4"] #b-7{transform:translate(0px,286px) scale(1);opacity:1;pointer-events:auto}
+.u-stage[data-scene="5"] #b-7{transform:translate(0px,286px) scale(1);opacity:1;pointer-events:auto}
+.u-stage[data-scene="0"] #k-apple{transform:translate(90px,126px) scale(1);opacity:1;pointer-events:auto}
+.u-stage[data-scene="1"] #k-apple{transform:translate(90px,126px) scale(1);opacity:1;pointer-events:auto}
+.u-stage[data-scene="2"] #k-apple{transform:translate(90px,126px) scale(1);opacity:1;pointer-events:auto}
+.u-stage[data-scene="3"] #k-apple{transform:translate(90px,126px) scale(1);opacity:1;pointer-events:auto}
+.u-stage[data-scene="4"] #k-apple{transform:translate(90px,286px) scale(1);opacity:1;pointer-events:auto}
+.u-stage[data-scene="5"] #k-apple{transform:translate(90px,286px) scale(1);opacity:1;pointer-events:auto}
+.u-stage[data-scene="0"] #k-apple .in-b{opacity:1}
+.u-stage[data-scene="1"] #k-apple .in-b{opacity:1}
+.u-stage[data-scene="2"] #k-apple .in-b{opacity:1}
+.u-stage[data-scene="3"] #k-apple .in-b{opacity:1}
+.u-stage[data-scene="4"] #k-apple .in-b{opacity:1}
+.u-stage[data-scene="5"] #k-apple .in-b{opacity:1}
+.u-stage[data-scene="0"] #k-pear{transform:translate(90px,12px) scale(1);opacity:0;pointer-events:none}
+.u-stage[data-scene="1"] #k-pear{transform:translate(90px,46px) scale(1);opacity:1;pointer-events:auto}
+.u-stage[data-scene="2"] #k-pear{transform:translate(90px,46px) scale(1);opacity:1;pointer-events:auto}
+.u-stage[data-scene="3"] #k-pear{transform:translate(90px,46px) scale(1);opacity:1;pointer-events:auto}
+.u-stage[data-scene="4"] #k-pear{transform:translate(90px,206px) scale(1);opacity:1;pointer-events:auto}
+.u-stage[data-scene="5"] #k-pear{transform:translate(90px,206px) scale(1);opacity:1;pointer-events:auto}
+.u-stage[data-scene="1"] #k-pear .in-b{opacity:1}
+.u-stage[data-scene="1"] #k-pear .dot{opacity:1}
+.u-stage[data-scene="1"] #k-pear .null{opacity:0}
+.u-stage[data-scene="2"] #k-pear .in-b{opacity:1}
+.u-stage[data-scene="2"] #k-pear .dot{opacity:1}
+.u-stage[data-scene="2"] #k-pear .null{opacity:0}
+.u-stage[data-scene="3"] #k-pear .in-b{opacity:1}
+.u-stage[data-scene="3"] #k-pear .dot{opacity:1}
+.u-stage[data-scene="3"] #k-pear .null{opacity:0}
+.u-stage[data-scene="4"] #k-pear .in-b{opacity:1}
+.u-stage[data-scene="5"] #k-pear .in-b{opacity:1}
+.u-stage[data-scene="5"] #k-pear .dot{opacity:1}
+.u-stage[data-scene="5"] #k-pear .null{opacity:0}
+.u-stage[data-scene="0"] #k-kiwi{transform:translate(194px,12px) scale(1);opacity:0;pointer-events:none}
+.u-stage[data-scene="1"] #k-kiwi{transform:translate(194px,46px) scale(1);opacity:1;pointer-events:auto}
+.u-stage[data-scene="2"] #k-kiwi{transform:translate(194px,46px) scale(1);opacity:1;pointer-events:auto}
+.u-stage[data-scene="3"] #k-kiwi{transform:translate(194px,46px) scale(1);opacity:1;pointer-events:auto}
+.u-stage[data-scene="4"] #k-kiwi{transform:translate(90px,46px) scale(1);opacity:1;pointer-events:auto}
+.u-stage[data-scene="5"] #k-kiwi{transform:translate(90px,46px) scale(1);opacity:1;pointer-events:auto}
+.u-stage[data-scene="1"] #k-kiwi .in-n{opacity:1}
+.u-stage[data-scene="2"] #k-kiwi .in-n{opacity:1}
+.u-stage[data-scene="3"] #k-kiwi .in-n{opacity:1}
+.u-stage[data-scene="4"] #k-kiwi .in-b{opacity:1}
+.u-stage[data-scene="5"] #k-kiwi .in-b{opacity:1}
+.u-stage[data-scene="0"] #k-lime{transform:translate(90px,-28px) scale(1);opacity:0;pointer-events:none}
+.u-stage[data-scene="1"] #k-lime{transform:translate(90px,-28px) scale(1);opacity:0;pointer-events:none}
+.u-stage[data-scene="2"] #k-lime{transform:translate(90px,-28px) scale(1);opacity:0;pointer-events:none}
+.u-stage[data-scene="3"] #k-lime{transform:translate(90px,6px) scale(1);opacity:1;pointer-events:auto}
+.u-stage[data-scene="4"] #k-lime{transform:translate(90px,166px) scale(1);opacity:1;pointer-events:auto}
+.u-stage[data-scene="5"] #k-lime{transform:translate(90px,166px) scale(1);opacity:1;pointer-events:auto}
+.u-stage[data-scene="3"] #k-lime .in-b{opacity:1}
+.u-stage[data-scene="4"] #k-lime .in-b{opacity:1}
+.u-stage[data-scene="5"] #k-lime .in-b{opacity:1}
+.u-stage[data-scene="0"] #k-fig{transform:translate(194px,172px) scale(1);opacity:0;pointer-events:none}
+.u-stage[data-scene="1"] #k-fig{transform:translate(194px,172px) scale(1);opacity:0;pointer-events:none}
+.u-stage[data-scene="2"] #k-fig{transform:translate(194px,172px) scale(1);opacity:0;pointer-events:none}
+.u-stage[data-scene="3"] #k-fig{transform:translate(194px,172px) scale(1);opacity:0;pointer-events:none}
+.u-stage[data-scene="4"] #k-fig{transform:translate(194px,172px) scale(1);opacity:0;pointer-events:none}
+.u-stage[data-scene="5"] #k-fig{transform:translate(194px,206px) scale(1);opacity:1;pointer-events:auto}
+.u-stage[data-scene="5"] #k-fig .in-n{opacity:1}
+.u-stage[data-scene="0"] #k-peach{transform:translate(90px,212px) scale(1);opacity:0;pointer-events:none}
+.u-stage[data-scene="1"] #k-peach{transform:translate(90px,212px) scale(1);opacity:0;pointer-events:none}
+.u-stage[data-scene="2"] #k-peach{transform:translate(90px,212px) scale(1);opacity:0;pointer-events:none}
+.u-stage[data-scene="3"] #k-peach{transform:translate(90px,212px) scale(1);opacity:0;pointer-events:none}
+.u-stage[data-scene="4"] #k-peach{transform:translate(90px,212px) scale(1);opacity:0;pointer-events:none}
+.u-stage[data-scene="5"] #k-peach{transform:translate(90px,246px) scale(1);opacity:1;pointer-events:auto}
+.u-stage[data-scene="5"] #k-peach .in-b{opacity:1}
+.u-stage[data-scene="0"] #b-3 .dot{opacity:1}
+.u-stage[data-scene="0"] #b-3 .null{opacity:0}
+.u-stage[data-scene="1"] #b-1 .dot{opacity:1}
+.u-stage[data-scene="1"] #b-1 .null{opacity:0}
+.u-stage[data-scene="1"] #b-3 .dot{opacity:1}
+.u-stage[data-scene="1"] #b-3 .null{opacity:0}
+.u-stage[data-scene="2"] #b-1 .dot{opacity:1}
+.u-stage[data-scene="2"] #b-1 .null{opacity:0}
+.u-stage[data-scene="2"] #b-3 .dot{opacity:1}
+.u-stage[data-scene="2"] #b-3 .null{opacity:0}
+.u-stage[data-scene="3"] #b-0 .dot{opacity:1}
+.u-stage[data-scene="3"] #b-0 .null{opacity:0}
+.u-stage[data-scene="3"] #b-1 .dot{opacity:1}
+.u-stage[data-scene="3"] #b-1 .null{opacity:0}
+.u-stage[data-scene="3"] #b-3 .dot{opacity:1}
+.u-stage[data-scene="3"] #b-3 .null{opacity:0}
+.u-stage[data-scene="4"] #b-1 .dot{opacity:1}
+.u-stage[data-scene="4"] #b-1 .null{opacity:0}
+.u-stage[data-scene="4"] #b-4 .dot{opacity:1}
+.u-stage[data-scene="4"] #b-4 .null{opacity:0}
+.u-stage[data-scene="4"] #b-5 .dot{opacity:1}
+.u-stage[data-scene="4"] #b-5 .null{opacity:0}
+.u-stage[data-scene="4"] #b-7 .dot{opacity:1}
+.u-stage[data-scene="4"] #b-7 .null{opacity:0}
+.u-stage[data-scene="5"] #b-1 .dot{opacity:1}
+.u-stage[data-scene="5"] #b-1 .null{opacity:0}
+.u-stage[data-scene="5"] #b-4 .dot{opacity:1}
+.u-stage[data-scene="5"] #b-4 .null{opacity:0}
+.u-stage[data-scene="5"] #b-5 .dot{opacity:1}
+.u-stage[data-scene="5"] #b-5 .null{opacity:0}
+.u-stage[data-scene="5"] #b-6 .dot{opacity:1}
+.u-stage[data-scene="5"] #b-6 .null{opacity:0}
+.u-stage[data-scene="5"] #b-7 .dot{opacity:1}
+.u-stage[data-scene="5"] #b-7 .null{opacity:0}
+.u-stage[data-scene="0"] #lab-0{transform:translate(278px,60px) scale(1);opacity:0;pointer-events:none}
+.u-stage[data-scene="1"] #lab-0{transform:translate(278px,60px) scale(1);opacity:1;pointer-events:auto}
+.u-stage[data-scene="2"] #lab-0{transform:translate(278px,60px) scale(1);opacity:0;pointer-events:none}
+.u-stage[data-scene="3"] #lab-0{transform:translate(278px,60px) scale(1);opacity:0;pointer-events:none}
+.u-stage[data-scene="4"] #lab-0{transform:translate(278px,60px) scale(1);opacity:0;pointer-events:none}
+.u-stage[data-scene="5"] #lab-0{transform:translate(278px,60px) scale(1);opacity:0;pointer-events:none}
+.u-stage[data-scene="0"] #lab-1{transform:translate(174px,300px) scale(1);opacity:0;pointer-events:none}
+.u-stage[data-scene="1"] #lab-1{transform:translate(174px,300px) scale(1);opacity:0;pointer-events:none}
+.u-stage[data-scene="2"] #lab-1{transform:translate(174px,300px) scale(1);opacity:0;pointer-events:none}
+.u-stage[data-scene="3"] #lab-1{transform:translate(174px,300px) scale(1);opacity:0;pointer-events:none}
+.u-stage[data-scene="4"] #lab-1{transform:translate(174px,300px) scale(1);opacity:1;pointer-events:auto}
+.u-stage[data-scene="5"] #lab-1{transform:translate(174px,300px) scale(1);opacity:0;pointer-events:none}
+.u-stage[data-scene="0"] #lab-2{transform:translate(174px,220px) scale(1);opacity:0;pointer-events:none}
+.u-stage[data-scene="1"] #lab-2{transform:translate(174px,220px) scale(1);opacity:0;pointer-events:none}
+.u-stage[data-scene="2"] #lab-2{transform:translate(174px,220px) scale(1);opacity:0;pointer-events:none}
+.u-stage[data-scene="3"] #lab-2{transform:translate(174px,220px) scale(1);opacity:0;pointer-events:none}
+.u-stage[data-scene="4"] #lab-2{transform:translate(174px,220px) scale(1);opacity:1;pointer-events:auto}
+.u-stage[data-scene="5"] #lab-2{transform:translate(174px,220px) scale(1);opacity:0;pointer-events:none}
+.u-stage[data-scene="0"] #lab-3{transform:translate(174px,60px) scale(1);opacity:0;pointer-events:none}
+.u-stage[data-scene="1"] #lab-3{transform:translate(174px,60px) scale(1);opacity:0;pointer-events:none}
+.u-stage[data-scene="2"] #lab-3{transform:translate(174px,60px) scale(1);opacity:0;pointer-events:none}
+.u-stage[data-scene="3"] #lab-3{transform:translate(174px,60px) scale(1);opacity:0;pointer-events:none}
+.u-stage[data-scene="4"] #lab-3{transform:translate(174px,60px) scale(1);opacity:1;pointer-events:auto}
+.u-stage[data-scene="5"] #lab-3{transform:translate(174px,60px) scale(1);opacity:0;pointer-events:none}
+.u-stage[data-scene="0"] #lab-4{transform:translate(174px,180px) scale(1);opacity:0;pointer-events:none}
+.u-stage[data-scene="1"] #lab-4{transform:translate(174px,180px) scale(1);opacity:0;pointer-events:none}
+.u-stage[data-scene="2"] #lab-4{transform:translate(174px,180px) scale(1);opacity:0;pointer-events:none}
+.u-stage[data-scene="3"] #lab-4{transform:translate(174px,180px) scale(1);opacity:0;pointer-events:none}
+.u-stage[data-scene="4"] #lab-4{transform:translate(174px,180px) scale(1);opacity:1;pointer-events:auto}
+.u-stage[data-scene="5"] #lab-4{transform:translate(174px,180px) scale(1);opacity:0;pointer-events:none}
+.u-stage[data-scene="0"] #lab-5{transform:translate(278px,220px) scale(1);opacity:0;pointer-events:none}
+.u-stage[data-scene="1"] #lab-5{transform:translate(278px,220px) scale(1);opacity:0;pointer-events:none}
+.u-stage[data-scene="2"] #lab-5{transform:translate(278px,220px) scale(1);opacity:0;pointer-events:none}
+.u-stage[data-scene="3"] #lab-5{transform:translate(278px,220px) scale(1);opacity:0;pointer-events:none}
+.u-stage[data-scene="4"] #lab-5{transform:translate(278px,220px) scale(1);opacity:0;pointer-events:none}
+.u-stage[data-scene="5"] #lab-5{transform:translate(278px,220px) scale(1);opacity:1;pointer-events:auto}
+.u-stage[data-scene="4"] #k-apple .k{stroke:var(--unfold-teal);fill:color-mix(in srgb,var(--unfold-teal) 14%,var(--anatomy-card))}
+.u-stage[data-scene="4"] #k-pear .k{stroke:var(--unfold-teal);fill:color-mix(in srgb,var(--unfold-teal) 14%,var(--anatomy-card))}
+.u-stage[data-scene="4"] #k-lime .k{stroke:var(--unfold-teal);fill:color-mix(in srgb,var(--unfold-teal) 14%,var(--anatomy-card))}
+.grp-pipe{transform:translate(24px,26px)}.grp-array{transform:translate(440px,0px)}
+.u-stage[data-narrow] .grp-pipe{transform:translate(24px,10px)}.u-stage[data-narrow] .grp-array{transform:translate(40px,316px)}.u-stage[data-narrow] .route{display:none}
+.lbl{font:12px var(--anatomy-mono);fill:var(--anatomy-muted)}.lbl.small{font-size:11px}.lbl[data-hue],.lab text[data-hue],.hv[data-hue]{fill:var(--hue)}
+.hv{font:600 18px var(--anatomy-mono);font-variant-numeric:tabular-nums}
+.lv{font:13px var(--anatomy-mono);fill:var(--anatomy-text)}
+.pk rect{fill:var(--anatomy-card);stroke:var(--anatomy-strong);stroke-width:1.2}.pk text{font:500 14px var(--anatomy-mono);fill:var(--anatomy-strong)}
+.bit rect{fill:var(--anatomy-card);stroke:var(--anatomy-faint);transition:fill .3s,stroke .3s}.bit text{font:12px var(--anatomy-mono);fill:var(--anatomy-muted);dominant-baseline:central;text-anchor:middle}
+.bit[data-low] rect{stroke:var(--unfold-gold);fill:color-mix(in srgb,var(--unfold-gold) 22%,var(--anatomy-card))}.bit[data-low] text{fill:var(--anatomy-strong)}
+.bit[data-new] rect{stroke:var(--unfold-teal);stroke-width:2}
+.ibox rect{fill:color-mix(in srgb,var(--unfold-gold) 22%,var(--anatomy-card));stroke:var(--unfold-gold)}.ibox text{font:600 16px var(--anatomy-mono);fill:var(--anatomy-strong);dominant-baseline:central;text-anchor:middle}
+.track{fill:var(--anatomy-faint);opacity:.5}.fill{fill:var(--unfold-purple);transform-box:fill-box;transform-origin:left;transition:transform .7s,fill .3s}.fill[data-over]{fill:var(--unfold-red)}
+.limit{stroke:var(--unfold-red);stroke-width:1.5;stroke-dasharray:3 2}
+.idx{font:12px var(--anatomy-mono);fill:var(--anatomy-muted);dominant-baseline:central;text-anchor:middle}
+.bk .cell{fill:var(--anatomy-card);stroke:var(--anatomy-mid);stroke-width:1;transition:stroke .3s,fill .3s}
+.bk[data-lit] .cell{stroke:var(--unfold-gold);stroke-width:2;fill:color-mix(in srgb,var(--unfold-gold) 18%,var(--anatomy-card))}.bk[data-lit] .idx{fill:var(--unfold-gold);font-weight:700}
+.null{stroke:var(--anatomy-mid);stroke-width:1;transition:opacity .4s}.dot{fill:var(--anatomy-strong);opacity:0;transition:opacity .4s}
+.hk .in-b,.hk .in-n{opacity:0;transition:opacity .4s}
+.hk .k{fill:var(--anatomy-card);stroke:var(--anatomy-mid);stroke-width:1;transition:stroke .3s,fill .3s}.hk .p{fill:var(--anatomy-card);stroke:var(--anatomy-mid);stroke-width:1}
+.kt{font:500 13px var(--anatomy-mono);fill:var(--anatomy-strong);dominant-baseline:central;text-anchor:middle}.hk{cursor:pointer}
+.hk[data-focus] .k{stroke:var(--anatomy-strong);stroke-width:2.2}
+.hk[data-cmp] .k{stroke:var(--unfold-green);stroke-width:2;stroke-dasharray:4 2}.hk[data-cmp][data-hit] .k{stroke-dasharray:none;fill:color-mix(in srgb,var(--unfold-green) 22%,var(--anatomy-card))}
+.cmpb{opacity:0;transition:opacity .25s}.hk[data-cmp] .cmpb{opacity:1}.cmpb circle{fill:var(--unfold-green)}.cmpb text{font:700 10px var(--anatomy-mono);fill:var(--anatomy-card);dominant-baseline:central;text-anchor:middle}
+.lab text{font:12px var(--anatomy-mono);fill:var(--anatomy-muted);dominant-baseline:central}
+.route{fill:none;stroke:var(--unfold-gold);stroke-width:1.2;stroke-dasharray:4 3;opacity:.8;transition:d .6s}
+.u-controls input[type=text]{width:12ch;padding:4px 6px;border:0;border-radius:6px;background:transparent;color:var(--anatomy-text);font:12px var(--anatomy-mono);box-shadow:0 0 0 1px var(--anatomy-faint)}
+.pick{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:6px 8px}
+@container (max-width:520px){.lab text{font-size:11px}}</style><div class="u-stage" tabindex="0" role="group" aria-roledescription="explainer" aria-label="Hash table explainer. Left and right arrows change the scene. Up and down arrows pick the key. The text field hashes any key you type." data-scene="0" data-count="6" data-dwell="7000" data-narrow-box="0 0 400 650"><div class="u-eq" aria-live="polite"><div class="u-at" data-at="0"><math display="block"><mi data-hue="gold">i</mi><mo>=</mo><mi data-hue="blue">h</mi><mo stretchy="false">(</mo><mi>k</mi><mo stretchy="false">)</mo><mo lspace="0.4em" rspace="0.4em">mod</mo><mi>m</mi><mo>=</mo><mn data-hue="blue">280767167</mn><mo lspace="0.4em" rspace="0.4em">mod</mo><mn>4</mn><mo>=</mo><mn data-hue="gold">3</mn></math></div><div class="u-at" data-at="1"><math display="block"><mi data-hue="blue">h</mi><mo stretchy="false">(</mo><mtext>pear</mtext><mo stretchy="false">)</mo><mo lspace="0.4em" rspace="0.4em">mod</mo><mn>4</mn><mo>=</mo><mi data-hue="blue">h</mi><mo stretchy="false">(</mo><mtext>kiwi</mtext><mo stretchy="false">)</mo><mo lspace="0.4em" rspace="0.4em">mod</mo><mn>4</mn><mo>=</mo><mn data-hue="gold">1</mn></math></div><div class="u-at" data-at="2"><math display="block"><mi>T</mi><mo stretchy="false">[</mo><mn data-hue="gold">1</mn><mo stretchy="false">]</mo><mo>:</mo><mspace width="0.4em"/><mtext>pear</mtext><mo>≠</mo><mtext>kiwi</mtext><mo>,</mo><mspace width="0.6em"/><mtext>kiwi</mtext><mo>=</mo><mtext>kiwi</mtext></math></div><div class="u-at" data-at="3"><math display="block"><mi data-hue="purple">α</mi><mo>=</mo><mfrac><mi>n</mi><mi>m</mi></mfrac><mo>=</mo><mfrac><mn>4</mn><mn>4</mn></mfrac><mo>=</mo><mn data-hue="red">1.00</mn><mo>&gt;</mo><mn data-hue="red">0.75</mn></math></div><div class="u-at" data-at="4"><math display="block"><mi>h</mi><mo lspace="0.4em" rspace="0.4em">mod</mo><mn>8</mn><mo>=</mo><mi>h</mi><mo lspace="0.4em" rspace="0.4em">mod</mo><mn>4</mn><mo>+</mo><mn>4</mn><mo>·</mo><msub><mi data-hue="teal">b</mi><mn>2</mn></msub></math></div><div class="u-at" data-at="5"><math display="block"><mi data-hue="purple">α</mi><mo>=</mo><mfrac><mn>6</mn><mn>8</mn></mfrac><mo>=</mo><mn data-hue="purple">0.75</mn><mo>≤</mo><mn data-hue="red">0.75</mn></math></div></div><svg xmlns="http://www.w3.org/2000/svg" class="iso-svg" viewBox="0 0 820 340" role="img" aria-label="A hash table with chaining. Six keys are hashed into buckets. Two keys collide and form a chain. The table doubles from 4 to 8 buckets when it is too full."><path class="route" data-route d="M0 0"/><g class="grp-pipe"><g class="pipe"><text class="lbl" x="0" y="14">key</text><g class="u-chip pk" transform="translate(40 0)"><rect width="120" height="28" rx="4"/><text x="60" y="14" data-pk>apple</text></g><g class="u-arrow" data-hue="blue"><path class="u-arrow-line" pathLength="1" d="M100 30Q100 43 100 51"/><path class="u-arrow-head" d="M100 56L97.3 51L102.8 51Z"/></g><text class="lbl" x="112" y="47" data-hue="blue">FNV-1a hash</text><text class="lbl" x="0" y="80">h</text><text class="hv" x="40" y="80" data-hv data-hue="blue">0</text><text class="lbl" x="40" y="104">last 8 bits of h</text><g class="bit" data-bit="7" transform="translate(40 112)"><rect width="22" height="22" rx="3"/><text x="11" y="11">0</text></g><g class="bit" data-bit="6" transform="translate(65 112)"><rect width="22" height="22" rx="3"/><text x="11" y="11">0</text></g><g class="bit" data-bit="5" transform="translate(90 112)"><rect width="22" height="22" rx="3"/><text x="11" y="11">0</text></g><g class="bit" data-bit="4" transform="translate(115 112)"><rect width="22" height="22" rx="3"/><text x="11" y="11">0</text></g><g class="bit" data-bit="3" transform="translate(140 112)"><rect width="22" height="22" rx="3"/><text x="11" y="11">0</text></g><g class="bit" data-bit="2" transform="translate(165 112)"><rect width="22" height="22" rx="3"/><text x="11" y="11">0</text></g><g class="bit" data-bit="1" transform="translate(190 112)"><rect width="22" height="22" rx="3"/><text x="11" y="11">0</text></g><g class="bit" data-bit="0" transform="translate(215 112)"><rect width="22" height="22" rx="3"/><text x="11" y="11">0</text></g><text class="lbl small" x="240" y="127" data-lowlbl>mod 4 = last 2 bits</text><g class="u-arrow" data-hue="gold"><path class="u-arrow-line" pathLength="1" d="M100 138Q100 149 100 155"/><path class="u-arrow-head" d="M100 160L97.3 155L102.8 155Z"/></g><text class="lbl" x="112" y="153" data-hue="gold" data-modlbl>mod m</text><text class="lbl" x="0" y="181">i</text><g class="ibox" transform="translate(40 166)"><rect width="44" height="30" rx="4"/><text x="22" y="15" data-iv>3</text></g><text class="lbl" x="96" y="181" data-ilbl>bucket index</text><text class="lbl" x="0" y="232" data-hue="purple">load factor n / m</text><rect class="track" x="0" y="242" width="300" height="12" rx="6"/><rect class="fill" x="0" y="242" width="300" height="12" rx="6" data-fill/><path class="limit" d="M180 236V260"/><text class="lbl small" x="180" y="272" text-anchor="middle" data-hue="red">limit 0.75</text><text class="lv" x="0" y="290" data-lv>1 / 4 = 0.25</text></g></g><g class="grp-array"><g class="u-move bk" id="b-0" data-b="0"><text class="idx" x="8" y="14">0</text><rect class="cell" x="18" width="44" height="28" rx="3"/><path class="null" d="M24 24L56 4"/><circle class="dot" cx="40" cy="14" r="2.6"/></g><g class="u-move bk" id="b-1" data-b="1"><text class="idx" x="8" y="14">1</text><rect class="cell" x="18" width="44" height="28" rx="3"/><path class="null" d="M24 24L56 4"/><circle class="dot" cx="40" cy="14" r="2.6"/></g><g class="u-move bk" id="b-2" data-b="2"><text class="idx" x="8" y="14">2</text><rect class="cell" x="18" width="44" height="28" rx="3"/><path class="null" d="M24 24L56 4"/><circle class="dot" cx="40" cy="14" r="2.6"/></g><g class="u-move bk" id="b-3" data-b="3"><text class="idx" x="8" y="14">3</text><rect class="cell" x="18" width="44" height="28" rx="3"/><path class="null" d="M24 24L56 4"/><circle class="dot" cx="40" cy="14" r="2.6"/></g><g class="u-move bk" id="b-4" data-b="4"><text class="idx" x="8" y="14">4</text><rect class="cell" x="18" width="44" height="28" rx="3"/><path class="null" d="M24 24L56 4"/><circle class="dot" cx="40" cy="14" r="2.6"/></g><g class="u-move bk" id="b-5" data-b="5"><text class="idx" x="8" y="14">5</text><rect class="cell" x="18" width="44" height="28" rx="3"/><path class="null" d="M24 24L56 4"/><circle class="dot" cx="40" cy="14" r="2.6"/></g><g class="u-move bk" id="b-6" data-b="6"><text class="idx" x="8" y="14">6</text><rect class="cell" x="18" width="44" height="28" rx="3"/><path class="null" d="M24 24L56 4"/><circle class="dot" cx="40" cy="14" r="2.6"/></g><g class="u-move bk" id="b-7" data-b="7"><text class="idx" x="8" y="14">7</text><rect class="cell" x="18" width="44" height="28" rx="3"/><path class="null" d="M24 24L56 4"/><circle class="dot" cx="40" cy="14" r="2.6"/></g><g class="u-move hk" id="k-apple" data-key="apple"><g class="u-arrow in-b"><path class="u-arrow-line" pathLength="1" d="M-50 14Q-25.5 14 -6 14"/><path class="u-arrow-head" d="M-1 14L-6 16.8L-6 11.3Z"/></g><g class="u-arrow in-n"><path class="u-arrow-line" pathLength="1" d="M-37 14Q-19 14 -6 14"/><path class="u-arrow-head" d="M-1 14L-6 16.8L-6 11.3Z"/></g><g class="body"><rect class="k" width="60" height="28" rx="4"/><text class="kt" x="30" y="14">apple</text><rect class="p" x="60" width="14" height="28" rx="2"/><path class="null" d="M62 25L72 3"/><circle class="dot" cx="67" cy="14" r="2.4"/></g><g class="cmpb"><circle cx="2" cy="1" r="7.5"/><text x="2" y="1.5">1</text></g></g><g class="u-move hk" id="k-pear" data-key="pear"><g class="u-arrow in-b"><path class="u-arrow-line" pathLength="1" d="M-50 14Q-25.5 14 -6 14"/><path class="u-arrow-head" d="M-1 14L-6 16.8L-6 11.3Z"/></g><g class="u-arrow in-n"><path class="u-arrow-line" pathLength="1" d="M-37 14Q-19 14 -6 14"/><path class="u-arrow-head" d="M-1 14L-6 16.8L-6 11.3Z"/></g><g class="body"><rect class="k" width="60" height="28" rx="4"/><text class="kt" x="30" y="14">pear</text><rect class="p" x="60" width="14" height="28" rx="2"/><path class="null" d="M62 25L72 3"/><circle class="dot" cx="67" cy="14" r="2.4"/></g><g class="cmpb"><circle cx="2" cy="1" r="7.5"/><text x="2" y="1.5">1</text></g></g><g class="u-move hk" id="k-kiwi" data-key="kiwi"><g class="u-arrow in-b"><path class="u-arrow-line" pathLength="1" d="M-50 14Q-25.5 14 -6 14"/><path class="u-arrow-head" d="M-1 14L-6 16.8L-6 11.3Z"/></g><g class="u-arrow in-n"><path class="u-arrow-line" pathLength="1" d="M-37 14Q-19 14 -6 14"/><path class="u-arrow-head" d="M-1 14L-6 16.8L-6 11.3Z"/></g><g class="body"><rect class="k" width="60" height="28" rx="4"/><text class="kt" x="30" y="14">kiwi</text><rect class="p" x="60" width="14" height="28" rx="2"/><path class="null" d="M62 25L72 3"/><circle class="dot" cx="67" cy="14" r="2.4"/></g><g class="cmpb"><circle cx="2" cy="1" r="7.5"/><text x="2" y="1.5">1</text></g></g><g class="u-move hk" id="k-lime" data-key="lime"><g class="u-arrow in-b"><path class="u-arrow-line" pathLength="1" d="M-50 14Q-25.5 14 -6 14"/><path class="u-arrow-head" d="M-1 14L-6 16.8L-6 11.3Z"/></g><g class="u-arrow in-n"><path class="u-arrow-line" pathLength="1" d="M-37 14Q-19 14 -6 14"/><path class="u-arrow-head" d="M-1 14L-6 16.8L-6 11.3Z"/></g><g class="body"><rect class="k" width="60" height="28" rx="4"/><text class="kt" x="30" y="14">lime</text><rect class="p" x="60" width="14" height="28" rx="2"/><path class="null" d="M62 25L72 3"/><circle class="dot" cx="67" cy="14" r="2.4"/></g><g class="cmpb"><circle cx="2" cy="1" r="7.5"/><text x="2" y="1.5">1</text></g></g><g class="u-move hk" id="k-fig" data-key="fig"><g class="u-arrow in-b"><path class="u-arrow-line" pathLength="1" d="M-50 14Q-25.5 14 -6 14"/><path class="u-arrow-head" d="M-1 14L-6 16.8L-6 11.3Z"/></g><g class="u-arrow in-n"><path class="u-arrow-line" pathLength="1" d="M-37 14Q-19 14 -6 14"/><path class="u-arrow-head" d="M-1 14L-6 16.8L-6 11.3Z"/></g><g class="body"><rect class="k" width="60" height="28" rx="4"/><text class="kt" x="30" y="14">fig</text><rect class="p" x="60" width="14" height="28" rx="2"/><path class="null" d="M62 25L72 3"/><circle class="dot" cx="67" cy="14" r="2.4"/></g><g class="cmpb"><circle cx="2" cy="1" r="7.5"/><text x="2" y="1.5">1</text></g></g><g class="u-move hk" id="k-peach" data-key="peach"><g class="u-arrow in-b"><path class="u-arrow-line" pathLength="1" d="M-50 14Q-25.5 14 -6 14"/><path class="u-arrow-head" d="M-1 14L-6 16.8L-6 11.3Z"/></g><g class="u-arrow in-n"><path class="u-arrow-line" pathLength="1" d="M-37 14Q-19 14 -6 14"/><path class="u-arrow-head" d="M-1 14L-6 16.8L-6 11.3Z"/></g><g class="body"><rect class="k" width="60" height="28" rx="4"/><text class="kt" x="30" y="14">peach</text><rect class="p" x="60" width="14" height="28" rx="2"/><path class="null" d="M62 25L72 3"/><circle class="dot" cx="67" cy="14" r="2.4"/></g><g class="cmpb"><circle cx="2" cy="1" r="7.5"/><text x="2" y="1.5">1</text></g></g><g class="u-move lab" id="lab-0"><text x="0" y="0">collision</text></g><g class="u-move lab" id="lab-1"><text x="0" y="0" data-hue="teal">was 3 · +4</text></g><g class="u-move lab" id="lab-2"><text x="0" y="0" data-hue="teal">was 1 · +4</text></g><g class="u-move lab" id="lab-3"><text x="0" y="0">stays 1</text></g><g class="u-move lab" id="lab-4"><text x="0" y="0" data-hue="teal">was 0 · +4</text></g><g class="u-move lab" id="lab-5"><text x="0" y="0">collision</text></g></g></svg><div class="u-controls"><div class="pick"><button type="button" data-pick="apple">apple</button><button type="button" data-pick="pear">pear</button><button type="button" data-pick="kiwi">kiwi</button><button type="button" data-pick="lime">lime</button><button type="button" data-pick="fig">fig</button><button type="button" data-pick="peach">peach</button><label>try a key <input type="text" maxlength="16" spellcheck="false" autocomplete="off" data-try aria-label="Type any key to see its hash and bucket"></label></div></div><div class="u-say" aria-live="polite"><p class="u-at" data-at="0">A <b data-hue="blue">hash function</b> turns the key into a 32-bit number h. The remainder h mod 4 is the <b data-hue="gold">bucket index</b>.</p><p class="u-at" data-at="1">pear and kiwi get the same index, so they collide. kiwi joins a chain after pear in bucket 1.</p><p class="u-at" data-at="2">To find a key, the table hashes it again to get the same bucket. Then it <b data-hue="green">compares</b> the key with each key in that chain.</p><p class="u-at" data-at="3">lime makes 4 keys in 4 buckets. The <b data-hue="purple">load factor</b> is now above the <b data-hue="red">limit</b>, so chains will get long.</p><p class="u-at" data-at="4">The table doubles to 8 buckets and puts every key in again. One more bit of h decides if a key <b data-hue="teal">moves</b> from i to i + 4.</p><p class="u-at" data-at="5">fig and peach arrive. Collisions still happen, but chains stay short until the load factor passes the limit again.</p></div><nav class="u-steps" aria-label="Scenes"><button type="button" class="u-play" aria-pressed="false"><span>▶</span>Play</button><button type="button" data-go="0" aria-current="step"><span>1</span>Hash</button><button type="button" data-go="1"><span>2</span>Collide</button><button type="button" data-go="2"><span>3</span>Find</button><button type="button" data-go="3"><span>4</span>Too full</button><button type="button" data-go="4"><span>5</span>Grow</button><button type="button" data-go="5"><span>6</span>Spread</button></nav><div class="u-key"><span data-hue="blue"><i></i>hash h</span><span data-hue="gold"><i></i>bucket index i</span><span data-hue="purple"><i></i>load factor n / m</span><span data-hue="red"><i></i>limit 0.75</span><span data-hue="teal"><i></i>key that moves</span><span data-hue="green"><i></i>compare</span></div></div></div><figcaption class="iso-legend"><span class="iso-caption">A hash table with separate chaining, built by real inserts of six keys chosen by hand. The hash h is 32-bit FNV-1a of the key's UTF-8 bytes, checked against the published FNV-1a test values. The table doubles when n / m passes 0.75, the rule Java's HashMap uses.</span></figcaption></figure><section class="u-notes"><h2>Two ways to handle a collision</h2><svg viewBox="0 0 530 104" role="img" aria-label="The first three keys with chaining and with linear probing, in 4 buckets." style="max-width:530px;width:100%"><text x="0" y="15" font-size="12" fill="var(--anatomy-muted)" font-family="var(--anatomy-mono)">chaining</text><g transform="translate(130 0)"><rect width="92" height="28" rx="4" fill="var(--anatomy-card)" stroke="var(--anatomy-mid)" stroke-width="1"/><text x="46" y="15" text-anchor="middle" dominant-baseline="central" font-size="12" font-family="var(--anatomy-mono)" fill="var(--anatomy-strong)">–</text><text x="46" y="-6" text-anchor="middle" font-size="11" font-family="var(--anatomy-mono)" fill="var(--anatomy-muted)"></text></g><g transform="translate(230 0)"><rect width="92" height="28" rx="4" fill="var(--anatomy-card)" stroke="var(--unfold-red)" stroke-width="2"/><text x="46" y="15" text-anchor="middle" dominant-baseline="central" font-size="12" font-family="var(--anatomy-mono)" fill="var(--anatomy-strong)">pear → kiwi</text><text x="46" y="-6" text-anchor="middle" font-size="11" font-family="var(--anatomy-mono)" fill="var(--anatomy-muted)"></text></g><g transform="translate(330 0)"><rect width="92" height="28" rx="4" fill="var(--anatomy-card)" stroke="var(--anatomy-mid)" stroke-width="1"/><text x="46" y="15" text-anchor="middle" dominant-baseline="central" font-size="12" font-family="var(--anatomy-mono)" fill="var(--anatomy-strong)">–</text><text x="46" y="-6" text-anchor="middle" font-size="11" font-family="var(--anatomy-mono)" fill="var(--anatomy-muted)"></text></g><g transform="translate(430 0)"><rect width="92" height="28" rx="4" fill="var(--anatomy-card)" stroke="var(--anatomy-mid)" stroke-width="1"/><text x="46" y="15" text-anchor="middle" dominant-baseline="central" font-size="12" font-family="var(--anatomy-mono)" fill="var(--anatomy-strong)">apple</text><text x="46" y="-6" text-anchor="middle" font-size="11" font-family="var(--anatomy-mono)" fill="var(--anatomy-muted)"></text></g><text x="0" y="65" font-size="12" fill="var(--anatomy-muted)" font-family="var(--anatomy-mono)">linear probing</text><g transform="translate(130 50)"><rect width="92" height="28" rx="4" fill="var(--anatomy-card)" stroke="var(--anatomy-mid)" stroke-width="1"/><text x="46" y="15" text-anchor="middle" dominant-baseline="central" font-size="12" font-family="var(--anatomy-mono)" fill="var(--anatomy-strong)">–</text><text x="46" y="42" text-anchor="middle" font-size="11" font-family="var(--anatomy-mono)" fill="var(--anatomy-muted)">0</text></g><g transform="translate(230 50)"><rect width="92" height="28" rx="4" fill="var(--anatomy-card)" stroke="var(--anatomy-mid)" stroke-width="1"/><text x="46" y="15" text-anchor="middle" dominant-baseline="central" font-size="12" font-family="var(--anatomy-mono)" fill="var(--anatomy-strong)">pear</text><text x="46" y="42" text-anchor="middle" font-size="11" font-family="var(--anatomy-mono)" fill="var(--anatomy-muted)">1</text></g><g transform="translate(330 50)"><rect width="92" height="28" rx="4" fill="var(--anatomy-card)" stroke="var(--unfold-red)" stroke-width="2"/><text x="46" y="15" text-anchor="middle" dominant-baseline="central" font-size="12" font-family="var(--anatomy-mono)" fill="var(--anatomy-strong)">kiwi</text><text x="46" y="42" text-anchor="middle" font-size="11" font-family="var(--anatomy-mono)" fill="var(--anatomy-muted)">2</text></g><g transform="translate(430 50)"><rect width="92" height="28" rx="4" fill="var(--anatomy-card)" stroke="var(--anatomy-mid)" stroke-width="1"/><text x="46" y="15" text-anchor="middle" dominant-baseline="central" font-size="12" font-family="var(--anatomy-mono)" fill="var(--anatomy-strong)">apple</text><text x="46" y="42" text-anchor="middle" font-size="11" font-family="var(--anatomy-mono)" fill="var(--anatomy-muted)">3</text></g></svg><p>The same three keys in 4 buckets. With linear probing, kiwi finds bucket 1 taken and uses the next free bucket, 2. A lookup then walks the next buckets until it finds the key or an empty bucket.</p><h2>What real hash tables do</h2><p>These rows come from each language's documentation and source. They were not run for this figure.</p><table><thead><tr><th>Table</th><th>Collisions</th><th>Grows when</th><th>Grows to</th></tr></thead><tbody><tr><td data-th="Table">Java <code>HashMap</code></td><td data-th="Collisions">chaining; a chain of 8 or more becomes a tree</td><td data-th="Grows when">n / m > 0.75</td><td data-th="Grows to">2 × m</td></tr><tr><td data-th="Table">C++ <code>std::unordered_map</code></td><td data-th="Collisions">chaining</td><td data-th="Grows when">n / m > <code>max_load_factor()</code>, 1.0 by default</td><td data-th="Grows to">more buckets, chosen by the library</td></tr><tr><td data-th="Table">Python <code>dict</code></td><td data-th="Collisions">open addressing with a pseudo-random probe order</td><td data-th="Grows when">about 2/3 full</td><td data-th="Grows to">a larger power of 2</td></tr><tr><td data-th="Table">Rust <code>HashMap</code>, Go <code>map</code> (1.24+)</td><td data-th="Collisions">open addressing in groups of slots (Swiss table)</td><td data-th="Grows when">7/8 full</td><td data-th="Grows to">2 × m</td></tr></tbody></table><h2>Cost</h2><table><thead><tr><th>Operation</th><th>Average</th><th>Worst case</th></tr></thead><tbody><tr><td data-th="Operation">insert, find, delete</td><td data-th="Average">O(1): a chain holds about n / m keys</td><td data-th="Worst case">O(n): every key in one chain</td></tr><tr><td data-th="Operation">grow</td><td data-th="Average">O(n) once, but rare</td><td data-th="Worst case">doubling makes the total work for n inserts O(n)</td></tr></tbody></table><h2>Words used here</h2><table><thead><tr><th>Term</th><th>Meaning</th></tr></thead><tbody><tr><td data-th="Term">Hash function</td><td data-th="Meaning">turns a key into a fixed-size number, the same every time</td></tr><tr><td data-th="Term">Bucket</td><td data-th="Meaning">one slot of the array, picked by the index</td></tr><tr><td data-th="Term">Collision</td><td data-th="Meaning">two different keys get the same bucket index</td></tr><tr><td data-th="Term">Chain</td><td data-th="Meaning">a linked list of the keys in one bucket</td></tr><tr><td data-th="Term">Load factor</td><td data-th="Meaning">keys per bucket: n / m</td></tr><tr><td data-th="Term">Rehash</td><td data-th="Meaning">put every key in again with the new m</td></tr></tbody></table></section></main><script type="module">function runtime() {
+  const stage = document.querySelector(".u-stage");
+  const count = Number(stage.dataset.count);
+  const dwell = Number(stage.dataset.dwell);
+  const still = matchMedia("(prefers-reduced-motion: reduce)");
+  let scene = 0;
+  let visible = false;
+  let playing = false;
+  let held = false;
+  let next = 0;
+  const beats = [];
+  const go = (i, by = "user") => {
+    scene = Math.max(0, Math.min(count - 1, i));
+    stage.dataset.scene = String(scene);
+    stage.querySelectorAll("[data-go]").forEach((b) => (Number(b.dataset.go) === scene ? b.setAttribute("aria-current", "step") : b.removeAttribute("aria-current")));
+    stage.querySelectorAll("[data-ds]").forEach((el) => {
+      const d = JSON.parse(el.dataset.ds)[scene];
+      el.toggleAttribute("data-off", !d);
+      if (!d) return;
+      if (CSS.supports("d", 'path("M0 0")')) el.style.d = `path("${d}")`;
+      else el.setAttribute("d", d);
+    });
+    stage.dispatchEvent(new CustomEvent("unfold:scene", { detail: { scene, by } }));
+    if (by === "user") setPlaying(false);
+    held = false;
+    next = performance.now() + dwell;
+    for (const b of beats) {
+      b.n = 0;
+      b.at = performance.now() + b.wait - b.ms;
+      if (still.matches && b.scene === scene) b.fn(-1);
+    }
+    setBusy();
+  };
+  // data-busy is on the stage while a counted sweep of this scene still runs (shoot.mjs waits for it to clear).
+  // A sweep is done one `ms` after its last call, so the last step has time to move.
+  const setBusy = (now = performance.now()) => {
+    const busy = !held && !still.matches && beats.some((b) => b.scene === scene && b.count && (b.n < b.count || now - b.at < b.ms));
+    if (busy !== stage.hasAttribute("data-busy")) stage.toggleAttribute("data-busy", busy);
+  };
+  // The tour runs only after the reader presses Play, and stops at the last scene or at any input.
+  const playBtn = stage.querySelector(".u-play");
+  const setPlaying = (on) => {
+    playing = on;
+    playBtn.setAttribute("aria-pressed", String(on));
+    playBtn.firstChild.textContent = on ? "❚❚" : "▶";
+    playBtn.lastChild.textContent = on ? "Pause" : "Play";
+  };
+  playBtn.addEventListener("click", () => {
+    if (playing) return setPlaying(false);
+    if (scene === count - 1) go(0, "tour");
+    next = performance.now() + dwell;
+    setPlaying(true);
+  });
+  const tour = (now) => {
+    if (playing && visible && now > next) scene === count - 1 ? setPlaying(false) : go(scene + 1, "tour");
+    for (const b of beats) {
+      if (b.scene === scene && visible && !held && !still.matches && now - b.at >= b.ms && !(b.count && b.n >= b.count)) {
+        b.at = now;
+        b.fn(b.n++);
+      }
+    }
+    setBusy(now);
+    requestAnimationFrame(tour);
+  };
+  stage.querySelector(".u-steps").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-go]");
+    if (b) go(Number(b.dataset.go));
+  });
+  stage.addEventListener("keydown", (e) => {
+    const to = { ArrowRight: scene + 1, ArrowLeft: scene - 1, Home: 0, End: count - 1 }[e.key];
+    if (to === undefined) return;
+    e.preventDefault();
+    go(to);
+  });
+  // Time by hand: the step control and the "," and "." keys call the page's onTime(t). Its keys stay inside it.
+  const timer = stage.querySelector(".u-time");
+  let onTime = () => {};
+  const range = timer?.querySelector("input");
+  // onTime first: it may call go(), which releases the sweeps. pause() after it holds them again.
+  const byHand = (t) => {
+    onTime(Math.max(0, Math.min(Number(range.max), t)));
+    pause();
+  };
+  if (timer) {
+    range.addEventListener("input", () => byHand(Number(range.value)));
+    timer.addEventListener("click", (e) => {
+      const b = e.target.closest("[data-step]");
+      if (b) byHand(Number(range.value) + Number(b.dataset.step));
+    });
+    stage.addEventListener("keydown", (e) => {
+      const by = { ",": -1, ".": 1 }[e.key];
+      if (by === undefined) return;
+      e.preventDefault();
+      byHand(Number(range.value) + by);
+    });
+  }
+  // Keys typed in a control (a scrubber, a number field) stay in it: no scene or focus change.
+  stage.querySelectorAll(".u-controls :is(input,select,textarea)").forEach((el) => el.addEventListener("keydown", (e) => e.stopPropagation()));
+  // A scene-scoped control (stageHtml controlScenes) used in another scene moves to the first scene that uses it.
+  const ctl = stage.querySelector(".u-ctl");
+  const owners = ctl?.dataset.scenes.split(" ").map(Number);
+  const toOwner = () => owners.includes(scene) || go(owners[0]);
+  // Capture phase: the move runs before the page's own handler, so a preset applied on scene entry
+  // does not overwrite what the reader just set.
+  ctl?.addEventListener("input", toOwner, true);
+  ctl?.addEventListener("click", (e) => e.target.closest("button") && toOwner(), true);
+  // timeAt(t, steps): show step t. Pass steps when the run's length changed (a live input made a longer trace).
+  const timeAt = (t, steps) => {
+    if (!timer) return;
+    if (steps) range.max = String(steps - 1);
+    range.value = String(t);
+    timer.querySelector("output").textContent = `${timer.dataset.label} ${t} / ${range.max}`;
+  };
+  // Narrow layout: below 560 px the drawing takes its second viewBox and the stage gets data-narrow.
+  const svg = stage.querySelector("svg");
+  const wide = svg?.getAttribute("viewBox");
+  if (stage.dataset.narrowBox)
+    new ResizeObserver(([entry]) => {
+      const on = entry.contentRect.width < 560;
+      if (on === stage.hasAttribute("data-narrow")) return;
+      stage.toggleAttribute("data-narrow", on);
+      svg.setAttribute("viewBox", on ? stage.dataset.narrowBox : wide);
+      stage.dispatchEvent(new CustomEvent("unfold:layout", { detail: { narrow: on } }));
+    }).observe(stage);
+  new IntersectionObserver((entries) => (visible = entries[entries.length - 1].isIntersecting), { rootMargin: "120px 0px" }).observe(stage);
+  next = performance.now() + dwell;
+  requestAnimationFrame(tour);
+  // beat(scene, ms, fn, wait, count): call fn(0), fn(1), … every ms while that scene shows, starting `wait` ms after it opens.
+  // With count, it stops after fn(count - 1) and the stage loses data-busy. Without it, the sweep never ends (a loop).
+  // Under reduced motion fn(-1) is called once instead: show the resting state.
+  const beat = (sceneIndex, ms, fn, wait = 1000, count = 0) => {
+    beats.push({ scene: sceneIndex, ms, fn, wait, count, n: 0, at: performance.now() + wait - ms });
+    setBusy();
+  };
+  // pause(): the user took control. The tour stops, and the sweeps hold until the scene changes.
+  const pause = () => {
+    setPlaying(false);
+    held = true;
+    setBusy();
+  };
+  return { stage, go, beat, pause, scene: () => scene, onTime: (fn) => (onTime = fn), timeAt, narrow: () => stage.hasAttribute("data-narrow") };
+}
+const UNFOLD = runtime();
+
+const DATA = [{"m":4,"n":1,"table":[[],[],[],["apple"]],"focus":"apple"},{"m":4,"n":3,"table":[[],["pear","kiwi"],[],["apple"]],"focus":"kiwi"},{"m":4,"n":3,"table":[[],["pear","kiwi"],[],["apple"]],"focus":"kiwi"},{"m":4,"n":4,"table":[["lime"],["pear","kiwi"],[],["apple"]],"focus":"lime"},{"m":8,"n":4,"table":[[],["kiwi"],[],[],["lime"],["pear"],[],["apple"]],"focus":"pear"},{"m":8,"n":6,"table":[[],["kiwi"],[],[],["lime"],["pear","fig"],["peach"],["apple"]],"focus":"fig"}];
+const KEYS = ["apple","pear","kiwi","lime","fig","peach"];
+const LIMIT = 0.75;
+const ROW = 40;
+const ARRAY_AT = {"wide":[440,0],"narrow":[40,316]};
+const PIPE_AT = {"wide":[24,26],"narrow":[24,10]};
+function fnv1a(key) {
+  let h = 0x811c9dc5;
+  for (const byte of new TextEncoder().encode(key)) {
+    h ^= byte;
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h;
+}
+function bucketOf(key, m) {
+  return fnv1a(key) % m;
+}
+function lookup(table, key) {
+  const chain = table[bucketOf(key, table.length)];
+  const at = chain.indexOf(key);
+  return { bucket: bucketOf(key, table.length), compared: at < 0 ? [...chain] : chain.slice(0, at + 1), found: at >= 0 };
+}
+function bits(h, n = 8) {
+  return (h & ((1 << n) - 1)).toString(2).padStart(n, "0");
+}
+
+const root = UNFOLD.stage;
+const readout = document.querySelector("[data-readout]");
+const field = root.querySelector("[data-try]");
+const $ = (s) => root.querySelector(s);
+let focus = DATA[0].focus;
+let shown = 99;
+const FIND = 2, GROW = 4;
+function draw() {
+  const s = UNFOLD.scene();
+  const d = DATA[s];
+  const h = fnv1a(focus);
+  const i = h % d.m;
+  const lowBits = Math.log2(d.m);
+  $("[data-pk]").textContent = focus;
+  $("[data-hv]").textContent = String(h);
+  const b = bits(h);
+  root.querySelectorAll(".bit").forEach((g) => {
+    const j = Number(g.dataset.bit);
+    g.querySelector("text").textContent = b[7 - j];
+    g.toggleAttribute("data-low", j < lowBits);
+    g.toggleAttribute("data-new", s === GROW && j === lowBits - 1);
+  });
+  $("[data-lowlbl]").textContent = "mod " + d.m + " = last " + lowBits + " bits";
+  $("[data-modlbl]").textContent = "mod " + d.m;
+  $("[data-iv]").textContent = String(i);
+  $("[data-ilbl]").textContent = "bucket index of " + d.m;
+  const alpha = d.n / d.m;
+  const fill = $("[data-fill]");
+  fill.style.transform = "scaleX(" + Math.min(alpha / 1.25, 1) + ")";
+  fill.toggleAttribute("data-over", alpha > LIMIT);
+  $("[data-lv]").textContent = "n / m = " + d.n + " / " + d.m + " = " + alpha.toFixed(2) + (alpha > LIMIT ? "  > 0.75: grow" : "");
+  root.querySelectorAll(".bk").forEach((g) => g.toggleAttribute("data-lit", Number(g.dataset.b) === i));
+  const narrow = UNFOLD.narrow();
+  if (!narrow) {
+    const x1 = PIPE_AT.wide[0] + 262, y1 = PIPE_AT.wide[1] + 181;
+    const x2 = ARRAY_AT.wide[0] - 4, y2 = ARRAY_AT.wide[1] + 6 + i * ROW + 14;
+    $("[data-route]").style.d = 'path("M' + x1 + " " + y1 + "C" + (x2 - 14) + " " + y1 + " " + (x2 - 34) + " " + y2 + " " + x2 + " " + y2 + '")';
+  }
+  const found = s === FIND ? lookup(d.table, focus) : null;
+  root.querySelectorAll(".hk").forEach((g) => {
+    const k = g.dataset.key;
+    g.toggleAttribute("data-focus", k === focus);
+    const at = found ? found.compared.indexOf(k) : -1;
+    g.toggleAttribute("data-cmp", at >= 0 && at < shown);
+    g.toggleAttribute("data-hit", found !== null && found.found && at === found.compared.length - 1);
+    if (at >= 0) g.querySelector(".cmpb text").textContent = String(at + 1);
+  });
+  root.querySelectorAll("[data-pick]").forEach((btn) => btn.setAttribute("aria-pressed", String(btn.dataset.pick === focus)));
+  let text;
+  if (found) {
+    const steps = found.compared.map((k) => k + (k === focus ? " = " : " \u2260 ") + focus);
+    const c = found.compared.length;
+    text = "find " + focus + ": bucket " + found.bucket + (c ? " \u00b7 " + steps.join(" \u00b7 ") : " is empty") + " \u00b7 " + (found.found ? "found" : "not found") + ", " + c + (c === 1 ? " compare" : " compares");
+  } else if (s === GROW) {
+    const was = h % (d.m / 2);
+    text = focus + ": " + h + " mod 4 = " + was + ", mod 8 = " + i + " \u00b7 bit 2 is " + b[5] + (i === was ? ", so it stays" : ", so " + was + " + 4");
+  } else {
+    text = "h(" + focus + ") = " + h + " \u00b7 mod " + d.m + " = " + i + " (last " + lowBits + " bits " + b.slice(8 - lowBits) + ")";
+  }
+  if (readout.textContent !== text) readout.textContent = text;
+}
+// Find: light the chain one compare at a time, then hold the result.
+UNFOLD.beat(FIND, 800, (n) => {
+  shown = n < 0 ? 99 : n;
+  draw();
+}, 600, 4);
+root.addEventListener("unfold:scene", (e) => {
+  if (!field.value) focus = DATA[e.detail.scene].focus;
+  shown = e.detail.scene === FIND ? 0 : 99;
+  draw();
+});
+root.addEventListener("unfold:layout", draw);
+const pick = (k) => {
+  UNFOLD.pause();
+  focus = k;
+  shown = 99;
+  draw();
+};
+root.addEventListener("click", (e) => {
+  const btn = e.target.closest("[data-pick]");
+  const node = e.target.closest(".hk");
+  if (btn || node) {
+    field.value = "";
+    pick(btn ? btn.dataset.pick : node.dataset.key);
+  }
+});
+field.addEventListener("input", () => {
+  const k = field.value.slice(0, 16);
+  pick(k.length ? k : DATA[UNFOLD.scene()].focus);
+});
+root.addEventListener("keydown", (e) => {
+  if (e.target === field) return;
+  const to = { ArrowUp: -1, ArrowDown: 1 }[e.key];
+  if (to === undefined) return;
+  e.preventDefault();
+  field.value = "";
+  const at = KEYS.indexOf(focus);
+  pick(KEYS[(at + to + KEYS.length) % KEYS.length]);
+});
+draw();
+</script></body></html>

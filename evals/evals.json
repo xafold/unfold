@@ -1,0 +1,59 @@
+{
+  "skill_name": "unfold",
+  "evals": [
+    {
+      "id": 1,
+      "shape": "function or landscape",
+      "prompt": "Make me an interactive explainer of gradient descent for my ML course notes, as a single HTML page. Use a simple 1-D loss so students can follow every number, and show what happens when the learning rate is too small, about right and too big.",
+      "expected_output": "One standalone HTML page in the unfold style (anatomy card, equation bar in MathML, scenes with a stepper, colour key, live readout). A pure model computes a real loss (for example L(w) = (w - 3)^2 + 1), its gradient and every step w_{t+1} = w_t - eta * L'(w_t); node model.mjs asserts convergence for the good rate and divergence for the big one. Scenes build from the curve, to the slope at one point, to one step, to many steps, to the three learning rates side by side. The ball moves along the real curve, the tangent and step arrow update, and the readout shows the arithmetic of the current step. One hue per concept (parameter, loss, gradient, step) everywhere. Both themes build, every scene was captured after its entrance, at 390 px and with reduced motion, and the PNGs were read."
+    },
+    {
+      "id": 2,
+      "shape": "structure + process on a structure",
+      "prompt": "explain git rebase vs merge visually for our team wiki. show the commit graph changing. dark theme is fine",
+      "expected_output": "An unfold figure whose truth model is a small commit DAG with real operations (merge creates a merge commit with two parents; rebase replays commits as new commits with new ids onto the new base). Commits are nodes in a fixed time-ordered layout with morphPath links that follow them; replayed commits keep a visible relation to their originals (same hue or a dashed link) while getting new ids. Branch labels move as objects between scenes. Scenes contrast merge and rebase on the same starting graph. Up/down picks a commit and the readout shows its parents and id. No machine metaphor, no boxes-with-words. Verified with drive.mjs shots of every scene."
+    },
+    {
+      "id": 3,
+      "shape": "points in a space",
+      "prompt": "I need a figure explaining what word embeddings are and how cosine similarity finds similar words. For a blog post, should look like a 3blue1brown frame.",
+      "expected_output": "An unfold figure with a 2-D plane (axes named, light grid) holding a small set of word vectors computed or stated by a model module; the caption says how the 2-D values were chosen or projected. Scenes: words as vectors, the angle between two vectors, cos(theta) computed from real coordinates, nearest neighbours of a selected word ranked by cosine. Up/down picks the query word; the readout shows the dot product and norms. Vectors are arrows that end on their points; hues are consistent with the math. Checked in both themes and at 390 px."
+    },
+    {
+      "id": 4,
+      "shape": "sequence in time",
+      "prompt": "Build an interactive diagram of the TCP three-way handshake and connection teardown, with sequence and ack numbers, for a networking class.",
+      "expected_output": "An unfold figure using the kit's lanes/span helpers: one lane per host, time running in one direction, each segment an arrow between lanes labelled with its flags and real seq/ack numbers from a model that simulates both state machines (ISNs chosen and stated). Each host's state chip (LISTEN, SYN-SENT, ESTABLISHED, FIN-WAIT-1, ...) changes at the right moment. Up/down steps through segments; the readout explains why ack = seq + 1. Asserts in model.mjs check every ack number."
+    },
+    {
+      "id": 5,
+      "shape": "memory layout",
+      "prompt": "show how UTF-8 encodes the string \"Añ€😀\" byte by byte. interactive please",
+      "expected_output": "An unfold figure whose model really encodes the string (TextEncoder or the bit rules) and asserts the bytes 41 C3 B1 E2 82 AC F0 9F 98 80. Byte strips as cell grids, code points as chips, and the bit layout of each byte (leading 110/1110/11110 and continuation 10 bits) with the payload bits coloured by the code point they belong to. Scenes go from characters, to code points, to bit patterns, to bytes. Up/down picks a character and the readout shows its code point in hex and binary and its bytes."
+    },
+    {
+      "id": 6,
+      "shape": "states",
+      "prompt": "Explain how a regex like a(b|c)*d is matched by an NFA, stepping through the input \"abcbd\". Figure for docs.",
+      "expected_output": "An unfold figure with states as chips on a fixed layout, transitions as arrows with their symbols, and an input tape of chips. The model builds the NFA (Thompson or a hand-built equivalent, stated) and simulates the set of active states per input symbol, asserting a match for abcbd and no match for abd? or similar. The active set lights up per step; up/down steps through the input; the readout lists the active states."
+    },
+    {
+      "id": 7,
+      "shape": "routing check",
+      "prompt": "Make an isometric explainer of how a token bucket rate limiter works: 20 tokens, refill 5 per second.",
+      "expected_output": "The skill recognises a capacity/flow concept and says the anatomy skill fits better (a physical machine metaphor reads well here), then either hands off to anatomy or asks the user. It does not force a matrix or lanes figure onto it."
+    },
+    {
+      "id": 8,
+      "shape": "breadth request (shared + differs)",
+      "prompt": "Create an explainer that visualizes how a function call works in all the languages.",
+      "expected_output": "An unfold Explainer that answers both halves of a breadth request. Shared part: one small program shown whole and runnable in several languages (model.mjs runs each with its real tool), a call stack whose frames push and pop with arguments and return values from a truth model, and a step control (back, scrubber, next, ',' and '.') besides the tour. Differs part: at least one scene with real per-language data (for example the bytecode or machine code of the call, or the measured stack depth), and a notesHtml reference section with a table of more languages (how code runs, argument passing, tail calls, stack limits) that marks which rows were checked. Value chips never cover text. The 390 px shots are readable (narrow layout). Compare with examples/function-call/."
+    },
+    {
+      "id": 9,
+      "shape": "structure + the reader runs the operation",
+      "prompt": "Explain how a binary min-heap works for my data structures course. Interactive, one HTML page.",
+      "expected_output": "An unfold Explainer whose model really implements insert (sift up) and extract-min (sift down) on an array, with asserts that the heap property holds after many random inserts and extracts. The heap is drawn both as a tree and as the array it lives in, with each key one object in both views. The reader types any key and inserts it into the current heap, presses extract-min again and again, and resets; the structure keeps the reader's keys between operations. Each swap is marked at the two nodes it moves, the pseudocode line that runs is lit (codeLines), and the step control steps through the swaps of the last operation, with scenes as chapters of the same run. Every number in the equation bar (parent index (i-1)/2, child indices 2i+1 and 2i+2) follows the node in focus. shoot.mjs passes with no TEXT OVERLAP, and words.mjs prints words ok."
+    }
+  ]
+}

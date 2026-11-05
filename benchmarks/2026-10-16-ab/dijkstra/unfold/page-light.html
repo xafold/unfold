@@ -1,0 +1,701 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Dijkstra's shortest path</title><style>
+.iso{
+  --anatomy-page:#0b0b0b;--anatomy-card:#131313;--anatomy-text:#a3a3a3;--anatomy-strong:#e6e6e6;--anatomy-muted:#6e6e6e;
+  --anatomy-paper:#131313;--anatomy-face:#1b1b1b;--anatomy-top:#1c1c1c;
+  --anatomy-shade-0:#0f0f0f;--anatomy-shade-1:#121212;--anatomy-shade-2:#151515;--anatomy-shade-3:#181818;
+  --anatomy-lit-top:#262626;--anatomy-lit-shade:#1d1d1d;
+  --anatomy-hi:#d4d4d4;--anatomy-mid:#6a6a6a;--anatomy-lo:#3e3e3e;--anatomy-faint:#2a2a2a;--anatomy-lit:#ffffff;
+  --anatomy-halo:#050505;--anatomy-halo-opacity:.9;--anatomy-dot:#e6e6e6;
+  --anatomy-red:#ff6b6b;--anatomy-green:#6be0a0;--anatomy-blue:#6b9bff;
+  --anatomy-weight:.6px;--anatomy-ease:cubic-bezier(.32,.72,0,1);
+  --anatomy-mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --anatomy-lift:inset 0 1px 0 0 #ffffff0a,inset 0 0 0 1px #ffffff06,0 0 0 1px #00000026,0 1px 1px -.5px #00000014,0 3px 3px -1.5px #00000014,0 6px 6px -3px #00000014,0 12px 12px -6px #00000014;
+}
+.iso[data-theme="light"]{
+  --anatomy-page:#f2f2ef;--anatomy-card:#fbfbfa;--anatomy-text:#57575a;--anatomy-strong:#18181a;--anatomy-muted:#8c8c90;
+  --anatomy-paper:#fbfbfa;--anatomy-face:#ffffff;--anatomy-top:#ffffff;
+  --anatomy-shade-0:#dcdcd9;--anatomy-shade-1:#e5e5e2;--anatomy-shade-2:#ededea;--anatomy-shade-3:#f4f4f1;
+  --anatomy-lit-top:#ffffff;--anatomy-lit-shade:#eeeeeb;
+  --anatomy-hi:#26262a;--anatomy-mid:#8a8a8f;--anatomy-lo:#b4b4b8;--anatomy-faint:#d4d4d6;--anatomy-lit:#000000;
+  --anatomy-halo:#8a8a80;--anatomy-halo-opacity:.32;--anatomy-dot:#3a3a3e;
+  --anatomy-red:#e5484d;--anatomy-green:#30a46c;--anatomy-blue:#3e63dd;
+  --anatomy-lift:inset 0 1px 0 0 #ffffff,0 0 0 1px #0000000f,0 1px 1px -.5px #0000000a,0 3px 3px -1.5px #0000000a,0 6px 6px -3px #0000000a,0 12px 12px -6px #0000000a;
+}
+.iso-svg{display:block;width:100%;height:auto;overflow:visible}
+.iso-svg path,.iso-svg circle{vector-effect:non-scaling-stroke}
+.iso-fill{fill:var(--anatomy-paper);stroke:none}
+.iso-solid[data-lit]>.iso-fill{fill:var(--anatomy-face)}
+.iso-shade,.iso-top{stroke:none}
+.iso-shade[data-shade="0"]{fill:var(--anatomy-shade-0)}
+.iso-shade[data-shade="1"]{fill:var(--anatomy-shade-1)}
+.iso-shade[data-shade="2"]{fill:var(--anatomy-shade-2)}
+.iso-shade[data-shade="3"]{fill:var(--anatomy-shade-3)}
+.iso-top{fill:var(--anatomy-top)}
+.iso-solid[data-lit]>.iso-top{fill:var(--anatomy-lit-top)}
+.iso-solid[data-lit]>.iso-shade{fill:var(--anatomy-lit-shade)}
+.iso-solid[data-seamless]>.iso-shade,.iso-solid[data-seamless]>.iso-top{stroke-width:.4;stroke-linejoin:round}
+.iso-solid[data-seamless]>.iso-shade[data-shade="0"]{stroke:var(--anatomy-shade-0)}
+.iso-solid[data-seamless]>.iso-shade[data-shade="1"]{stroke:var(--anatomy-shade-1)}
+.iso-solid[data-seamless]>.iso-shade[data-shade="2"]{stroke:var(--anatomy-shade-2)}
+.iso-solid[data-seamless]>.iso-shade[data-shade="3"]{stroke:var(--anatomy-shade-3)}
+.iso-solid[data-seamless]>.iso-top{stroke:var(--anatomy-top)}
+.iso-solid[data-seamless][data-lit]>.iso-top{stroke:var(--anatomy-lit-top)}
+.iso-solid[data-seamless][data-lit]>.iso-shade{stroke:var(--anatomy-lit-shade)}
+.iso-solid[data-lit]>.iso-edge{stroke:var(--anatomy-lit)}
+.iso-halo{fill:var(--anatomy-halo);stroke:none;filter:blur(9px);opacity:var(--anatomy-halo-opacity);transform:translateY(3px)}
+.iso-line{fill:none;stroke:var(--anatomy-lo);stroke-width:var(--anatomy-weight);stroke-linecap:round;stroke-linejoin:round}
+.iso-line[data-tone="hi"]{stroke:var(--anatomy-hi)}
+.iso-line[data-tone="mid"]{stroke:var(--anatomy-mid)}
+.iso-line[data-tone="lo"]{stroke:var(--anatomy-lo)}
+.iso-line[data-tone="faint"]{stroke:var(--anatomy-faint)}
+.iso-line[data-tone="lit"]{stroke:var(--anatomy-lit)}
+.iso-line[data-tone="red"]{stroke:var(--anatomy-red)}
+.iso-line[data-tone="green"]{stroke:var(--anatomy-green)}
+.iso-line[data-tone="blue"]{stroke:var(--anatomy-blue)}
+.iso-line[data-dotted]{stroke-dasharray:.01 3.5;stroke-width:1}
+.iso-line[data-dashed]{stroke-dasharray:3 3}
+.iso-line[data-flow]{stroke-dasharray:2 6}
+.iso-wire-end{fill:var(--anatomy-paper);stroke:var(--anatomy-lo);stroke-width:var(--anatomy-weight)}
+.iso-wire[data-tone="hi"] .iso-wire-end{stroke:var(--anatomy-hi)}
+.iso-wire[data-tone="mid"] .iso-wire-end{stroke:var(--anatomy-mid)}
+.iso-wire[data-tone="faint"] .iso-wire-end{stroke:var(--anatomy-faint)}
+.iso-wire[data-tone="lit"] .iso-wire-end{stroke:var(--anatomy-lit)}
+.iso-dots circle{fill:var(--anatomy-dot);stroke:none;opacity:.32}
+.iso-dots[data-tone="hi"] circle{opacity:.85}
+.iso-dots[data-tone="mid"] circle{opacity:.45}
+.iso-dots[data-tone="lo"] circle{opacity:.22}
+.iso-dots[data-tone="faint"] circle{opacity:.12}
+.iso-face-text{fill:var(--anatomy-mid);font-family:var(--anatomy-mono);letter-spacing:.04em}
+.iso-face-text[data-tone="hi"]{fill:var(--anatomy-hi)}
+.iso-face-text[data-tone="lo"]{fill:var(--anatomy-lo)}
+.iso-face-text[data-tone="faint"]{fill:var(--anatomy-faint)}
+.tb-body{fill:var(--anatomy-shade-2);stroke:none}
+.tb-shine{fill:var(--anatomy-top);stroke:none}
+.tb-shade{fill:var(--anatomy-shade-0);stroke:none}
+.tb-ring{fill:none;stroke:var(--anatomy-lo);stroke-width:.45;stroke-linecap:butt;stroke-linejoin:round}
+.tb-ring[data-tone="mid"]{stroke:var(--anatomy-mid)}
+.tb-ring[data-tone="faint"]{stroke:var(--anatomy-faint)}
+.tb-ring[data-tone="hi"]{stroke:var(--anatomy-hi)}
+@keyframes iso-flow{to{stroke-dashoffset:-32}}
+@keyframes iso-pulse{0%,100%{opacity:.18}12%{opacity:1}40%{opacity:.18}}
+.iso-line[data-flow]{animation:iso-flow 1600ms linear infinite}
+.iso-dots circle[data-pulse]{animation:iso-pulse 1600ms steps(1,end) infinite;animation-delay:var(--pulse-at,0ms)}
+.iso-figure{margin:32px 0 36px}
+.iso-plate{position:relative;padding:52px 24px;border-radius:0;background:var(--anatomy-card);box-shadow:0 0 0 1px var(--anatomy-mid);--anatomy-paper:var(--anatomy-card)}
+.iso-plate-corners{position:absolute;inset:18px 20px;pointer-events:none}
+.iso-plate-corner{position:absolute;color:var(--anatomy-muted);font-family:var(--anatomy-mono);font-size:10.5px;line-height:1;letter-spacing:.04em;white-space:nowrap}
+.iso-plate-corner[data-corner="fig"]{top:0;left:0;color:var(--anatomy-text)}
+.iso-plate-corner[data-corner="title"]{top:0;right:0;text-transform:uppercase;letter-spacing:.1em}
+.iso-plate-corner[data-corner="hint"]{bottom:0;left:0;text-transform:uppercase;letter-spacing:.1em}
+.iso-plate-corner[data-corner="readout"]{right:0;bottom:0;color:var(--anatomy-text);font-variant-numeric:tabular-nums}
+.iso-plate .iso-svg{margin:0 auto}
+.iso-legend{display:grid;gap:8px;margin-top:12px;color:var(--anatomy-muted);font-size:13px;line-height:1.55}
+.iso-keys{display:flex;flex-wrap:wrap;gap:6px 18px}
+.iso-key{display:inline-flex;align-items:center;gap:7px}
+.iso-swatch{width:16px;height:10px;flex:none;overflow:visible}
+.iso-swatch path{fill:none;stroke:var(--anatomy-hi);stroke-width:1;vector-effect:non-scaling-stroke;stroke-linejoin:round;stroke-linecap:round}
+.iso-swatch[data-mark="raised"] path,.iso-swatch[data-mark="flat"] path{stroke:var(--anatomy-mid)}
+.iso-swatch[data-mark="lit"] path{stroke:var(--anatomy-lit)}
+.iso-swatch[data-mark="dim"] path{stroke:var(--anatomy-lo)}
+.iso-swatch[data-mark="dotted"] path{stroke-dasharray:.01 3;stroke-width:1.4}
+.iso-swatch[data-mark="dashed"] path{stroke-dasharray:3 2.5}
+.iso-swatch[data-mark="red"] path{stroke:var(--anatomy-red)}
+.iso-swatch[data-mark="green"] path{stroke:var(--anatomy-green)}
+.iso-swatch[data-mark="blue"] path{stroke:var(--anatomy-blue)}
+.iso-swatch-crease{stroke:var(--anatomy-lo)!important}
+@media (max-width:560px){.iso-plate{padding:48px 12px 70px}.iso-plate-corner[data-corner="hint"]{bottom:18px}}
+@media (prefers-reduced-motion:reduce){.iso-line[data-flow],.iso-dots circle[data-pulse]{animation:none}}
+
+*{box-sizing:border-box}
+html{color-scheme:dark}
+body[data-theme="light"]{color-scheme:light}
+body{margin:0;background:var(--anatomy-page);color:var(--anatomy-text);font:14px/1.6 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+.iso-page{width:min(900px,100% - 32px);margin:64px auto 96px}
+</style></head><body class="iso" data-theme="light"><main class="iso-page"><style>
+.iso{--unfold-blue:#58c4dd;--unfold-yellow:#f4d345;--unfold-red:#fc6255;--unfold-green:#83c167;--unfold-teal:#5cd0b3;--unfold-purple:#b48ad1;--unfold-gold:#f0ac5f;--unfold-on-hot:#0b0b0b;--unfold-serif:"Latin Modern Math","STIX Two Math","Cambria Math",math,serif}
+.iso[data-theme="light"]{--unfold-blue:#1f78a4;--unfold-yellow:#a67c00;--unfold-red:#cf3b2e;--unfold-green:#3e8a2a;--unfold-teal:#16866b;--unfold-purple:#7a4fa3;--unfold-gold:#b8661a;--unfold-on-hot:#ffffff}
+[data-hue="blue"]{--hue:var(--unfold-blue)}[data-hue="yellow"]{--hue:var(--unfold-yellow)}[data-hue="red"]{--hue:var(--unfold-red)}[data-hue="green"]{--hue:var(--unfold-green)}[data-hue="teal"]{--hue:var(--unfold-teal)}[data-hue="purple"]{--hue:var(--unfold-purple)}[data-hue="gold"]{--hue:var(--unfold-gold)}[data-hue="ink"]{--hue:var(--anatomy-hi)}
+.u-key{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 16px;margin-top:10px;color:var(--anatomy-muted);font-size:12px}
+.u-key>span{display:inline-flex;align-items:center;gap:6px}
+.u-key i{width:10px;height:10px;border-radius:2px;background:var(--hue)}
+.u-key i.u-hollow{background:none;box-shadow:inset 0 0 0 1.2px var(--anatomy-mid)}
+.u-key i.u-solid{background:var(--anatomy-mid)}
+.u-stage{position:relative;outline:none;container-type:inline-size}
+.u-stage:focus-visible{outline:1px solid var(--anatomy-faint);outline-offset:8px}
+.u-stage .iso-svg{overflow:visible}
+.u-eq,.u-say{display:grid;align-items:center}
+.u-eq>.u-at,.u-say>.u-at{grid-area:1/1;opacity:0;visibility:hidden;transition:opacity .45s var(--anatomy-ease),visibility 0s .45s;margin:0}
+.u-eq{min-height:44px;margin-bottom:8px;overflow-x:auto;overflow-y:hidden}
+.u-eq math{font-family:var(--unfold-serif);font-size:20px;color:var(--anatomy-strong)}
+.u-eq [data-hue]{color:var(--hue)}
+.u-say{min-height:48px;margin-top:6px;color:var(--anatomy-text);font-size:14px;line-height:1.55;text-align:center}
+.u-say>.u-at{max-width:62ch;justify-self:center}
+.u-say b{color:var(--anatomy-strong);font-weight:500}
+.u-say [data-hue]{color:var(--hue)}
+.u-steps{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin-top:14px}
+.u-steps button{display:inline-flex;align-items:center;gap:6px;padding:5px 10px 5px 6px;border:0;border-radius:999px;background:transparent;color:var(--anatomy-muted);font:11px/1 var(--anatomy-mono);letter-spacing:.04em;cursor:pointer;box-shadow:0 0 0 1px var(--anatomy-faint);transition:color .2s,box-shadow .2s}
+.u-steps button span{display:inline-grid;place-items:center;width:16px;height:16px;border-radius:50%;background:var(--anatomy-faint);color:var(--anatomy-text);font-size:10px}
+.u-steps button:hover{color:var(--anatomy-text)}
+.u-steps button[aria-current]{color:var(--anatomy-strong);box-shadow:0 0 0 1px var(--anatomy-mid)}
+.u-steps button[aria-current] span{background:var(--anatomy-strong);color:var(--anatomy-card)}
+.u-steps .u-play{margin-right:6px}.u-steps .u-play[aria-pressed="true"]{color:var(--anatomy-strong);box-shadow:0 0 0 1px var(--anatomy-mid)}
+.u-move{transition:transform .9s var(--anatomy-ease),opacity .6s var(--anatomy-ease)}
+.u-grid text,.u-chip text,.u-bars text,.u-arrow text{dominant-baseline:central;text-anchor:middle}
+.u-cell{transform:translate(var(--x),var(--y));transition:transform .9s var(--anatomy-ease) calc(var(--i) * 18ms)}
+.u-cell-bg{fill:var(--hue);fill-opacity:var(--a);stroke:none;transition:fill-opacity .35s}
+.u-cell[data-neg]>.u-cell-bg,.u-cell-bg[data-neg]{fill-opacity:calc(var(--a) * .18);stroke:var(--hue);stroke-opacity:var(--a);stroke-width:1.2}
+.u-cell[data-masked]>.u-cell-bg,.u-cell-bg[data-masked]{fill:none;stroke:var(--anatomy-faint);stroke-width:.8;stroke-dasharray:2 2}
+.u-num{font:500 10px var(--anatomy-mono);font-variant-numeric:tabular-nums;fill:var(--anatomy-strong)}
+.u-cell[data-hot] .u-num{fill:var(--unfold-on-hot)}
+.u-cell[data-masked] .u-num{fill:var(--anatomy-lo)}
+.u-name{font:italic 600 17px var(--unfold-serif);fill:var(--hue);dominant-baseline:auto!important;text-anchor:start!important}
+.u-dims{font:400 10px var(--anatomy-mono);font-style:normal;fill:var(--anatomy-muted)}
+.u-T,.u-dims-T{display:none}
+.u-mark{fill:none;stroke:var(--anatomy-strong);stroke-width:1.2;opacity:0;transition:opacity .3s}
+.u-mark[data-on]{opacity:.9}
+.u-chip rect{fill:var(--anatomy-card);stroke:var(--anatomy-mid);stroke-width:.8;transition:stroke .25s,fill .25s}
+.u-chip text{font:500 11px var(--anatomy-mono);fill:var(--anatomy-text);transition:fill .25s}
+.u-chip[data-hue] rect{stroke:var(--hue)}
+.u-chip[data-hue] text{fill:var(--hue)}
+.u-cell[data-later],.u-mark[data-later]{opacity:0!important;transition:opacity .3s}
+.u-plot-axis{stroke:var(--anatomy-mid);stroke-width:.9;fill:none}
+.u-plot-grid{stroke:var(--anatomy-faint);stroke-width:.6;fill:none}
+.u-tick-label{font:10px var(--anatomy-mono);fill:var(--anatomy-muted)}
+.u-plot-name{font:italic 600 15px var(--unfold-serif);fill:var(--hue,var(--anatomy-text))}
+.u-curve{fill:none;stroke:var(--hue,var(--anatomy-hi));stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.u-chip[data-on] rect{fill:var(--anatomy-strong);stroke:var(--anatomy-strong)}
+.u-chip[data-on] text{fill:var(--anatomy-card)}
+.u-chip[data-i]{cursor:pointer}
+.u-arrow{--w:1.1;color:var(--anatomy-mid)}
+.u-arrow[data-hue]{color:var(--hue)}
+.u-arrow-line{fill:none;stroke:currentColor;stroke-width:var(--w);stroke-linecap:round;transition:stroke-width .4s,opacity .4s}
+.u-arrow-head{fill:currentColor}
+.u-bar-fill{fill:var(--hue);transform-box:fill-box;transform-origin:50% 100%;transform:scaleY(var(--v));transition:transform .6s var(--anatomy-ease)}
+.u-bar-value{font:500 10px var(--anatomy-mono);fill:var(--anatomy-strong);transition:y .6s var(--anatomy-ease)}
+.u-bar-label{font:11px var(--anatomy-mono);fill:var(--anatomy-muted)}
+.u-axis{stroke:var(--anatomy-mid);stroke-width:.8;fill:none}
+.u-link{fill:none;stroke:var(--hue,var(--anatomy-mid));stroke-width:1.1;stroke-linecap:round;transition:d .9s var(--anatomy-ease),opacity .5s var(--anatomy-ease),stroke .3s}
+.u-link[data-off]{opacity:0}
+.u-eq>.u-at{text-align:center}
+.u-eq .u-rule{font:500 14px/1.5 var(--anatomy-mono);color:var(--anatomy-strong);letter-spacing:.01em}
+.u-lane-bg{fill:var(--anatomy-faint);fill-opacity:.18;stroke:var(--anatomy-faint);stroke-width:.6}
+.u-lane-name{font:11px var(--anatomy-mono);fill:var(--hue,var(--anatomy-muted));text-anchor:end;dominant-baseline:central}
+.u-tick{stroke:var(--anatomy-faint);stroke-width:.6}
+.u-tick-label{font:9px var(--anatomy-mono);fill:var(--anatomy-muted);text-anchor:middle;dominant-baseline:central}
+.u-now{stroke:var(--anatomy-strong);stroke-width:1.2;transition:transform .5s var(--anatomy-ease)}
+.u-span-bar{fill:var(--hue,var(--anatomy-mid));fill-opacity:.9;transform-box:fill-box;transform-origin:0 50%;transform:scaleX(var(--v,1));transition:transform .5s var(--anatomy-ease)}
+.u-span-label{opacity:0;transition:opacity .3s}
+.u-span[data-labeled] .u-span-label{opacity:1}
+.u-span-label text{font:500 10px var(--anatomy-mono);fill:var(--unfold-on-hot);dominant-baseline:central}
+.u-face .u-cell-bg{stroke-width:.5}
+.u-cell-bg{transform-box:fill-box;transform-origin:50% 50%}
+.u-cell[data-hl]>.u-cell-bg{stroke:var(--anatomy-strong);stroke-opacity:1;stroke-width:1.6;animation:u-ping .5s var(--anatomy-ease)}
+.u-pulse{fill:var(--hue,var(--anatomy-strong));filter:drop-shadow(0 0 3px var(--hue,var(--anatomy-strong)))}
+.u-rise{transform-box:fill-box}
+@keyframes u-pop{from{opacity:0;transform:scale(.4)}}
+@keyframes u-fade{from{opacity:0}}
+@keyframes u-rise{from{opacity:0;transform:translateY(-14px)}}
+@keyframes u-grow{from{transform:scaleY(0)}}
+@keyframes u-draw{from{stroke-dasharray:1;stroke-dashoffset:1}to{stroke-dasharray:1;stroke-dashoffset:0}}
+@keyframes u-ping{from{stroke-width:4;stroke-opacity:0}}
+.u-floor-text{font-family:var(--unfold-serif);font-style:italic;font-weight:600;fill:var(--hue,var(--anatomy-text))}
+.u-floor-label{font-family:var(--anatomy-mono);fill:var(--anatomy-muted)}
+.u-guide{fill:none;stroke:var(--anatomy-lo);stroke-width:.8;stroke-dasharray:2 3}
+.u-controls{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px 18px;margin-top:10px}
+.u-controls button{border:0;border-radius:999px;background:transparent;color:var(--anatomy-muted);font:11px/1 var(--anatomy-mono);letter-spacing:.04em;padding:6px 10px;cursor:pointer;box-shadow:0 0 0 1px var(--anatomy-faint);transition:color .2s,box-shadow .2s}
+.u-controls button:hover{color:var(--anatomy-text)}
+.u-controls button[aria-pressed="true"]{color:var(--anatomy-strong);box-shadow:0 0 0 1px var(--anatomy-mid)}
+.u-time{display:flex;align-items:center;gap:8px;flex:1 1 260px;max-width:440px;transition:opacity .4s}
+.u-time button{width:28px;height:28px;padding:0;font-size:15px}
+.u-time input{flex:1;min-width:80px;accent-color:var(--anatomy-hi)}
+.u-ctl{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px 12px;transition:opacity .4s}
+.u-controls label{display:inline-flex;align-items:center;gap:6px;color:var(--anatomy-muted);font:11px var(--anatomy-mono)}
+.u-controls input[type=number]{width:calc(5ch + 28px);padding:4px 6px;border:0;border-radius:6px;background:transparent;color:var(--anatomy-text);font:12px var(--anatomy-mono);font-variant-numeric:tabular-nums;box-shadow:0 0 0 1px var(--anatomy-faint)}
+.u-controls input[type=range]{accent-color:var(--anatomy-hi)}
+.u-time output{font:11px var(--anatomy-mono);color:var(--anatomy-muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.u-notes{margin-top:56px;color:var(--anatomy-text);font-size:14px;line-height:1.65}
+.u-notes h2{margin:36px 0 10px;font:500 13px var(--anatomy-mono);letter-spacing:.04em;color:var(--anatomy-strong)}
+.u-notes p,.u-notes ul{margin:0 0 12px;max-width:72ch}
+.u-notes li{margin-bottom:6px}
+.u-notes b{color:var(--anatomy-strong);font-weight:500}
+.u-notes code{font:12.5px var(--anatomy-mono);color:var(--anatomy-strong)}
+.u-notes table{width:100%;border-collapse:collapse;font-size:13px;line-height:1.5}
+.u-notes th,.u-notes td{padding:7px 10px 7px 0;border-bottom:1px solid var(--anatomy-faint);text-align:left;vertical-align:top}
+.u-notes th{color:var(--anatomy-muted);font:500 11.5px var(--anatomy-mono);letter-spacing:.03em}
+.u-notes svg{display:block;width:100%;max-width:640px;height:auto;margin:6px 0 14px;overflow:visible}
+.u-notes td:first-child{color:var(--anatomy-strong);white-space:nowrap}
+@media (max-width:560px){.u-notes thead{display:none}.u-notes tr{display:block;padding:8px 0;border-bottom:1px solid var(--anatomy-faint)}.u-notes td{display:block;padding:2px 0;border:0}.u-notes td[data-th]:not(:first-child)::before{content:attr(data-th) ": ";color:var(--anatomy-muted)}}
+@container (max-width:520px){.u-num,.u-bar-value{display:none}.u-eq math{font-size:14px}.u-steps button{font-size:0;gap:0;padding:4px}}
+@media (max-width:560px){.iso-plate-corner[data-corner="readout"]{left:0;white-space:normal;text-align:right;line-height:1.4}.iso-plate-corner[data-corner="hint"]{display:none}}
+@media (prefers-reduced-motion:reduce){.u-stage *{transition:none!important;animation:none!important}.u-pulse{display:none}}
+</style><figure class="iso-figure"><div class="iso-plate"><div class="iso-plate-corners" aria-hidden="true"><span class="iso-plate-corner" data-corner="fig">Fig 1</span><span class="iso-plate-corner" data-corner="title">Dijkstra's shortest path</span><span class="iso-plate-corner" data-corner="hint">← → scene · , . step · ↑ ↓ target</span><span class="iso-plate-corner" data-corner="readout" data-readout>step 0 · d(A) = 0, every other d = ∞</span></div><style>.u-stage[data-scene="0"] .u-at[data-at="0"]{opacity:1;visibility:visible;transition-delay:.15s}
+.u-stage[data-scene="0"] .u-grid[data-t~="0"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="0"] .u-grid[data-t~="0"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="0"] .u-grid[data-t~="0"] .u-dims:not(.u-dims-T),.u-stage[data-scene="0"] .u-grid[data-t~="0"] .u-mark{display:none}
+.u-stage[data-scene="1"] .u-at[data-at="1"]{opacity:1;visibility:visible;transition-delay:.15s}
+.u-stage[data-scene="1"] .u-grid[data-t~="1"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="1"] .u-grid[data-t~="1"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="1"] .u-grid[data-t~="1"] .u-dims:not(.u-dims-T),.u-stage[data-scene="1"] .u-grid[data-t~="1"] .u-mark{display:none}
+.u-stage[data-scene="2"] .u-at[data-at="2"]{opacity:1;visibility:visible;transition-delay:.15s}
+.u-stage[data-scene="2"] .u-grid[data-t~="2"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="2"] .u-grid[data-t~="2"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="2"] .u-grid[data-t~="2"] .u-dims:not(.u-dims-T),.u-stage[data-scene="2"] .u-grid[data-t~="2"] .u-mark{display:none}
+.u-stage[data-scene="3"] .u-at[data-at="3"]{opacity:1;visibility:visible;transition-delay:.15s}
+.u-stage[data-scene="3"] .u-grid[data-t~="3"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="3"] .u-grid[data-t~="3"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="3"] .u-grid[data-t~="3"] .u-dims:not(.u-dims-T),.u-stage[data-scene="3"] .u-grid[data-t~="3"] .u-mark{display:none}
+.u-stage[data-scene="4"] .u-at[data-at="4"]{opacity:1;visibility:visible;transition-delay:.15s}
+.u-stage[data-scene="4"] .u-grid[data-t~="4"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="4"] .u-grid[data-t~="4"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="4"] .u-grid[data-t~="4"] .u-dims:not(.u-dims-T),.u-stage[data-scene="4"] .u-grid[data-t~="4"] .u-mark{display:none}
+.u-stage[data-scene="5"] .u-at[data-at="5"]{opacity:1;visibility:visible;transition-delay:.15s}
+.u-stage[data-scene="5"] .u-grid[data-t~="5"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="5"] .u-grid[data-t~="5"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="5"] .u-grid[data-t~="5"] .u-dims:not(.u-dims-T),.u-stage[data-scene="5"] .u-grid[data-t~="5"] .u-mark{display:none}.el-side{transform:translate(512px,40px)}
+.u-stage[data-narrow] .el-graph{transform:translate(0,4px) scale(.84)}
+.u-stage[data-narrow] .el-side{transform:translate(50px,300px)}
+.el-graph,.el-side{transition:transform .5s var(--anatomy-ease)}
+.el-line{stroke:var(--anatomy-lo);stroke-width:1.3;fill:none;transition:stroke .35s,stroke-width .35s,opacity .4s}
+.el-edge[data-tree="tent"] .el-line{stroke:var(--unfold-yellow);stroke-width:2.4}
+.el-edge[data-tree="final"] .el-line{stroke:var(--unfold-green);stroke-width:2.4}
+.el-edge[data-path] .el-line{stroke-width:5}
+.el-edge{transition:opacity .5s}
+.u-stage[data-scene="5"] .el-edge:not([data-tree]){opacity:.28}
+.el-w rect{fill:var(--anatomy-card);stroke:var(--anatomy-faint);stroke-width:.8}
+.el-w text{font:500 12px var(--anatomy-mono);fill:var(--anatomy-text);text-anchor:middle;dominant-baseline:central}
+.el-edge[data-on] .el-w rect{stroke:var(--unfold-blue)}
+.el-ar{opacity:0;transition:opacity .3s}
+.el-ar[data-on]{opacity:1}
+.el-ar[data-new] .u-arrow-line{animation:u-draw .6s var(--anatomy-ease) backwards}
+.el-ar[data-new] .u-arrow-head{animation:u-fade .3s .45s backwards}
+.el-disc{fill:var(--anatomy-card);stroke:var(--anatomy-mid);stroke-width:1.3;transition:fill .35s,stroke .35s,stroke-width .35s}
+.el-node[data-state="queue"] .el-disc{stroke:var(--unfold-yellow);stroke-width:2}
+.el-node[data-state="done"] .el-disc{stroke:var(--unfold-green);stroke-width:2;fill:color-mix(in srgb,var(--unfold-green) 22%,var(--anatomy-card))}
+.el-node[data-cur] .el-disc{stroke:var(--unfold-blue);stroke-width:3.5}
+.el-ring{fill:none;stroke:var(--anatomy-mid);stroke-width:1;stroke-dasharray:3 3;opacity:0}
+.el-node[data-source] .el-ring{opacity:1}
+.el-node[data-focus] .el-ring{opacity:1;stroke:var(--anatomy-strong);stroke-dasharray:none;stroke-width:1.4}
+.el-node{cursor:pointer}
+.el-name{font:600 16px var(--anatomy-mono);fill:var(--anatomy-strong);text-anchor:middle;dominant-baseline:central}
+.el-dist text{font:600 15px var(--anatomy-mono);text-anchor:middle;dominant-baseline:central;font-variant-numeric:tabular-nums}
+.el-dv{fill:var(--anatomy-muted)}
+.el-node[data-state="queue"] .el-dv{fill:var(--unfold-yellow)}
+.el-node[data-state="done"] .el-dv{fill:var(--unfold-green)}
+.el-was{opacity:0;transition:opacity .3s}
+.el-was text{font:500 12px var(--anatomy-mono)!important;fill:var(--anatomy-muted)}
+.el-node[data-was] .el-was{opacity:1}
+.el-node[data-was="keep"] .el-was text{fill:var(--unfold-red)}
+.el-src{opacity:0;transition:opacity .3s}.el-node[data-source] .el-src{opacity:1}
+.el-src text{font:11px var(--anatomy-mono);fill:var(--anatomy-muted);dominant-baseline:central}
+.el-th{font:500 11px var(--anatomy-mono);fill:var(--anatomy-muted);text-anchor:middle;dominant-baseline:central}
+.el-left{text-anchor:start}
+.el-rule{stroke:var(--anatomy-faint);stroke-width:.8}
+.el-row text{font:500 13px var(--anatomy-mono);text-anchor:middle;dominant-baseline:central;fill:var(--anatomy-muted);font-variant-numeric:tabular-nums}
+.el-row .el-rn{fill:var(--anatomy-strong)}
+.el-row .el-rs{text-anchor:start;font-size:12px}
+.el-row-bg{fill:transparent;stroke:none;transition:fill .3s}
+.el-row[data-state="queue"] :is(.el-rd,.el-rs){fill:var(--unfold-yellow)}
+.el-row[data-state="done"] :is(.el-rd,.el-rs){fill:var(--unfold-green)}
+.el-row[data-state] .el-rp{fill:var(--anatomy-text)}
+.el-row[data-cur] .el-row-bg{fill:color-mix(in srgb,var(--unfold-blue) 16%,transparent)}
+.el-row[data-cur] .el-rs{fill:var(--unfold-blue)}
+.el-row[data-focus] .el-row-bg{stroke:var(--anatomy-strong);stroke-width:1}
+.el-row[data-hit] .el-rd{fill:var(--unfold-blue)}
+.el-row[data-hit="keep"] .el-rd{fill:var(--unfold-red)}
+.el-row{cursor:pointer}
+.el-slot{fill:none;stroke:var(--anatomy-faint);stroke-width:.8;stroke-dasharray:3 3}
+.el-q{transition:transform .6s var(--anatomy-ease),opacity .4s var(--anatomy-ease)}
+.el-q .u-chip rect{fill:color-mix(in srgb,var(--hue,var(--anatomy-mid)) 16%,var(--anatomy-card))}
+.el-q .u-chip text{fill:var(--anatomy-strong);font-size:12px}
+.u-ctl select{padding:4px 6px;border:0;border-radius:6px;background:var(--anatomy-card);color:var(--anatomy-text);font:12px var(--anatomy-mono);box-shadow:0 0 0 1px var(--anatomy-faint)}
+.el-pick{display:inline-flex;align-items:center;gap:4px;color:var(--anatomy-muted);font:11px var(--anatomy-mono)}
+.el-pick button{padding:5px 8px}
+@container (max-width:520px){.u-controls{gap:8px 10px}}
+.u-stage[data-narrow] .el-w text{font-size:14px}.u-stage[data-narrow] .el-w rect{x:-13px;y:-10px;width:26px;height:20px}.u-stage[data-narrow] :is(.el-src,.el-was) text{font-size:13px!important}</style><div class="u-stage" tabindex="0" role="group" aria-roledescription="explainer" aria-label="Dijkstra explainer. Left and right arrows change the scene. Comma and period step through the run. Up and down arrows pick the target node." data-scene="0" data-count="6" data-dwell="7000" data-narrow-box="0 0 400 572"><div class="u-eq" aria-live="polite"><div class="u-at" data-at="0"><math display="block"><mi data-hue="green">d</mi><mo stretchy="false">(</mo><mi>s</mi><mo stretchy="false">)</mo><mo>=</mo><mn>0</mn><mspace width="1em"/><mi data-hue="yellow">d</mi><mo stretchy="false">(</mo><mi>v</mi><mo stretchy="false">)</mo><mo>=</mo><mi>∞</mi><mspace width=".4em"/><mtext>for every other</mtext><mspace width=".3em"/><mi>v</mi></math></div><div class="u-at" data-at="1"><math display="block"><mi data-hue="yellow">d</mi><mo stretchy="false">(</mo><mi>v</mi><mo stretchy="false">)</mo><mo>←</mo><mi>min</mi><mo stretchy="false">(</mo><mi data-hue="yellow">d</mi><mo stretchy="false">(</mo><mi>v</mi><mo stretchy="false">)</mo><mo>,</mo><mspace width=".3em"/><mi data-hue="blue">d</mi><mo stretchy="false">(</mo><mi>u</mi><mo stretchy="false">)</mo><mo>+</mo><mi>w</mi><mo stretchy="false">(</mo><mi data-hue="blue">u</mi><mo>,</mo><mi>v</mi><mo stretchy="false">)</mo><mo stretchy="false">)</mo></math></div><div class="u-at" data-at="2"><math display="block"><mi data-hue="blue">u</mi><mo>=</mo><munder><mi>argmin</mi><mrow><mi>v</mi><mo>∈</mo><mi data-hue="yellow">Q</mi></mrow></munder><mspace width=".25em"/><mi data-hue="yellow">d</mi><mo stretchy="false">(</mo><mi>v</mi><mo stretchy="false">)</mo></math></div><div class="u-at" data-at="3"><math display="block"><mi data-hue="blue">d</mi><mo stretchy="false">(</mo><mi>u</mi><mo stretchy="false">)</mo><mo>+</mo><mi>w</mi><mo stretchy="false">(</mo><mi data-hue="blue">u</mi><mo>,</mo><mi>v</mi><mo stretchy="false">)</mo><mo>&lt;</mo><mi data-hue="yellow">d</mi><mo stretchy="false">(</mo><mi>v</mi><mo stretchy="false">)</mo><mspace width="1em"/><mo>⇒</mo><mspace width="1em"/><mi>prev</mi><mo stretchy="false">(</mo><mi>v</mi><mo stretchy="false">)</mo><mo>←</mo><mi data-hue="blue">u</mi></math></div><div class="u-at" data-at="4"><math display="block"><mtext>while</mtext><mspace width=".4em"/><mi data-hue="yellow">Q</mi><mo>≠</mo><mi>∅</mi><mo>:</mo><mspace width="1em"/><mi data-hue="blue">u</mi><mo>←</mo><mtext>extract-min</mtext><mo stretchy="false">(</mo><mi data-hue="yellow">Q</mi><mo stretchy="false">)</mo></math></div><div class="u-at" data-at="5"><math display="block"><mi data-hue="green">d</mi><mo stretchy="false">(</mo><mi>v</mi><mo stretchy="false">)</mo><mo>=</mo><mi data-hue="green">d</mi><mo stretchy="false">(</mo><mi>prev</mi><mo stretchy="false">(</mo><mi>v</mi><mo stretchy="false">)</mo><mo stretchy="false">)</mo><mo>+</mo><mi>w</mi><mo stretchy="false">(</mo><mi>prev</mi><mo stretchy="false">(</mo><mi>v</mi><mo stretchy="false">)</mo><mo>,</mo><mi>v</mi><mo stretchy="false">)</mo></math></div></div><svg xmlns="http://www.w3.org/2000/svg" class="iso-svg" viewBox="0 0 820 352" role="img" aria-label="Dijkstra's shortest path algorithm on a graph of 6 nodes and 9 weighted edges, with the distance table, the prev table and the priority queue."><g class="el-graph"><g class="el-edge" data-e="0"><path class="el-line" d="M40 170L180 60"/><g class="el-w" transform="translate(110 115)"><rect x="-11" y="-9" width="22" height="18" rx="4"/><text>4</text></g></g><g class="el-edge" data-e="1"><path class="el-line" d="M40 170L180 280"/><g class="el-w" transform="translate(110 225)"><rect x="-11" y="-9" width="22" height="18" rx="4"/><text>2</text></g></g><g class="el-edge" data-e="2"><path class="el-line" d="M180 60L180 280"/><g class="el-w" transform="translate(180 170)"><rect x="-11" y="-9" width="22" height="18" rx="4"/><text>1</text></g></g><g class="el-edge" data-e="3"><path class="el-line" d="M180 60L320 110"/><g class="el-w" transform="translate(250 85)"><rect x="-11" y="-9" width="22" height="18" rx="4"/><text>5</text></g></g><g class="el-edge" data-e="4"><path class="el-line" d="M180 280L320 110"/><g class="el-w" transform="translate(250 195)"><rect x="-11" y="-9" width="22" height="18" rx="4"/><text>5</text></g></g><g class="el-edge" data-e="5"><path class="el-line" d="M180 280L320 280"/><g class="el-w" transform="translate(250 280)"><rect x="-11" y="-9" width="22" height="18" rx="4"/><text>10</text></g></g><g class="el-edge" data-e="6"><path class="el-line" d="M320 110L320 280"/><g class="el-w" transform="translate(320 195)"><rect x="-11" y="-9" width="22" height="18" rx="4"/><text>2</text></g></g><g class="el-edge" data-e="7"><path class="el-line" d="M320 110L450 195"/><g class="el-w" transform="translate(385 152.5)"><rect x="-11" y="-9" width="22" height="18" rx="4"/><text>6</text></g></g><g class="el-edge" data-e="8"><path class="el-line" d="M320 280L450 195"/><g class="el-w" transform="translate(385 237.5)"><rect x="-11" y="-9" width="22" height="18" rx="4"/><text>3</text></g></g><g class="el-ar" id="ar-0-0"><g class="u-arrow" data-hue="blue" style="--w:2.2"><path class="u-arrow-line" pathLength="1" d="M66.9 165.4Q118.4 124.9 164.4 88.7"/><path class="u-arrow-head" d="M169.9 84.4L166.8 91.8L162 85.7Z"/></g></g><g class="el-ar" id="ar-0-1"><g class="u-arrow" data-hue="blue" style="--w:2.2"><path class="u-arrow-line" pathLength="1" d="M153.1 64.6Q101.6 105.1 55.6 141.3"/><path class="u-arrow-head" d="M50.1 145.6L53.2 138.2L58 144.3Z"/></g></g><g class="el-ar" id="ar-1-0"><g class="u-arrow" data-hue="blue" style="--w:2.2"><path class="u-arrow-line" pathLength="1" d="M50.9 195Q102.4 235.5 148.4 271.7"/><path class="u-arrow-head" d="M153.9 276L146 274.7L150.8 268.6Z"/></g></g><g class="el-ar" id="ar-1-2"><g class="u-arrow" data-hue="blue" style="--w:2.2"><path class="u-arrow-line" pathLength="1" d="M169.1 255Q117.6 214.5 71.6 178.3"/><path class="u-arrow-head" d="M66.1 174L74 175.3L69.2 181.4Z"/></g></g><g class="el-ar" id="ar-2-1"><g class="u-arrow" data-hue="blue" style="--w:2.2"><path class="u-arrow-line" pathLength="1" d="M167 84Q167 170.5 167 250"/><path class="u-arrow-head" d="M167 257L163.2 250L170.9 250Z"/></g></g><g class="el-ar" id="ar-2-2"><g class="u-arrow" data-hue="blue" style="--w:2.2"><path class="u-arrow-line" pathLength="1" d="M193 256Q193 169.5 193 90"/><path class="u-arrow-head" d="M193 83L196.9 90L189.2 90Z"/></g></g><g class="el-ar" id="ar-3-1"><g class="u-arrow" data-hue="blue" style="--w:2.2"><path class="u-arrow-line" pathLength="1" d="M198.2 80.3Q246.1 97.4 287.3 112.1"/><path class="u-arrow-head" d="M293.9 114.5L286 115.8L288.6 108.5Z"/></g></g><g class="el-ar" id="ar-3-3"><g class="u-arrow" data-hue="blue" style="--w:2.2"><path class="u-arrow-line" pathLength="1" d="M301.8 89.7Q254 72.6 212.7 57.9"/><path class="u-arrow-head" d="M206.1 55.5L214 54.2L211.4 61.5Z"/></g></g><g class="el-ar" id="ar-4-2"><g class="u-arrow" data-hue="blue" style="--w:2.2"><path class="u-arrow-line" pathLength="1" d="M205.3 269.8Q260.4 203 311 141.5"/><path class="u-arrow-head" d="M315.4 136.1L313.9 144L308 139.1Z"/></g></g><g class="el-ar" id="ar-4-3"><g class="u-arrow" data-hue="blue" style="--w:2.2"><path class="u-arrow-line" pathLength="1" d="M294.7 120.2Q239.7 187.1 189 248.5"/><path class="u-arrow-head" d="M184.6 253.9L186.1 246L192 250.9Z"/></g></g><g class="el-ar" id="ar-5-2"><g class="u-arrow" data-hue="blue" style="--w:2.2"><path class="u-arrow-line" pathLength="1" d="M204 293Q250.5 293 290 293"/><path class="u-arrow-head" d="M297 293L290 296.9L290 289.2Z"/></g></g><g class="el-ar" id="ar-5-4"><g class="u-arrow" data-hue="blue" style="--w:2.2"><path class="u-arrow-line" pathLength="1" d="M296 267Q249.5 267 210 267"/><path class="u-arrow-head" d="M203 267L210 263.2L210 270.9Z"/></g></g><g class="el-ar" id="ar-6-3"><g class="u-arrow" data-hue="blue" style="--w:2.2"><path class="u-arrow-line" pathLength="1" d="M307 134Q307 195.5 307 250"/><path class="u-arrow-head" d="M307 257L303.2 250L310.9 250Z"/></g></g><g class="el-ar" id="ar-6-4"><g class="u-arrow" data-hue="blue" style="--w:2.2"><path class="u-arrow-line" pathLength="1" d="M333 256Q333 194.5 333 140"/><path class="u-arrow-head" d="M333 133L336.9 140L329.2 140Z"/></g></g><g class="el-ar" id="ar-7-3"><g class="u-arrow" data-hue="blue" style="--w:2.2"><path class="u-arrow-line" pathLength="1" d="M333 134Q378.3 163.7 417.7 189.5"/><path class="u-arrow-head" d="M423.6 193.3L415.6 192.7L419.9 186.2Z"/></g></g><g class="el-ar" id="ar-7-5"><g class="u-arrow" data-hue="blue" style="--w:2.2"><path class="u-arrow-line" pathLength="1" d="M437 171Q391.7 141.4 352.3 115.5"/><path class="u-arrow-head" d="M346.4 111.7L354.4 112.3L350.1 118.8Z"/></g></g><g class="el-ar" id="ar-8-4"><g class="u-arrow" data-hue="blue" style="--w:2.2"><path class="u-arrow-line" pathLength="1" d="M347.2 277.8Q392.5 248.2 431.9 222.3"/><path class="u-arrow-head" d="M437.8 218.5L434.1 225.6L429.8 219.1Z"/></g></g><g class="el-ar" id="ar-8-5"><g class="u-arrow" data-hue="blue" style="--w:2.2"><path class="u-arrow-line" pathLength="1" d="M422.8 197.2Q377.5 226.9 338.1 252.7"/><path class="u-arrow-head" d="M332.2 256.5L335.9 249.4L340.2 255.9Z"/></g></g><g class="el-node" data-i="0" transform="translate(40 170)"><circle class="el-ring" r="25"/><circle class="el-disc" r="20"/><text class="el-name">A</text><g class="el-dist" transform="translate(0 -36)"><text class="el-dv">∞</text><g class="el-was"><text y="-18">was 4</text></g></g><g class="el-src"><text x="0" y="38" text-anchor="middle">source</text></g></g><g class="el-node" data-i="1" transform="translate(180 60)"><circle class="el-ring" r="25"/><circle class="el-disc" r="20"/><text class="el-name">B</text><g class="el-dist" transform="translate(0 -36)"><text class="el-dv">∞</text><g class="el-was"><text y="-18">was 4</text></g></g><g class="el-src"><text x="-31" y="4" text-anchor="end">source</text></g></g><g class="el-node" data-i="2" transform="translate(180 280)"><circle class="el-ring" r="25"/><circle class="el-disc" r="20"/><text class="el-name">C</text><g class="el-dist" transform="translate(0 37)"><text class="el-dv">∞</text><g class="el-was"><text y="18">was 4</text></g></g><g class="el-src"><text x="-31" y="4" text-anchor="end">source</text></g></g><g class="el-node" data-i="3" transform="translate(320 110)"><circle class="el-ring" r="25"/><circle class="el-disc" r="20"/><text class="el-name">D</text><g class="el-dist" transform="translate(0 -36)"><text class="el-dv">∞</text><g class="el-was"><text y="-18">was 4</text></g></g><g class="el-src"><text x="31" y="4" text-anchor="start">source</text></g></g><g class="el-node" data-i="4" transform="translate(320 280)"><circle class="el-ring" r="25"/><circle class="el-disc" r="20"/><text class="el-name">E</text><g class="el-dist" transform="translate(0 37)"><text class="el-dv">∞</text><g class="el-was"><text y="18">was 4</text></g></g><g class="el-src"><text x="31" y="4" text-anchor="start">source</text></g></g><g class="el-node" data-i="5" transform="translate(450 195)"><circle class="el-ring" r="25"/><circle class="el-disc" r="20"/><text class="el-name">F</text><g class="el-dist" transform="translate(0 -36)"><text class="el-dv">∞</text><g class="el-was"><text y="-18">was 4</text></g></g><g class="el-src"><text x="0" y="40" text-anchor="middle">source</text></g></g></g><g class="el-side"><text class="el-th" x="14" y="12">node</text><text class="el-th" x="84" y="12">d</text><text class="el-th" x="146" y="12">prev</text><text class="el-th el-left" x="192" y="12">state</text><path class="el-rule" d="M0 22H300"/><g class="el-row" data-i="0" transform="translate(0 34)"><rect class="el-row-bg" x="0" y="-12" width="300" height="24" rx="4"/><text class="el-rn" x="14">A</text><text class="el-rd" x="84">∞</text><text class="el-rp" x="146">–</text><text class="el-rs" x="192">not reached</text></g><g class="el-row" data-i="1" transform="translate(0 61)"><rect class="el-row-bg" x="0" y="-12" width="300" height="24" rx="4"/><text class="el-rn" x="14">B</text><text class="el-rd" x="84">∞</text><text class="el-rp" x="146">–</text><text class="el-rs" x="192">not reached</text></g><g class="el-row" data-i="2" transform="translate(0 88)"><rect class="el-row-bg" x="0" y="-12" width="300" height="24" rx="4"/><text class="el-rn" x="14">C</text><text class="el-rd" x="84">∞</text><text class="el-rp" x="146">–</text><text class="el-rs" x="192">not reached</text></g><g class="el-row" data-i="3" transform="translate(0 115)"><rect class="el-row-bg" x="0" y="-12" width="300" height="24" rx="4"/><text class="el-rn" x="14">D</text><text class="el-rd" x="84">∞</text><text class="el-rp" x="146">–</text><text class="el-rs" x="192">not reached</text></g><g class="el-row" data-i="4" transform="translate(0 142)"><rect class="el-row-bg" x="0" y="-12" width="300" height="24" rx="4"/><text class="el-rn" x="14">E</text><text class="el-rd" x="84">∞</text><text class="el-rp" x="146">–</text><text class="el-rs" x="192">not reached</text></g><g class="el-row" data-i="5" transform="translate(0 169)"><rect class="el-row-bg" x="0" y="-12" width="300" height="24" rx="4"/><text class="el-rn" x="14">F</text><text class="el-rd" x="84">∞</text><text class="el-rp" x="146">–</text><text class="el-rs" x="192">not reached</text></g><text class="el-th el-left" x="0" y="222">taken</text><text class="el-th el-left" x="62" y="222">priority queue, smallest d first</text><rect class="el-slot" x="-3" y="233" width="50" height="30" rx="6"/><rect class="el-slot" x="57" y="233" width="245" height="30" rx="6"/><g class="el-q" data-i="0" style="transform:translate(0px,236px);opacity:0"><g class="u-chip " transform="translate(0 0)"><rect width="44" height="24" rx="5"/><text x="22" y="12">A ∞</text></g></g><g class="el-q" data-i="1" style="transform:translate(0px,236px);opacity:0"><g class="u-chip " transform="translate(0 0)"><rect width="44" height="24" rx="5"/><text x="22" y="12">B ∞</text></g></g><g class="el-q" data-i="2" style="transform:translate(0px,236px);opacity:0"><g class="u-chip " transform="translate(0 0)"><rect width="44" height="24" rx="5"/><text x="22" y="12">C ∞</text></g></g><g class="el-q" data-i="3" style="transform:translate(0px,236px);opacity:0"><g class="u-chip " transform="translate(0 0)"><rect width="44" height="24" rx="5"/><text x="22" y="12">D ∞</text></g></g><g class="el-q" data-i="4" style="transform:translate(0px,236px);opacity:0"><g class="u-chip " transform="translate(0 0)"><rect width="44" height="24" rx="5"/><text x="22" y="12">E ∞</text></g></g><g class="el-q" data-i="5" style="transform:translate(0px,236px);opacity:0"><g class="u-chip " transform="translate(0 0)"><rect width="44" height="24" rx="5"/><text x="22" y="12">F ∞</text></g></g></g></svg><div class="u-controls"><span class="el-pick">source <button type="button" data-src="0" aria-pressed="true">A</button><button type="button" data-src="1" aria-pressed="false">B</button><button type="button" data-src="2" aria-pressed="false">C</button><button type="button" data-src="3" aria-pressed="false">D</button><button type="button" data-src="4" aria-pressed="false">E</button><button type="button" data-src="5" aria-pressed="false">F</button></span><label>edge <select id="el-edge"><option value="0">A–B</option><option value="1">A–C</option><option value="2">B–C</option><option value="3">B–D</option><option value="4">C–D</option><option value="5">C–E</option><option value="6">D–E</option><option value="7">D–F</option><option value="8">E–F</option></select></label><label>weight <input type="number" id="el-wt" min="1" max="20" step="1" value="4"></label><button type="button" id="el-reset">reset</button><div class="u-time" data-label="step"><button type="button" data-step="-1" aria-label="Previous step">‹</button><input type="range" min="0" max="15" value="0" aria-label="step"><button type="button" data-step="1" aria-label="Next step">›</button><output>step 0 / 15</output></div></div><div class="u-say" aria-live="polite"><p class="u-at" data-at="0">Dijkstra finds the cheapest path from the <b>source</b> to every node. Each edge weight is the cost to cross that edge.</p><p class="u-at" data-at="1">The loop takes the source and <b data-hue="blue">relaxes</b> each of its edges. A relax keeps the smaller of the old <b data-hue="yellow">d</b> and the cost through u.</p><p class="u-at" data-at="2">Next the loop takes the queued node with the smallest d and marks it <b data-hue="green">final</b>. No later path can cost less, because no weight is negative.</p><p class="u-at" data-at="3">A relax from the new node can lower a d that is not final yet. A path with more edges can still cost less.</p><p class="u-at" data-at="4">The loop repeats the same two moves until the queue is empty. A relax that finds <b data-hue="red">no cheaper path</b> keeps the old d.</p><p class="u-at" data-at="5">Every <b data-hue="green">final</b> d is a shortest distance. Follow prev back from any node to read its path.</p></div><nav class="u-steps" aria-label="Scenes"><button type="button" class="u-play" aria-pressed="false"><span>▶</span>Play</button><button type="button" data-go="0" aria-current="step"><span>1</span>Graph</button><button type="button" data-go="1"><span>2</span>Relax</button><button type="button" data-go="2"><span>3</span>Closest</button><button type="button" data-go="3"><span>4</span>Improve</button><button type="button" data-go="4"><span>5</span>Repeat</button><button type="button" data-go="5"><span>6</span>Tree</button></nav><div class="u-key"><span data-hue="blue"><i></i>node taken now, edge relaxed</span><span data-hue="yellow"><i></i>d in queue (may still drop)</span><span data-hue="green"><i></i>final d, shortest</span><span data-hue="red"><i></i>no cheaper path</span><span data-hue="ink"><i></i>thick line: best path to target</span></div></div></div><figcaption class="iso-legend"><span class="iso-caption">An undirected graph with 6 nodes and 9 edges. The weights were chosen by hand, so the run lowers some distances and keeps one. Every d, prev and queue entry comes from a model of the algorithm, checked against networkx. Ties in the queue go to the earlier letter.</span></figcaption></figure><section class="u-notes"><h2>Cost of the queue</h2><p>The figure keeps the queue sorted, so it reads like the array version. Real code uses a binary heap.</p><table><thead><tr><th>queue</th><th>extract-min</th><th>lower a d</th><th>whole run</th></tr></thead><tbody><tr><td data-th="queue">array scan</td><td data-th="extract-min">O(V)</td><td data-th="lower a d">O(1)</td><td data-th="whole run">O(V²)</td></tr><tr><td data-th="queue">binary heap</td><td data-th="extract-min">O(log V)</td><td data-th="lower a d">O(log V)</td><td data-th="whole run">O((V + E) log V)</td></tr><tr><td data-th="queue">Fibonacci heap</td><td data-th="extract-min">O(log V) amortized</td><td data-th="lower a d">O(1) amortized</td><td data-th="whole run">O(E + V log V)</td></tr></tbody></table><h2>Negative weights break it</h2><p>A final d is safe only if no edge can make a longer path cheaper.</p><svg viewBox="0 0 520 120" role="img" aria-label="A graph where a negative weight breaks Dijkstra"><style>.n-l{stroke:var(--anatomy-lo);stroke-width:1.3}.n-c{fill:var(--anatomy-card);stroke:var(--anatomy-mid);stroke-width:1.3}.n-t{font:600 13px var(--anatomy-mono);fill:var(--anatomy-strong);text-anchor:middle;dominant-baseline:central}.n-w{font:500 12px var(--anatomy-mono);fill:var(--anatomy-text);text-anchor:middle;dominant-baseline:central}.n-s{font:11px var(--anatomy-mono);fill:var(--anatomy-muted)}</style><path class="n-l" d="M40 60L160 20M40 60L160 100M160 100L160 20"/><rect x="88" y="22" width="20" height="16" rx="3" fill="var(--anatomy-card)"/><text class="n-w" x="98" y="30">2</text><rect x="88" y="82" width="20" height="16" rx="3" fill="var(--anatomy-card)"/><text class="n-w" x="98" y="90">3</text><rect x="164" y="52" width="26" height="16" rx="3" fill="var(--anatomy-card)"/><text class="n-w" x="177" y="60" style="fill:var(--unfold-red)">−2</text><circle class="n-c" cx="40" cy="60" r="15"/><text class="n-t" x="40" y="60">s</text><circle class="n-c" cx="160" cy="20" r="15" style="stroke:var(--unfold-green)"/><text class="n-t" x="160" y="20">a</text><circle class="n-c" cx="160" cy="100" r="15"/><text class="n-t" x="160" y="100">b</text><text class="n-s" x="230" y="24">Dijkstra: a is final with d = 2</text><text class="n-s" x="230" y="60" style="fill:var(--unfold-red)">true shortest: s–b–a = 3 + (−2) = 1</text><text class="n-s" x="230" y="96">use Bellman-Ford for negative weights</text></svg><h2>Variants you will meet</h2><table><thead><tr><th>variant</th><th>what changes</th></tr></thead><tbody><tr><td data-th="variant">lazy deletion</td><td data-th="what changes">push a new queue entry on each lower, skip stale entries on pop (Python <code>heapq</code>)</td></tr><tr><td data-th="variant">early stop</td><td data-th="what changes">stop when the target node is taken, its d is already final</td></tr><tr><td data-th="variant">directed graph</td><td data-th="what changes">relax only the edges that leave u</td></tr><tr><td data-th="variant">A*</td><td data-th="what changes">order the queue by d(v) + h(v), an estimate of the rest</td></tr></tbody></table><h2>Terms</h2><table><thead><tr><th>term</th><th>meaning</th></tr></thead><tbody><tr><td data-th="term">source</td><td data-th="meaning">the start node, d = 0</td></tr><tr><td data-th="term">d(v)</td><td data-th="meaning">cheapest cost to v found so far</td></tr><tr><td data-th="term">relax</td><td data-th="meaning">check if the path through u is cheaper for v</td></tr><tr><td data-th="term">final</td><td data-th="meaning">taken from the queue, d cannot drop again</td></tr><tr><td data-th="term">prev(v)</td><td data-th="meaning">the node before v on its best path</td></tr><tr><td data-th="term">priority queue</td><td data-th="meaning">nodes with a known d, smallest d first</td></tr></tbody></table></section></main><script type="module">function cellLook(value, max) {
+  const masked = value === -Infinity;
+  const s = masked ? 0 : Math.min(1, Math.abs(value) / max);
+  return { masked, neg: !masked && value < 0, hot: !masked && value > 0 && s > 0.55, alpha: 0.1 + 0.8 * s };
+}
+function fmt(value, places = 1) {
+  if (value === -Infinity) return "−∞";
+  const text = value.toFixed(places);
+  return Number(text) === 0 ? (0).toFixed(places) : text.replace("-", "−");
+}
+function setGrid(grid, values, max = Number(grid.dataset.max)) {
+  const places = Number(grid.dataset.places);
+  grid.querySelectorAll(".u-cell").forEach((cell) => {
+    const value = values[Number(cell.dataset.r)][Number(cell.dataset.c)];
+    const look = cellLook(value, max);
+    cell.toggleAttribute("data-masked", look.masked);
+    cell.toggleAttribute("data-neg", look.neg);
+    cell.toggleAttribute("data-hot", look.hot);
+    cell.querySelector(".u-cell-bg").style.setProperty("--a", look.alpha.toFixed(2));
+    cell.querySelector(".u-num").textContent = fmt(value, places);
+  });
+}
+function showRows(grid, t) {
+  grid.querySelectorAll(".u-cell,.u-mark").forEach((el) => el.toggleAttribute("data-later", Number(el.dataset.r) > t));
+}
+function setBars(group, values) {
+  const h = Number(group.dataset.h);
+  const max = Number(group.dataset.max);
+  const places = Number(group.dataset.places);
+  group.querySelectorAll(".u-bar").forEach((bar) => {
+    const v = values[Number(bar.dataset.i)] ?? 0;
+    const share = Math.max(0, Math.min(1, v / max));
+    bar.style.setProperty("--v", share.toFixed(3));
+    const text = bar.querySelector(".u-bar-value");
+    text.setAttribute("y", String(h - h * share - 6));
+    text.textContent = fmt(v, places);
+  });
+}
+function mark(root, i, selector = ".u-mark") {
+  root.querySelectorAll(`${selector}[data-r],${selector}[data-i]`).forEach((el) => el.toggleAttribute("data-on", Number(el.dataset.r ?? el.dataset.i) === i));
+}
+function showSpans(root, t) {
+  const box = root.querySelector(".u-lanes");
+  const px = Number(box.dataset.px);
+  box.querySelector(".u-now").style.transform = `translateX(${(t - Number(box.dataset.from)) * px}px)`;
+  root.querySelectorAll(".u-span").forEach((el) => {
+    const from = Number(el.dataset.from);
+    const to = Number(el.dataset.to);
+    const v = Math.max(0, Math.min(1, (t - from) / (to - from)));
+    el.style.setProperty("--v", v.toFixed(3));
+    el.toggleAttribute("data-labeled", v * (to - from) * px >= Number(el.dataset.need));
+  });
+}
+function runtime() {
+  const stage = document.querySelector(".u-stage");
+  const count = Number(stage.dataset.count);
+  const dwell = Number(stage.dataset.dwell);
+  const still = matchMedia("(prefers-reduced-motion: reduce)");
+  let scene = 0;
+  let visible = false;
+  let playing = false;
+  let held = false;
+  let next = 0;
+  const beats = [];
+  const go = (i, by = "user") => {
+    scene = Math.max(0, Math.min(count - 1, i));
+    stage.dataset.scene = String(scene);
+    stage.querySelectorAll("[data-go]").forEach((b) => (Number(b.dataset.go) === scene ? b.setAttribute("aria-current", "step") : b.removeAttribute("aria-current")));
+    stage.querySelectorAll("[data-ds]").forEach((el) => {
+      const d = JSON.parse(el.dataset.ds)[scene];
+      el.toggleAttribute("data-off", !d);
+      if (!d) return;
+      if (CSS.supports("d", 'path("M0 0")')) el.style.d = `path("${d}")`;
+      else el.setAttribute("d", d);
+    });
+    stage.dispatchEvent(new CustomEvent("unfold:scene", { detail: { scene, by } }));
+    if (by === "user") setPlaying(false);
+    held = false;
+    next = performance.now() + dwell;
+    for (const b of beats) {
+      b.n = 0;
+      b.at = performance.now() + b.wait - b.ms;
+      if (still.matches && b.scene === scene) b.fn(-1);
+    }
+  };
+  // The tour runs only after the reader presses Play, and stops at the last scene or at any input.
+  const playBtn = stage.querySelector(".u-play");
+  const setPlaying = (on) => {
+    playing = on;
+    playBtn.setAttribute("aria-pressed", String(on));
+    playBtn.firstChild.textContent = on ? "❚❚" : "▶";
+    playBtn.lastChild.textContent = on ? "Pause" : "Play";
+  };
+  playBtn.addEventListener("click", () => {
+    if (playing) return setPlaying(false);
+    if (scene === count - 1) go(0, "tour");
+    next = performance.now() + dwell;
+    setPlaying(true);
+  });
+  const tour = (now) => {
+    if (playing && visible && now > next) scene === count - 1 ? setPlaying(false) : go(scene + 1, "tour");
+    for (const b of beats) {
+      if (b.scene === scene && visible && !held && !still.matches && now - b.at >= b.ms) {
+        b.at = now;
+        b.fn(b.n++);
+      }
+    }
+    requestAnimationFrame(tour);
+  };
+  stage.querySelector(".u-steps").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-go]");
+    if (b) go(Number(b.dataset.go));
+  });
+  stage.addEventListener("keydown", (e) => {
+    const to = { ArrowRight: scene + 1, ArrowLeft: scene - 1, Home: 0, End: count - 1 }[e.key];
+    if (to === undefined) return;
+    e.preventDefault();
+    go(to);
+  });
+  // Time by hand: the step control and the "," and "." keys call the page's onTime(t). Its keys stay inside it.
+  const timer = stage.querySelector(".u-time");
+  let onTime = () => {};
+  const range = timer?.querySelector("input");
+  const byHand = (t) => {
+    pause();
+    onTime(Math.max(0, Math.min(Number(range.max), t)));
+  };
+  if (timer) {
+    range.addEventListener("input", () => byHand(Number(range.value)));
+    timer.addEventListener("click", (e) => {
+      const b = e.target.closest("[data-step]");
+      if (b) byHand(Number(range.value) + Number(b.dataset.step));
+    });
+    stage.addEventListener("keydown", (e) => {
+      const by = { ",": -1, ".": 1 }[e.key];
+      if (by === undefined) return;
+      e.preventDefault();
+      byHand(Number(range.value) + by);
+    });
+  }
+  // Keys typed in a control (a scrubber, a number field) stay in it: no scene or focus change.
+  stage.querySelectorAll(".u-controls :is(input,select,textarea)").forEach((el) => el.addEventListener("keydown", (e) => e.stopPropagation()));
+  // A scene-scoped control (stageHtml controlScenes) used in another scene moves to the first scene that uses it.
+  const ctl = stage.querySelector(".u-ctl");
+  const owners = ctl?.dataset.scenes.split(" ").map(Number);
+  const toOwner = () => owners.includes(scene) || go(owners[0]);
+  ctl?.addEventListener("input", toOwner);
+  ctl?.addEventListener("click", (e) => e.target.closest("button") && toOwner());
+  const timeAt = (t) => {
+    if (!timer) return;
+    range.value = String(t);
+    timer.querySelector("output").textContent = `${timer.dataset.label} ${t} / ${range.max}`;
+  };
+  // Narrow layout: below 560 px the drawing takes its second viewBox and the stage gets data-narrow.
+  const svg = stage.querySelector("svg");
+  const wide = svg?.getAttribute("viewBox");
+  if (stage.dataset.narrowBox)
+    new ResizeObserver(([entry]) => {
+      const on = entry.contentRect.width < 560;
+      if (on === stage.hasAttribute("data-narrow")) return;
+      stage.toggleAttribute("data-narrow", on);
+      svg.setAttribute("viewBox", on ? stage.dataset.narrowBox : wide);
+      stage.dispatchEvent(new CustomEvent("unfold:layout", { detail: { narrow: on } }));
+    }).observe(stage);
+  new IntersectionObserver((entries) => (visible = entries[entries.length - 1].isIntersecting), { rootMargin: "120px 0px" }).observe(stage);
+  next = performance.now() + dwell;
+  requestAnimationFrame(tour);
+  // beat(scene, ms, fn, wait): call fn(0), fn(1), … every ms while that scene shows, starting `wait` ms after it opens.
+  // Under reduced motion fn(-1) is called once instead: show the resting state.
+  const beat = (sceneIndex, ms, fn, wait = 1000) => beats.push({ scene: sceneIndex, ms, fn, wait, n: 0, at: performance.now() + wait - ms });
+  // pause(): the user took control. The tour stops, and the sweeps hold until the scene changes.
+  const pause = () => {
+    setPlaying(false);
+    held = true;
+  };
+  return { stage, go, beat, pause, scene: () => scene, onTime: (fn) => (onTime = fn), timeAt, narrow: () => stage.hasAttribute("data-narrow") };
+}
+const UNFOLD = runtime();
+
+const NODES = ["A","B","C","D","E","F"];
+const EDGES0 = [[0,1,4],[0,2,2],[1,2,1],[1,3,5],[2,3,5],[2,4,10],[3,4,2],[3,5,6],[4,5,3]];
+const SOURCE0 = 0;
+const W_MIN = 1;
+const W_MAX = 20;
+function dijkstra(n, edges, source) {
+  const d = Array(n).fill(null);
+  const prev = Array(n).fill(-1);
+  const done = Array(n).fill(false);
+  const nbrs = Array.from({ length: n }, () => []);
+  edges.forEach(([a, b, w], e) => {
+    nbrs[a].push({ v: b, w, e });
+    nbrs[b].push({ v: a, w, e });
+  });
+  for (const list of nbrs) list.sort((x, y) => x.v - y.v);
+  d[source] = 0;
+  // The priority queue: unvisited nodes with a finite distance, smallest first, ties by name.
+  const queue = () => d.map((x, i) => i).filter((i) => !done[i] && d[i] !== null).sort((i, j) => d[i] - d[j] || i - j);
+  const snap = (extra) => ({ ...extra, d: d.slice(), prev: prev.slice(), done: done.slice(), queue: queue() });
+  const steps = [snap({ kind: "init", u: source })];
+  for (;;) {
+    const q = queue();
+    if (!q.length) break;
+    const u = q[0];
+    done[u] = true;
+    steps.push(snap({ kind: "pop", u }));
+    for (const { v, w, e } of nbrs[u]) {
+      if (done[v]) continue;
+      const before = d[v];
+      const cand = d[u] + w;
+      const outcome = before === null ? "set" : cand < before ? "lower" : "keep";
+      if (outcome !== "keep") {
+        d[v] = cand;
+        prev[v] = u;
+      }
+      steps.push(snap({ kind: "relax", u, v, w, e, before, cand, outcome }));
+    }
+  }
+  return { steps, d: d.slice(), prev: prev.slice() };
+}
+function sceneRanges(steps) {
+  const pops = steps.map((s, i) => (s.kind === "pop" ? i : -1)).filter((i) => i >= 0);
+  const last = steps.length - 1;
+  return [[0, 0], [pops[0], pops[1] - 1], [pops[1], pops[1]], [pops[1] + 1, pops[2] - 1], [pops[2], last], [last, last]];
+}
+
+const root = UNFOLD.stage;
+const readout = document.querySelector("[data-readout]");
+const QY = 236;
+let edges = EDGES0.map((e) => e.slice());
+let source = SOURCE0;
+let focus = 1;
+let run, ranges, step = 0, crossing = false;
+const $ = (s) => root.querySelector(s);
+const all = (s) => root.querySelectorAll(s);
+const nodeEl = [...all(".el-node")];
+const rowEl = [...all(".el-row")];
+const chipEl = [...all(".el-q")];
+const edgeEl = [...all(".el-edge")];
+const ev = (x) => (x === null ? "\u221e" : String(x));
+const edgeOf = (a, b) => edges.findIndex(([p, q]) => (p === a && q === b) || (p === b && q === a));
+function recompute() {
+  run = dijkstra(NODES.length, edges, source);
+  ranges = sceneRanges(run.steps);
+}
+function pathTo(s, v) {
+  const out = [v];
+  while (s.prev[out[0]] >= 0) out.unshift(s.prev[out[0]]);
+  return s.d[v] === null ? [] : out;
+}
+function say(s, t) {
+  const N = (k) => NODES[k];
+  if (UNFOLD.scene() === 5) {
+    const p = pathTo(s, focus);
+    const ws = p.slice(1).map((v, i) => edges[edgeOf(p[i], v)][2]);
+    return "shortest path to " + N(focus) + ": " + p.map(N).join("\u2013") + (ws.length > 1 ? " = " + ws.join(" + ") + " = " + s.d[focus] : ws.length ? " = " + s.d[focus] : ", the source itself, d = 0");
+  }
+  const head = "step " + t + " \u00b7 ";
+  if (s.kind === "init") return head + "d(" + N(s.u) + ") = 0, every other d = \u221e";
+  if (s.kind === "pop") return head + "take " + N(s.u) + ": smallest d in the queue (" + s.d[s.u] + "), now final";
+  const a = "relax " + N(s.u) + "\u2013" + N(s.v) + ": " + s.d[s.u] + " + " + s.w + " = " + s.cand;
+  if (s.outcome === "keep") return head + a + " \u2265 " + s.before + ", so d(" + N(s.v) + ") stays " + s.before;
+  return head + a + " < " + ev(s.before) + ", so d(" + N(s.v) + ") = " + s.cand + ", prev(" + N(s.v) + ") = " + N(s.u);
+}
+function show(t) {
+  step = Math.max(0, Math.min(run.steps.length - 1, t));
+  const s = run.steps[step];
+  const tree = UNFOLD.scene() === 5;
+  const cur = s.kind === "init" || tree ? -1 : s.u;
+  // Every relax since the last pop stays drawn, so a scene's resting frame shows all of u's edges.
+  let p = step;
+  while (p > 0 && run.steps[p].kind === "relax") p--;
+  const batch = tree ? [] : run.steps.slice(p + 1, step + 1);
+  const state = (k) => (s.done[k] ? "done" : s.d[k] === null ? "far" : "queue");
+  const path = pathTo(s, focus);
+  const onPath = new Set(path.slice(1).map((v, i) => edgeOf(path[i], v)));
+  nodeEl.forEach((el, k) => {
+    el.dataset.state = state(k);
+    el.toggleAttribute("data-cur", k === cur);
+    el.toggleAttribute("data-source", k === source);
+    el.toggleAttribute("data-focus", k === focus);
+    el.querySelector(".el-dv").textContent = ev(s.d[k]);
+    const r = batch.find((x) => x.v === k && x.outcome !== "set");
+    if (r) el.dataset.was = r.outcome; else el.removeAttribute("data-was");
+    if (r) el.querySelector(".el-was text").textContent = r.outcome === "lower" ? "was " + r.before : "via " + NODES[r.u] + ": " + r.cand;
+  });
+  rowEl.forEach((el, k) => {
+    el.dataset.state = state(k);
+    el.toggleAttribute("data-cur", k === cur);
+    el.toggleAttribute("data-focus", k === focus);
+    if (s.kind === "relax" && s.v === k) el.dataset.hit = s.outcome; else el.removeAttribute("data-hit");
+    el.querySelector(".el-rd").textContent = ev(s.d[k]);
+    el.querySelector(".el-rp").textContent = s.prev[k] >= 0 ? NODES[s.prev[k]] : "\u2013";
+    el.querySelector(".el-rs").textContent = k === cur ? "taken now" : { done: "final", queue: "in queue", far: "not reached" }[state(k)];
+  });
+  edgeEl.forEach((el, e) => {
+    const [a, b] = edges[e];
+    const v = s.prev[b] === a ? b : s.prev[a] === b ? a : -1;
+    if (v >= 0) el.dataset.tree = s.done[v] ? "final" : "tent"; else el.removeAttribute("data-tree");
+    el.toggleAttribute("data-path", onPath.has(e));
+    el.toggleAttribute("data-on", s.kind === "relax" && s.e === e);
+    el.querySelector(".el-w text").textContent = edges[e][2];
+  });
+  const on = new Map(batch.map((r) => ["ar-" + r.e + "-" + r.u, r]));
+  all(".el-ar").forEach((el) => {
+    const r = on.get(el.id);
+    const fresh = r === s && !el.hasAttribute("data-new");
+    el.toggleAttribute("data-on", !!r);
+    if (r !== s) el.removeAttribute("data-new");
+    if (!r) return;
+    el.querySelector(".u-arrow").dataset.hue = r.outcome === "keep" ? "red" : "blue";
+    if (fresh) (void el.getBoundingClientRect(), el.setAttribute("data-new", ""));
+  });
+  chipEl.forEach((el, k) => {
+    const at = s.queue.indexOf(k);
+    const c = el.querySelector(".u-chip");
+    let x = 62 + (at < 0 ? s.queue.length : at) * 48, o = 0;
+    if (at >= 0) o = 1;
+    if (k === cur) (x = 0), (o = 1);
+    else if (s.done[k]) x = 0;
+    el.style.transform = "translate(" + x + "px," + QY + "px)";
+    el.style.opacity = o;
+    c.dataset.hue = k === cur ? "blue" : "yellow";
+    c.querySelector("text").textContent = NODES[k] + " " + ev(s.d[k]);
+  });
+  UNFOLD.timeAt(step);
+  const text = say(s, step);
+  if (readout.textContent !== text) readout.textContent = text;
+}
+function stepTo(t) {
+  show(t);
+  const sc = UNFOLD.scene();
+  const [a, b] = ranges[sc];
+  if (step < a || step > b) {
+    crossing = true;
+    UNFOLD.go(ranges.findIndex((r) => step >= r[0] && step <= r[1]));
+    crossing = false;
+  }
+  UNFOLD.pause();
+}
+root.addEventListener("unfold:scene", (e) => {
+  if (!crossing) show(ranges[e.detail.scene][0]);
+});
+for (let sc = 0; sc < 6; sc++) UNFOLD.beat(sc, 1500, (n) => { const [a, b] = ranges[sc]; show(n < 0 ? b : Math.min(a + n, b)); }, 900);
+UNFOLD.onTime(stepTo);
+const pick = (k) => {
+  focus = (k + NODES.length) % NODES.length;
+  UNFOLD.pause();
+  show(step);
+};
+root.addEventListener("keydown", (e) => {
+  const to = { ArrowUp: focus - 1, ArrowDown: focus + 1 }[e.key];
+  if (to === undefined) return;
+  e.preventDefault();
+  pick(to);
+});
+root.addEventListener("click", (e) => {
+  const n = e.target.closest(".el-node,.el-row");
+  if (n) pick(Number(n.dataset.i));
+});
+// Live inputs: the source and any edge weight. The page reruns the model's own dijkstra().
+const sel = $("#el-edge"), wt = $("#el-wt");
+const redo = () => {
+  UNFOLD.pause();
+  recompute();
+  const [a, b] = ranges[UNFOLD.scene()];
+  show(UNFOLD.scene() === 0 ? a : b);
+};
+all("[data-src]").forEach((b) => b.addEventListener("click", () => {
+  source = Number(b.dataset.src);
+  all("[data-src]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+  redo();
+}));
+sel.addEventListener("change", () => (wt.value = edges[Number(sel.value)][2]));
+wt.addEventListener("input", () => {
+  const v = Number(wt.value);
+  if (wt.value === "" || !Number.isFinite(v)) return;
+  edges[Number(sel.value)][2] = Math.round(Math.max(W_MIN, Math.min(W_MAX, v)));
+  redo();
+});
+wt.addEventListener("change", () => (wt.value = edges[Number(sel.value)][2]));
+$("#el-reset").addEventListener("click", () => {
+  edges = EDGES0.map((e) => e.slice());
+  wt.value = edges[Number(sel.value)][2];
+  redo();
+});
+recompute();
+show(0);
+</script></body></html>

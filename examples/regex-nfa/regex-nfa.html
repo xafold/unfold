@@ -1,0 +1,813 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Regex matching with an NFA</title><style>
+.iso{
+  --anatomy-page:#0b0b0b;--anatomy-card:#131313;--anatomy-text:#a3a3a3;--anatomy-strong:#e6e6e6;--anatomy-muted:#6e6e6e;
+  --anatomy-paper:#131313;--anatomy-face:#1b1b1b;--anatomy-top:#1c1c1c;
+  --anatomy-shade-0:#0f0f0f;--anatomy-shade-1:#121212;--anatomy-shade-2:#151515;--anatomy-shade-3:#181818;
+  --anatomy-lit-top:#262626;--anatomy-lit-shade:#1d1d1d;
+  --anatomy-hi:#d4d4d4;--anatomy-mid:#6a6a6a;--anatomy-lo:#3e3e3e;--anatomy-faint:#2a2a2a;--anatomy-lit:#ffffff;
+  --anatomy-halo:#050505;--anatomy-halo-opacity:.9;--anatomy-dot:#e6e6e6;
+  --anatomy-red:#ff6b6b;--anatomy-green:#6be0a0;--anatomy-blue:#6b9bff;
+  --anatomy-weight:.6px;--anatomy-ease:cubic-bezier(.32,.72,0,1);
+  --anatomy-mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --anatomy-lift:inset 0 1px 0 0 #ffffff0a,inset 0 0 0 1px #ffffff06,0 0 0 1px #00000026,0 1px 1px -.5px #00000014,0 3px 3px -1.5px #00000014,0 6px 6px -3px #00000014,0 12px 12px -6px #00000014;
+}
+.iso[data-theme="light"]{
+  --anatomy-page:#f2f2ef;--anatomy-card:#fbfbfa;--anatomy-text:#57575a;--anatomy-strong:#18181a;--anatomy-muted:#8c8c90;
+  --anatomy-paper:#fbfbfa;--anatomy-face:#ffffff;--anatomy-top:#ffffff;
+  --anatomy-shade-0:#dcdcd9;--anatomy-shade-1:#e5e5e2;--anatomy-shade-2:#ededea;--anatomy-shade-3:#f4f4f1;
+  --anatomy-lit-top:#ffffff;--anatomy-lit-shade:#eeeeeb;
+  --anatomy-hi:#26262a;--anatomy-mid:#8a8a8f;--anatomy-lo:#b4b4b8;--anatomy-faint:#d4d4d6;--anatomy-lit:#000000;
+  --anatomy-halo:#8a8a80;--anatomy-halo-opacity:.32;--anatomy-dot:#3a3a3e;
+  --anatomy-red:#e5484d;--anatomy-green:#30a46c;--anatomy-blue:#3e63dd;
+  --anatomy-lift:inset 0 1px 0 0 #ffffff,0 0 0 1px #0000000f,0 1px 1px -.5px #0000000a,0 3px 3px -1.5px #0000000a,0 6px 6px -3px #0000000a,0 12px 12px -6px #0000000a;
+}
+.iso-svg{display:block;width:100%;height:auto;overflow:visible}
+.iso-svg path,.iso-svg circle{vector-effect:non-scaling-stroke}
+.iso-fill{fill:var(--anatomy-paper);stroke:none}
+.iso-solid[data-lit]>.iso-fill{fill:var(--anatomy-face)}
+.iso-shade,.iso-top{stroke:none}
+.iso-shade[data-shade="0"]{fill:var(--anatomy-shade-0)}
+.iso-shade[data-shade="1"]{fill:var(--anatomy-shade-1)}
+.iso-shade[data-shade="2"]{fill:var(--anatomy-shade-2)}
+.iso-shade[data-shade="3"]{fill:var(--anatomy-shade-3)}
+.iso-top{fill:var(--anatomy-top)}
+.iso-solid[data-lit]>.iso-top{fill:var(--anatomy-lit-top)}
+.iso-solid[data-lit]>.iso-shade{fill:var(--anatomy-lit-shade)}
+.iso-solid[data-seamless]>.iso-shade,.iso-solid[data-seamless]>.iso-top{stroke-width:.4;stroke-linejoin:round}
+.iso-solid[data-seamless]>.iso-shade[data-shade="0"]{stroke:var(--anatomy-shade-0)}
+.iso-solid[data-seamless]>.iso-shade[data-shade="1"]{stroke:var(--anatomy-shade-1)}
+.iso-solid[data-seamless]>.iso-shade[data-shade="2"]{stroke:var(--anatomy-shade-2)}
+.iso-solid[data-seamless]>.iso-shade[data-shade="3"]{stroke:var(--anatomy-shade-3)}
+.iso-solid[data-seamless]>.iso-top{stroke:var(--anatomy-top)}
+.iso-solid[data-seamless][data-lit]>.iso-top{stroke:var(--anatomy-lit-top)}
+.iso-solid[data-seamless][data-lit]>.iso-shade{stroke:var(--anatomy-lit-shade)}
+.iso-solid[data-lit]>.iso-edge{stroke:var(--anatomy-lit)}
+.iso-halo{fill:var(--anatomy-halo);stroke:none;filter:blur(9px);opacity:var(--anatomy-halo-opacity);transform:translateY(3px)}
+.iso-line{fill:none;stroke:var(--anatomy-lo);stroke-width:var(--anatomy-weight);stroke-linecap:round;stroke-linejoin:round}
+.iso-line[data-tone="hi"]{stroke:var(--anatomy-hi)}
+.iso-line[data-tone="mid"]{stroke:var(--anatomy-mid)}
+.iso-line[data-tone="lo"]{stroke:var(--anatomy-lo)}
+.iso-line[data-tone="faint"]{stroke:var(--anatomy-faint)}
+.iso-line[data-tone="lit"]{stroke:var(--anatomy-lit)}
+.iso-line[data-tone="red"]{stroke:var(--anatomy-red)}
+.iso-line[data-tone="green"]{stroke:var(--anatomy-green)}
+.iso-line[data-tone="blue"]{stroke:var(--anatomy-blue)}
+.iso-line[data-dotted]{stroke-dasharray:.01 3.5;stroke-width:1}
+.iso-line[data-dashed]{stroke-dasharray:3 3}
+.iso-line[data-flow]{stroke-dasharray:2 6}
+.iso-wire-end{fill:var(--anatomy-paper);stroke:var(--anatomy-lo);stroke-width:var(--anatomy-weight)}
+.iso-wire[data-tone="hi"] .iso-wire-end{stroke:var(--anatomy-hi)}
+.iso-wire[data-tone="mid"] .iso-wire-end{stroke:var(--anatomy-mid)}
+.iso-wire[data-tone="faint"] .iso-wire-end{stroke:var(--anatomy-faint)}
+.iso-wire[data-tone="lit"] .iso-wire-end{stroke:var(--anatomy-lit)}
+.iso-dots circle{fill:var(--anatomy-dot);stroke:none;opacity:.32}
+.iso-dots[data-tone="hi"] circle{opacity:.85}
+.iso-dots[data-tone="mid"] circle{opacity:.45}
+.iso-dots[data-tone="lo"] circle{opacity:.22}
+.iso-dots[data-tone="faint"] circle{opacity:.12}
+.iso-face-text{fill:var(--anatomy-mid);font-family:var(--anatomy-mono);letter-spacing:.04em}
+.iso-face-text[data-tone="hi"]{fill:var(--anatomy-hi)}
+.iso-face-text[data-tone="lo"]{fill:var(--anatomy-lo)}
+.iso-face-text[data-tone="faint"]{fill:var(--anatomy-faint)}
+.tb-body{fill:var(--anatomy-shade-2);stroke:none}
+.tb-shine{fill:var(--anatomy-top);stroke:none}
+.tb-shade{fill:var(--anatomy-shade-0);stroke:none}
+.tb-ring{fill:none;stroke:var(--anatomy-lo);stroke-width:.45;stroke-linecap:butt;stroke-linejoin:round}
+.tb-ring[data-tone="mid"]{stroke:var(--anatomy-mid)}
+.tb-ring[data-tone="faint"]{stroke:var(--anatomy-faint)}
+.tb-ring[data-tone="hi"]{stroke:var(--anatomy-hi)}
+@keyframes iso-flow{to{stroke-dashoffset:-32}}
+@keyframes iso-pulse{0%,100%{opacity:.18}12%{opacity:1}40%{opacity:.18}}
+.iso-line[data-flow]{animation:iso-flow 1600ms linear infinite}
+.iso-dots circle[data-pulse]{animation:iso-pulse 1600ms steps(1,end) infinite;animation-delay:var(--pulse-at,0ms)}
+.iso-figure{margin:32px 0 36px}
+.iso-plate{position:relative;padding:52px 24px;border-radius:0;background:var(--anatomy-card);box-shadow:0 0 0 1px var(--anatomy-mid);--anatomy-paper:var(--anatomy-card)}
+.iso-plate-corners{position:absolute;inset:18px 20px;pointer-events:none}
+.iso-plate-corner{position:absolute;color:var(--anatomy-muted);font-family:var(--anatomy-mono);font-size:10.5px;line-height:1;letter-spacing:.04em;white-space:nowrap}
+.iso-plate-corner[data-corner="fig"]{top:0;left:0;color:var(--anatomy-text)}
+.iso-plate-corner[data-corner="title"]{top:0;right:0;text-transform:uppercase;letter-spacing:.1em}
+.iso-plate-corner[data-corner="hint"]{bottom:0;left:0;text-transform:uppercase;letter-spacing:.1em}
+.iso-plate-corner[data-corner="readout"]{right:0;bottom:0;color:var(--anatomy-text);font-variant-numeric:tabular-nums}
+.iso-plate .iso-svg{margin:0 auto}
+.iso-legend{display:grid;gap:8px;margin-top:12px;color:var(--anatomy-muted);font-size:13px;line-height:1.55}
+.iso-keys{display:flex;flex-wrap:wrap;gap:6px 18px}
+.iso-key{display:inline-flex;align-items:center;gap:7px}
+.iso-swatch{width:16px;height:10px;flex:none;overflow:visible}
+.iso-swatch path{fill:none;stroke:var(--anatomy-hi);stroke-width:1;vector-effect:non-scaling-stroke;stroke-linejoin:round;stroke-linecap:round}
+.iso-swatch[data-mark="raised"] path,.iso-swatch[data-mark="flat"] path{stroke:var(--anatomy-mid)}
+.iso-swatch[data-mark="lit"] path{stroke:var(--anatomy-lit)}
+.iso-swatch[data-mark="dim"] path{stroke:var(--anatomy-lo)}
+.iso-swatch[data-mark="dotted"] path{stroke-dasharray:.01 3;stroke-width:1.4}
+.iso-swatch[data-mark="dashed"] path{stroke-dasharray:3 2.5}
+.iso-swatch[data-mark="red"] path{stroke:var(--anatomy-red)}
+.iso-swatch[data-mark="green"] path{stroke:var(--anatomy-green)}
+.iso-swatch[data-mark="blue"] path{stroke:var(--anatomy-blue)}
+.iso-swatch-crease{stroke:var(--anatomy-lo)!important}
+@media (max-width:560px){.iso-plate{padding:48px 12px 70px}.iso-plate-corner[data-corner="hint"]{bottom:18px}}
+@media (prefers-reduced-motion:reduce){.iso-line[data-flow],.iso-dots circle[data-pulse]{animation:none}}
+
+*{box-sizing:border-box}
+html{color-scheme:dark}
+body[data-theme="light"]{color-scheme:light}
+body{margin:0;background:var(--anatomy-page);color:var(--anatomy-text);font:14px/1.6 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+.iso-page{width:min(900px,100% - 32px);margin:64px auto 96px}
+</style></head><body class="iso" data-theme="auto"><main class="iso-page"><style>
+.iso{--unfold-blue:#58c4dd;--unfold-yellow:#f4d345;--unfold-red:#fc6255;--unfold-green:#83c167;--unfold-teal:#5cd0b3;--unfold-purple:#b48ad1;--unfold-gold:#f0ac5f;--unfold-on-hot:#0b0b0b;--unfold-serif:"Latin Modern Math","STIX Two Math","Cambria Math",math,serif}
+.iso[data-theme="light"]{--unfold-blue:#1f78a4;--unfold-yellow:#a67c00;--unfold-red:#cf3b2e;--unfold-green:#3e8a2a;--unfold-teal:#16866b;--unfold-purple:#7a4fa3;--unfold-gold:#b8661a;--unfold-on-hot:#ffffff}
+[data-hue="blue"]{--hue:var(--unfold-blue)}[data-hue="yellow"]{--hue:var(--unfold-yellow)}[data-hue="red"]{--hue:var(--unfold-red)}[data-hue="green"]{--hue:var(--unfold-green)}[data-hue="teal"]{--hue:var(--unfold-teal)}[data-hue="purple"]{--hue:var(--unfold-purple)}[data-hue="gold"]{--hue:var(--unfold-gold)}[data-hue="ink"]{--hue:var(--anatomy-hi)}
+.u-key{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 16px;margin-top:10px;color:var(--anatomy-muted);font-size:12px}
+.u-key>span{display:inline-flex;align-items:center;gap:6px}
+.u-key i{width:10px;height:10px;border-radius:2px;background:var(--hue)}
+.u-key i.u-hollow{background:none;box-shadow:inset 0 0 0 1.2px var(--anatomy-mid)}
+.u-key i.u-solid{background:var(--anatomy-mid)}
+.u-stage{position:relative;outline:none;container-type:inline-size;--u-fade:.5s;--u-fade-at:.22s}
+.u-stage:focus-visible{outline:1px solid var(--anatomy-faint);outline-offset:8px}
+.u-stage .iso-svg{overflow:visible}
+.u-eq,.u-say,.u-cc{display:grid;align-items:center}
+.u-eq>.u-at,.u-say>.u-at,.u-cc>.u-at{grid-area:1/1;opacity:0;visibility:hidden;transition:opacity .2s var(--anatomy-ease),visibility 0s .2s;margin:0}
+.u-eq{min-height:44px;margin-bottom:8px;overflow-x:auto;overflow-y:hidden}
+.u-eq math{font-family:var(--unfold-serif);font-size:20px;color:var(--anatomy-strong)}
+.u-eq [data-hue]{color:var(--hue)}
+.u-say{min-height:48px;margin-top:6px;color:var(--anatomy-text);font-size:14px;line-height:1.55;text-align:center}
+.u-cc{margin-top:6px;color:var(--anatomy-text);font-size:14px;line-height:1.55;text-align:center}
+.u-stage[data-voice] .u-cc{display:none}
+:is(.u-say,.u-cc)>.u-at{max-width:62ch;justify-self:center}
+:is(.u-say,.u-cc) b{color:var(--anatomy-strong);font-weight:500}
+:is(.u-say,.u-cc) [data-hue]{color:var(--hue)}
+.u-steps{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin-top:14px}
+.u-steps button{display:inline-flex;align-items:center;gap:6px;padding:5px 10px 5px 6px;border:0;border-radius:999px;background:transparent;color:var(--anatomy-muted);font:11px/1 var(--anatomy-mono);letter-spacing:.04em;cursor:pointer;box-shadow:0 0 0 1px var(--anatomy-faint);transition:color .2s,box-shadow .2s}
+.u-steps button span{display:inline-grid;place-items:center;width:16px;height:16px;border-radius:50%;background:var(--anatomy-faint);color:var(--anatomy-text);font-size:10px}
+.u-steps button:hover{color:var(--anatomy-text)}
+.u-steps button[aria-current]{color:var(--anatomy-strong);box-shadow:0 0 0 1px var(--anatomy-mid)}
+.u-steps button[aria-current] span{background:var(--anatomy-strong);color:var(--anatomy-card)}
+.u-steps :is(.u-play,.u-voice){margin-right:6px}.u-steps :is(.u-play,.u-voice)[aria-pressed="true"]{color:var(--anatomy-strong);box-shadow:0 0 0 1px var(--anatomy-mid)}
+.u-move{transition:transform .9s var(--anatomy-ease),opacity var(--u-fade) var(--anatomy-ease) var(--u-fade-at)}
+.u-grid text,.u-chip text,.u-bars text,.u-arrow text{dominant-baseline:central;text-anchor:middle}
+.u-cell{transform:translate(var(--x),var(--y));transition:transform .9s var(--anatomy-ease) calc(var(--i) * 18ms),opacity .35s}
+.u-cell-bg{fill:var(--hue);fill-opacity:var(--a);stroke:none;transition:fill-opacity .35s,stroke-width .3s}
+.u-cell[data-neg]>.u-cell-bg,.u-cell-bg[data-neg]{fill-opacity:calc(var(--a) * .18);stroke:var(--hue);stroke-opacity:var(--a);stroke-width:1.2}
+.u-cell[data-masked]>.u-cell-bg,.u-cell-bg[data-masked]{fill:none;stroke:var(--anatomy-faint);stroke-width:.8;stroke-dasharray:2 2}
+.u-num{font:500 10px var(--anatomy-mono);font-variant-numeric:tabular-nums;fill:var(--anatomy-strong)}
+.u-cell[data-hot] .u-num{fill:var(--unfold-on-hot)}
+.u-cell[data-masked] .u-num{fill:var(--anatomy-lo)}
+.u-name{font:italic 600 17px var(--unfold-serif);fill:var(--hue);dominant-baseline:auto!important;text-anchor:start!important}
+.u-dims{font:400 10px var(--anatomy-mono);font-style:normal;fill:var(--anatomy-muted)}
+.u-T,.u-dims-T{display:none}
+.u-mark{fill:none;stroke:var(--anatomy-strong);stroke-width:1.2;opacity:0;transition:opacity .3s}
+.u-mark[data-on]{opacity:.9}
+.u-chip rect{fill:var(--anatomy-card);stroke:var(--anatomy-mid);stroke-width:.8;transition:stroke .25s,fill .25s}
+.u-chip text{font:500 11px var(--anatomy-mono);fill:var(--anatomy-text);transition:fill .25s}
+.u-chip[data-hue] rect{stroke:var(--hue)}
+.u-chip[data-hue] text{fill:var(--hue)}
+.u-cell[data-later],.u-mark[data-later]{opacity:0!important;transition:opacity .3s}
+.u-plot-axis{stroke:var(--anatomy-mid);stroke-width:.9;fill:none}
+.u-plot-grid{stroke:var(--anatomy-faint);stroke-width:.6;fill:none}
+.u-tick-label{font:10px var(--anatomy-mono);fill:var(--anatomy-muted)}
+.u-plot-name{font:italic 600 15px var(--unfold-serif);fill:var(--hue,var(--anatomy-text))}
+.u-curve{fill:none;stroke:var(--hue,var(--anatomy-hi));stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.u-chip[data-on] rect{fill:var(--anatomy-strong);stroke:var(--anatomy-strong)}
+.u-chip[data-on] text{fill:var(--anatomy-card)}
+.u-chip[data-i]{cursor:pointer}
+.u-arrow{--w:1.1;color:var(--anatomy-mid)}
+.u-arrow[data-hue]{color:var(--hue)}
+.u-arrow-line{fill:none;stroke:currentColor;stroke-width:var(--w);stroke-linecap:round;transition:stroke-width .4s,opacity .4s}
+.u-arrow-head{fill:currentColor}
+.u-bar-fill{fill:var(--hue);transform-box:fill-box;transform-origin:50% 100%;transform:scaleY(var(--v));transition:transform .6s var(--anatomy-ease)}
+.u-bar-value{font:500 10px var(--anatomy-mono);fill:var(--anatomy-strong);transition:y .6s var(--anatomy-ease)}
+.u-bar-label{font:11px var(--anatomy-mono);fill:var(--anatomy-muted)}
+.u-axis{stroke:var(--anatomy-mid);stroke-width:.8;fill:none}
+.u-link{fill:none;stroke:var(--hue,var(--anatomy-mid));stroke-width:1.1;stroke-linecap:round;transition:d .9s var(--anatomy-ease),opacity .5s var(--anatomy-ease),stroke .3s}
+.u-link[data-off]{opacity:0}
+.u-eq>.u-at{text-align:center}
+.u-eq .u-rule{font:500 14px/1.5 var(--anatomy-mono);color:var(--anatomy-strong);letter-spacing:.01em}
+.u-lane-bg{fill:var(--anatomy-faint);fill-opacity:.18;stroke:var(--anatomy-faint);stroke-width:.6}
+.u-lane-name{font:11px var(--anatomy-mono);fill:var(--hue,var(--anatomy-muted));text-anchor:end;dominant-baseline:central}
+.u-tick{stroke:var(--anatomy-faint);stroke-width:.6}
+.u-lanes .u-tick-label{text-anchor:middle;dominant-baseline:central}
+.u-now{stroke:var(--anatomy-strong);stroke-width:1.2;transition:transform .5s var(--anatomy-ease)}
+.u-span-bar{fill:var(--hue,var(--anatomy-mid));fill-opacity:.9;transform-box:fill-box;transform-origin:0 50%;transform:scaleX(var(--v,1));transition:transform .5s var(--anatomy-ease)}
+.u-span-label{opacity:0;transition:opacity .3s}
+.u-span[data-labeled] .u-span-label{opacity:1}
+.u-span-label text{font:500 10px var(--anatomy-mono);fill:var(--unfold-on-hot);dominant-baseline:central}
+.u-face .u-cell-bg{stroke-width:.5}
+.u-cell-bg{transform-box:fill-box;transform-origin:50% 50%}
+.u-cell[data-hl]>.u-cell-bg{stroke:var(--anatomy-strong);stroke-opacity:1;stroke-width:1.6;animation:u-ping .5s var(--anatomy-ease)}
+.u-pulse{fill:var(--hue,var(--anatomy-strong));filter:drop-shadow(0 0 3px var(--hue,var(--anatomy-strong)))}
+.u-rise{transform-box:fill-box}
+@keyframes u-pop{from{opacity:0;transform:scale(.4)}}
+@keyframes u-fade{from{opacity:0}}
+@keyframes u-rise{from{opacity:0;transform:translateY(-14px)}}
+@keyframes u-grow{from{transform:scaleY(0)}}
+@keyframes u-draw{from{stroke-dasharray:1;stroke-dashoffset:1}to{stroke-dasharray:1;stroke-dashoffset:0}}
+@keyframes u-ping{from{stroke-width:4;stroke-opacity:0}}
+.u-floor-text{font-family:var(--unfold-serif);font-style:italic;font-weight:600;fill:var(--hue,var(--anatomy-text))}
+.u-floor-label{font-family:var(--anatomy-mono);fill:var(--anatomy-muted)}
+.u-guide{fill:none;stroke:var(--anatomy-lo);stroke-width:.8;stroke-dasharray:2 3}
+.u-controls{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px 18px;margin-top:10px}
+.u-controls button{border:0;border-radius:999px;background:transparent;color:var(--anatomy-muted);font:11px/1 var(--anatomy-mono);letter-spacing:.04em;padding:6px 10px;cursor:pointer;box-shadow:0 0 0 1px var(--anatomy-faint);transition:color .2s,box-shadow .2s}
+.u-controls button:hover{color:var(--anatomy-text)}
+.u-controls button[aria-pressed="true"]{color:var(--anatomy-strong);box-shadow:0 0 0 1px var(--anatomy-mid)}
+.u-time{display:flex;align-items:center;gap:8px;flex:1 1 260px;max-width:440px;transition:opacity .4s}
+.u-time button{width:28px;height:28px;padding:0;font-size:15px}
+.u-time input{flex:1;min-width:80px;accent-color:var(--anatomy-hi)}
+.u-ctl{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px 12px;transition:opacity .4s}
+.u-controls [data-scenes]{transition:opacity .4s}.u-controls [data-idle]{opacity:.4}
+.u-sub{font-size:72%}
+.u-line rect{fill:var(--hue,var(--anatomy-hi));fill-opacity:0;transition:fill-opacity .25s}
+.u-line[data-on] rect{fill-opacity:.18}
+.u-line-num{font:10px var(--anatomy-mono);fill:var(--anatomy-lo);text-anchor:end;dominant-baseline:central}
+.u-line-text{font:11.5px var(--anatomy-mono);fill:var(--anatomy-text);dominant-baseline:central;white-space:pre}
+.u-line[data-on] .u-line-text{fill:var(--anatomy-strong)}
+.u-controls label{display:inline-flex;align-items:center;gap:6px;color:var(--anatomy-muted);font:11px var(--anatomy-mono)}
+.u-controls :is(input[type=number],input[type=text]){width:calc(5ch + 28px);padding:4px 6px;border:0;border-radius:6px;background:transparent;color:var(--anatomy-text);font:12px var(--anatomy-mono);font-variant-numeric:tabular-nums;box-shadow:0 0 0 1px var(--anatomy-faint)}
+.u-controls input[type=range]{accent-color:var(--anatomy-hi)}
+.u-controls select{max-width:100%;padding:4px 22px 4px 8px;border:0;border-radius:6px;background:var(--anatomy-card);color:var(--anatomy-text);font:11px var(--anatomy-mono);box-shadow:0 0 0 1px var(--anatomy-faint);cursor:pointer}
+.iso-plate-corner[data-corner="readout"]{max-width:62%;white-space:normal;text-align:right;line-height:1.4}
+.u-time output{font:11px var(--anatomy-mono);color:var(--anatomy-muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.u-more{margin-top:48px}
+.u-more>summary{cursor:pointer;color:var(--anatomy-muted);font:500 12px var(--anatomy-mono);letter-spacing:.04em}
+.u-more>summary:hover,.u-more[open]>summary{color:var(--anatomy-strong)}
+.u-notes{color:var(--anatomy-text);font-size:14px;line-height:1.65}
+.u-notes h2{margin:36px 0 10px;font:500 13px var(--anatomy-mono);letter-spacing:.04em;color:var(--anatomy-strong)}
+.u-notes p,.u-notes ul{margin:0 0 12px;max-width:72ch}
+.u-notes li{margin-bottom:6px}
+.u-notes b{color:var(--anatomy-strong);font-weight:500}
+.u-notes code{font:12.5px var(--anatomy-mono);color:var(--anatomy-strong)}
+.u-notes table{width:100%;border-collapse:collapse;font-size:13px;line-height:1.5}
+.u-notes th,.u-notes td{padding:7px 10px 7px 0;border-bottom:1px solid var(--anatomy-faint);text-align:left;vertical-align:top}
+.u-notes th{color:var(--anatomy-muted);font:500 11.5px var(--anatomy-mono);letter-spacing:.03em}
+.u-notes svg{display:block;width:100%;max-width:640px;height:auto;margin:6px 0 14px;overflow:visible}
+.u-notes td:first-child{color:var(--anatomy-strong);white-space:nowrap}
+@media (max-width:560px){.u-notes thead{display:none}.u-notes tr{display:block;padding:8px 0;border-bottom:1px solid var(--anatomy-faint)}.u-notes td{display:block;padding:2px 0;border:0}.u-notes td[data-th]:not(:first-child)::before{content:attr(data-th) ": ";color:var(--anatomy-muted)}}
+@container (max-width:520px){:not([data-keep])>.u-cell .u-num,:not([data-keep])>.u-bar .u-bar-value{display:none}.u-eq math{font-size:14px}.u-steps button{font-size:0;gap:0;padding:4px}.u-controls{gap:8px;flex-direction:column;align-items:stretch}.u-ctl{gap:6px 8px}.u-time{flex:none;max-width:none}.u-controls label{gap:4px}}
+@media (max-width:560px){.iso-plate-corner[data-corner="readout"]{left:0;max-width:none;white-space:normal;text-align:right;line-height:1.4}.iso-plate-corner[data-corner="hint"]{display:none}}
+@media (prefers-reduced-motion:reduce){.u-stage *{transition:none!important;animation:none!important}.u-pulse{display:none}}
+@media (prefers-color-scheme:light){html{color-scheme:light}.iso[data-theme="auto"]{
+  --anatomy-page:#f2f2ef;--anatomy-card:#fbfbfa;--anatomy-text:#57575a;--anatomy-strong:#18181a;--anatomy-muted:#8c8c90;
+  --anatomy-paper:#fbfbfa;--anatomy-face:#ffffff;--anatomy-top:#ffffff;
+  --anatomy-shade-0:#dcdcd9;--anatomy-shade-1:#e5e5e2;--anatomy-shade-2:#ededea;--anatomy-shade-3:#f4f4f1;
+  --anatomy-lit-top:#ffffff;--anatomy-lit-shade:#eeeeeb;
+  --anatomy-hi:#26262a;--anatomy-mid:#8a8a8f;--anatomy-lo:#b4b4b8;--anatomy-faint:#d4d4d6;--anatomy-lit:#000000;
+  --anatomy-halo:#8a8a80;--anatomy-halo-opacity:.32;--anatomy-dot:#3a3a3e;
+  --anatomy-red:#e5484d;--anatomy-green:#30a46c;--anatomy-blue:#3e63dd;
+  --anatomy-lift:inset 0 1px 0 0 #ffffff,0 0 0 1px #0000000f,0 1px 1px -.5px #0000000a,0 3px 3px -1.5px #0000000a,0 6px 6px -3px #0000000a,0 12px 12px -6px #0000000a;
+;--unfold-blue:#1f78a4;--unfold-yellow:#a67c00;--unfold-red:#cf3b2e;--unfold-green:#3e8a2a;--unfold-teal:#16866b;--unfold-purple:#7a4fa3;--unfold-gold:#b8661a;--unfold-on-hot:#ffffff}}</style><figure class="iso-figure"><div class="iso-plate"><div class="iso-plate-corners" aria-hidden="true"><span class="iso-plate-corner" data-corner="fig">Fig 1</span><span class="iso-plate-corner" data-corner="title">Regex matching with an NFA</span><span class="iso-plate-corner" data-corner="hint">← → scene · ↑ ↓ step</span><span class="iso-plate-corner" data-corner="readout" data-readout>step 10 · ε-closure({7}) = {7} · adds nothing · 7 ∈ S: match</span></div><style>.u-stage[data-scene="0"] .u-at[data-at="0"]{opacity:1;visibility:visible;transition:opacity .4s var(--anatomy-ease) .2s,visibility 0s .2s}
+.u-stage[data-scene="0"] .u-grid[data-t~="0"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="0"] .u-grid[data-t~="0"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="0"] .u-grid[data-t~="0"] .u-dims:not(.u-dims-T),.u-stage[data-scene="0"] .u-grid[data-t~="0"] .u-mark{display:none}
+.u-stage[data-scene="1"] .u-at[data-at="1"]{opacity:1;visibility:visible;transition:opacity .4s var(--anatomy-ease) .2s,visibility 0s .2s}
+.u-stage[data-scene="1"] .u-grid[data-t~="1"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="1"] .u-grid[data-t~="1"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="1"] .u-grid[data-t~="1"] .u-dims:not(.u-dims-T),.u-stage[data-scene="1"] .u-grid[data-t~="1"] .u-mark{display:none}
+.u-stage[data-scene="2"] .u-at[data-at="2"]{opacity:1;visibility:visible;transition:opacity .4s var(--anatomy-ease) .2s,visibility 0s .2s}
+.u-stage[data-scene="2"] .u-grid[data-t~="2"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="2"] .u-grid[data-t~="2"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="2"] .u-grid[data-t~="2"] .u-dims:not(.u-dims-T),.u-stage[data-scene="2"] .u-grid[data-t~="2"] .u-mark{display:none}
+.u-stage[data-scene="3"] .u-at[data-at="3"]{opacity:1;visibility:visible;transition:opacity .4s var(--anatomy-ease) .2s,visibility 0s .2s}
+.u-stage[data-scene="3"] .u-grid[data-t~="3"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="3"] .u-grid[data-t~="3"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="3"] .u-grid[data-t~="3"] .u-dims:not(.u-dims-T),.u-stage[data-scene="3"] .u-grid[data-t~="3"] .u-mark{display:none}
+.u-stage[data-scene="4"] .u-at[data-at="4"]{opacity:1;visibility:visible;transition:opacity .4s var(--anatomy-ease) .2s,visibility 0s .2s}
+.u-stage[data-scene="4"] .u-grid[data-t~="4"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="4"] .u-grid[data-t~="4"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="4"] .u-grid[data-t~="4"] .u-dims:not(.u-dims-T),.u-stage[data-scene="4"] .u-grid[data-t~="4"] .u-mark{display:none}
+.u-stage[data-scene="5"] .u-at[data-at="5"]{opacity:1;visibility:visible;transition:opacity .4s var(--anatomy-ease) .2s,visibility 0s .2s}
+.u-stage[data-scene="5"] .u-grid[data-t~="5"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="5"] .u-grid[data-t~="5"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="5"] .u-grid[data-t~="5"] .u-dims:not(.u-dims-T),.u-stage[data-scene="5"] .u-grid[data-t~="5"] .u-mark{display:none}.el-narrow{display:none}.u-stage[data-narrow] .el-narrow{display:inline}.u-stage[data-narrow] .el-wide{display:none}
+.u-stage[data-kind="move"] .eq-clo,.u-stage:not([data-kind="move"]) .eq-move{display:none}
+.el-ring{fill:var(--anatomy-card);stroke:var(--anatomy-mid);stroke-width:1.2;transition:fill .35s,stroke .35s,stroke-width .35s}
+.el-state[data-on] .el-ring{fill:color-mix(in srgb,var(--unfold-blue) 30%,var(--anatomy-card));stroke:var(--unfold-blue);stroke-width:2.2}
+.el-state[data-died]:not([data-on]) .el-ring{fill:color-mix(in srgb,var(--unfold-red) 14%,var(--anatomy-card));stroke:var(--unfold-red);stroke-dasharray:3 3;stroke-width:1.6}
+.el-halo{fill:none;stroke:var(--unfold-red);stroke-width:1.4;stroke-dasharray:3 3;opacity:0;transition:opacity .35s}
+.el-state[data-died][data-on] .el-halo{opacity:1}
+.el-accept{fill:none;stroke:var(--unfold-green);stroke-width:1.4}
+.el-num{font:600 14px var(--anatomy-mono);fill:var(--anatomy-strong);text-anchor:middle;dominant-baseline:central}
+.el-edge{--c:var(--anatomy-mid)}.el-edge[data-eps]{--c:var(--unfold-purple)}
+.el-line{fill:none;stroke:var(--c);stroke-width:1.2;opacity:.75;transition:stroke-width .3s,opacity .3s,stroke .3s}
+.el-head{fill:var(--c);opacity:.75;transition:opacity .3s,fill .3s}
+.el-edge[data-eps] :is(.el-line,.el-head){opacity:.5}
+.el-edge[data-fire]:not([data-eps]){--c:var(--unfold-yellow)}
+.el-edge[data-fire] .el-line{stroke-width:2.6;opacity:1}.el-edge[data-fire] .el-head{opacity:1}
+.el-elabel{font:600 14px var(--anatomy-mono);fill:var(--anatomy-text);text-anchor:middle;dominant-baseline:central}
+.el-edge[data-eps] .el-elabel{font:italic 600 16px var(--unfold-serif);fill:var(--unfold-purple)}
+.el-edge[data-fire]:not([data-eps]) .el-elabel{fill:var(--unfold-yellow)}
+.el-note{font:11px var(--anatomy-mono);fill:var(--anatomy-muted);dominant-baseline:central}
+.el-tok{fill:var(--c);filter:drop-shadow(0 0 3px var(--c))}
+.el-br{fill:none;stroke:var(--anatomy-lo);stroke-width:1;transition:stroke .4s}
+.el-brt{font:12px var(--anatomy-mono);fill:var(--anatomy-muted);text-anchor:middle;dominant-baseline:central}
+.el-br,.el-brt{opacity:.45;transition:opacity .4s}.u-stage[data-scene="1"] :is(.el-br,.el-brt){opacity:1}
+.u-stage[data-scene="1"] .el-brt{fill:var(--anatomy-strong)}
+.el-title,.el-axis{font:10.5px var(--anatomy-mono);fill:var(--anatomy-muted);letter-spacing:.06em}
+.el-ch{cursor:pointer;transition:opacity .35s}.el-ch rect{fill:var(--anatomy-card);stroke:var(--anatomy-mid);stroke-width:1;transition:fill .3s,stroke .3s}
+.el-ch:hover rect{stroke:var(--anatomy-strong)}
+.el-ch text{font:600 16px var(--anatomy-mono);fill:var(--anatomy-strong);text-anchor:middle;dominant-baseline:central}
+.el-ch[data-done]{opacity:.35}.el-ch[data-gone]{display:none}
+.el-ch[data-cur] rect{stroke:var(--unfold-yellow);stroke-width:2;fill:color-mix(in srgb,var(--unfold-yellow) 18%,var(--anatomy-card))}
+.el-sname{font:italic 600 22px var(--unfold-serif);fill:var(--unfold-blue)}
+.el-set{font:500 17px var(--anatomy-mono);fill:var(--unfold-blue)}
+.el-verdict{opacity:0;transition:opacity .4s}.el-verdict[data-on]{opacity:1}
+.el-verdict text{font:500 13px var(--anatomy-mono)}.el-v1{fill:var(--unfold-green)}.el-verdict[data-no] .el-v1{fill:var(--unfold-red)}.el-v2{fill:var(--anatomy-muted)}
+.el-drop text{font:500 13px var(--anatomy-mono)}.el-d1{fill:var(--unfold-red)}.el-d2{fill:var(--unfold-blue)}
+.el-gh{font:600 12px var(--anatomy-mono);fill:var(--unfold-yellow);text-anchor:middle;dominant-baseline:central}
+.el-gh[data-k="closure"]{font:italic 600 14px var(--unfold-serif);fill:var(--unfold-purple)}
+.el-rl,.el-gf{font:10.5px var(--anatomy-mono);fill:var(--anatomy-muted);text-anchor:middle;dominant-baseline:central}
+.el-cell{cursor:pointer;fill:var(--anatomy-faint);fill-opacity:.35;transition:opacity .3s}
+.el-cell[data-in]{fill:var(--unfold-blue);fill-opacity:.85}
+.el-cell[data-later]{opacity:0}.el-cell[data-gone],.el-gf[data-gone]{display:none}
+.el-col{fill:none;stroke:var(--anatomy-strong);stroke-width:1;opacity:.7;transition:transform .45s var(--anatomy-ease)}
+.u-controls input[data-input]{width:calc(8ch + 16px)}</style><div class="u-stage" tabindex="0" role="group" aria-roledescription="explainer" aria-label="NFA explainer. Left and right arrows change the scene. Up and down arrows, or comma and period, step through the input. The text field sets the input string." data-scene="0" data-count="6" data-dwell="10000" data-narrow-box="0 0 430 930"><div class="u-eq" aria-live="polite"><div class="u-at" data-at="0"><math display="block"><msub><mi data-hue="blue">S</mi><mi>t+1</mi></msub><mo>=</mo><mi data-hue="purple">ε</mi><mtext data-hue="purple">-closure</mtext><mo stretchy="false">(</mo><mi data-hue="yellow">δ</mi><mo stretchy="false">(</mo><msub><mi data-hue="blue">S</mi><mi>t</mi></msub><mo>,</mo><msub><mi data-hue="yellow">x</mi><mi>t</mi></msub><mo stretchy="false">)</mo><mo stretchy="false">)</mo></math></div><div class="u-at" data-at="1"><code class="u-rule">a ( b | c )* d  →  8 states · <span data-hue="yellow">4 symbol edges</span> · <span data-hue="purple">5 ε edges</span></code></div><div class="u-at" data-at="2"><math display="block"><mrow class="eq-move"><mi data-hue="yellow">δ</mi><mo stretchy="false">(</mo><mo stretchy="false">{</mo><mn data-hue="blue" data-live="from">7</mn><mo stretchy="false">}</mo><mo>,</mo><mi data-hue="yellow" mathvariant="normal" data-live="x">d</mi><mo stretchy="false">)</mo><mo>=</mo><mo stretchy="false">{</mo><mn data-hue="blue" data-live="to">7</mn><mo stretchy="false">}</mo></mrow><mrow class="eq-clo"><mi data-hue="purple">ε</mi><mtext data-hue="purple">-closure</mtext><mo stretchy="false">(</mo><mo stretchy="false">{</mo><mn data-hue="blue" data-live="from">7</mn><mo stretchy="false">}</mo><mo stretchy="false">)</mo><mo>=</mo><mo stretchy="false">{</mo><mn data-hue="blue" data-live="to">7</mn><mo stretchy="false">}</mo></mrow></math></div><div class="u-at" data-at="3"><math display="block"><mrow class="eq-move"><mi data-hue="yellow">δ</mi><mo stretchy="false">(</mo><mo stretchy="false">{</mo><mn data-hue="blue" data-live="from">7</mn><mo stretchy="false">}</mo><mo>,</mo><mi data-hue="yellow" mathvariant="normal" data-live="x">d</mi><mo stretchy="false">)</mo><mo>=</mo><mo stretchy="false">{</mo><mn data-hue="blue" data-live="to">7</mn><mo stretchy="false">}</mo></mrow><mrow class="eq-clo"><mi data-hue="purple">ε</mi><mtext data-hue="purple">-closure</mtext><mo stretchy="false">(</mo><mo stretchy="false">{</mo><mn data-hue="blue" data-live="from">7</mn><mo stretchy="false">}</mo><mo stretchy="false">)</mo><mo>=</mo><mo stretchy="false">{</mo><mn data-hue="blue" data-live="to">7</mn><mo stretchy="false">}</mo></mrow></math></div><div class="u-at" data-at="4"><math display="block"><mrow class="eq-move"><mi data-hue="yellow">δ</mi><mo stretchy="false">(</mo><mo stretchy="false">{</mo><mn data-hue="blue" data-live="from">7</mn><mo stretchy="false">}</mo><mo>,</mo><mi data-hue="yellow" mathvariant="normal" data-live="x">d</mi><mo stretchy="false">)</mo><mo>=</mo><mo stretchy="false">{</mo><mn data-hue="blue" data-live="to">7</mn><mo stretchy="false">}</mo></mrow><mrow class="eq-clo"><mi data-hue="purple">ε</mi><mtext data-hue="purple">-closure</mtext><mo stretchy="false">(</mo><mo stretchy="false">{</mo><mn data-hue="blue" data-live="from">7</mn><mo stretchy="false">}</mo><mo stretchy="false">)</mo><mo>=</mo><mo stretchy="false">{</mo><mn data-hue="blue" data-live="to">7</mn><mo stretchy="false">}</mo></mrow></math></div><div class="u-at" data-at="5"><math display="block"><mrow class="eq-move"><mi data-hue="yellow">δ</mi><mo stretchy="false">(</mo><mo stretchy="false">{</mo><mn data-hue="blue" data-live="from">7</mn><mo stretchy="false">}</mo><mo>,</mo><mi data-hue="yellow" mathvariant="normal" data-live="x">d</mi><mo stretchy="false">)</mo><mo>=</mo><mo stretchy="false">{</mo><mn data-hue="blue" data-live="to">7</mn><mo stretchy="false">}</mo></mrow><mrow class="eq-clo"><mi data-hue="purple">ε</mi><mtext data-hue="purple">-closure</mtext><mo stretchy="false">(</mo><mo stretchy="false">{</mo><mn data-hue="blue" data-live="from">7</mn><mo stretchy="false">}</mo><mo stretchy="false">)</mo><mo>=</mo><mo stretchy="false">{</mo><mn data-hue="blue" data-live="to">7</mn><mo stretchy="false">}</mo></mrow></math></div></div><svg xmlns="http://www.w3.org/2000/svg" class="iso-svg" viewBox="0 0 820 540" role="img" aria-label="An NFA for the regex a(b|c)*d with 8 states, reading an input string. Active states are lit, the symbol read is marked on the input, and a trace grid shows the set of states at each step."><g class="el-wide"><path class="el-br" d="M22 331V336H128V331"/><text class="el-brt" x="75" y="351">a</text><path class="el-br" d="M140 331V336H520V331"/><text class="el-brt" x="330" y="351">(b|c)*</text><path class="el-br" d="M622 331V336H790V331"/><text class="el-brt" x="706" y="351">d</text><g class="el-edge" data-e="e01"><path class="el-line" d="M58 170Q97.5 170 129 170"/><path class="el-head" d="M136 170L129 166L129 174Z"/><text class="el-elabel" x="97" y="158">a</text><circle class="el-tok" r="4.5" opacity="0"><animateMotion dur="0.75s" begin="indefinite" fill="freeze" path="M58 170Q97.5 170 136 170"/><animate attributeName="opacity" values="1;1;0" keyTimes="0;0.8;1" dur="0.75s" begin="indefinite" fill="freeze"/></circle></g><g class="el-edge" data-e="e12" data-eps><path class="el-line" d="M173 170Q212.5 170 244 170"/><path class="el-head" d="M251 170L244 166L244 174Z"/><text class="el-elabel" x="212" y="158">ε</text><circle class="el-tok" r="4.5" opacity="0"><animateMotion dur="0.75s" begin="indefinite" fill="freeze" path="M173 170Q212.5 170 251 170"/><animate attributeName="opacity" values="1;1;0" keyTimes="0;0.8;1" dur="0.75s" begin="indefinite" fill="freeze"/></circle></g><g class="el-edge" data-e="e16" data-eps><path class="el-line" d="M167.3 183.2Q397.5 430 622.3 189"/><path class="el-head" d="M627 183.9L619.3 186.3L625.2 191.7Z"/><text class="el-elabel" x="397.3" y="322.8" text-anchor="middle">ε</text><text class="el-note" x="409.3" y="322.8" text-anchor="start">leave loop</text><circle class="el-tok" r="4.5" opacity="0"><animateMotion dur="0.75s" begin="indefinite" fill="freeze" path="M167.3 183.2Q397.5 430 627 183.9"/><animate attributeName="opacity" values="1;1;0" keyTimes="0;0.8;1" dur="0.75s" begin="indefinite" fill="freeze"/></circle></g><g class="el-edge" data-e="e23" data-eps><path class="el-line" d="M285.7 161.1Q327.5 137.5 362.4 117.8"/><path class="el-head" d="M368.5 114.3L360.4 114.3L364.3 121.3Z"/><text class="el-elabel" x="316" y="126">ε</text><circle class="el-tok" r="4.5" opacity="0"><animateMotion dur="0.75s" begin="indefinite" fill="freeze" path="M285.7 161.1Q327.5 137.5 368.5 114.3"/><animate attributeName="opacity" values="1;1;0" keyTimes="0;0.8;1" dur="0.75s" begin="indefinite" fill="freeze"/></circle></g><g class="el-edge" data-e="e24" data-eps><path class="el-line" d="M285.7 178.9Q327.5 202.5 362.4 222.2"/><path class="el-head" d="M368.5 225.7L364.3 218.7L360.4 225.7Z"/><text class="el-elabel" x="316" y="216">ε</text><circle class="el-tok" r="4.5" opacity="0"><animateMotion dur="0.75s" begin="indefinite" fill="freeze" path="M285.7 178.9Q327.5 202.5 368.5 225.7"/><animate attributeName="opacity" values="1;1;0" keyTimes="0;0.8;1" dur="0.75s" begin="indefinite" fill="freeze"/></circle></g><g class="el-edge" data-e="e35"><path class="el-line" d="M400.7 113.9Q442.5 137.5 477.4 157.2"/><path class="el-head" d="M483.5 160.7L479.3 153.7L475.4 160.7Z"/><text class="el-elabel" x="454" y="126">b</text><circle class="el-tok" r="4.5" opacity="0"><animateMotion dur="0.75s" begin="indefinite" fill="freeze" path="M400.7 113.9Q442.5 137.5 483.5 160.7"/><animate attributeName="opacity" values="1;1;0" keyTimes="0;0.8;1" dur="0.75s" begin="indefinite" fill="freeze"/></circle></g><g class="el-edge" data-e="e45"><path class="el-line" d="M400.7 226.1Q442.5 202.5 477.4 182.8"/><path class="el-head" d="M483.5 179.3L475.4 179.3L479.3 186.3Z"/><text class="el-elabel" x="454" y="216">c</text><circle class="el-tok" r="4.5" opacity="0"><animateMotion dur="0.75s" begin="indefinite" fill="freeze" path="M400.7 226.1Q442.5 202.5 483.5 179.3"/><animate attributeName="opacity" values="1;1;0" keyTimes="0;0.8;1" dur="0.75s" begin="indefinite" fill="freeze"/></circle></g><g class="el-edge" data-e="e51" data-eps><path class="el-line" d="M490 155Q327.5 -90 169.4 148.3"/><path class="el-head" d="M165.5 154.2L172.7 150.5L166 146.1Z"/><text class="el-elabel" x="327.6" y="22.3" text-anchor="middle">ε</text><text class="el-note" x="339.6" y="22.3" text-anchor="start">loop back</text><circle class="el-tok" r="4.5" opacity="0"><animateMotion dur="0.75s" begin="indefinite" fill="freeze" path="M490 155Q327.5 -90 165.5 154.2"/><animate attributeName="opacity" values="1;1;0" keyTimes="0;0.8;1" dur="0.75s" begin="indefinite" fill="freeze"/></circle></g><g class="el-edge" data-e="e67"><path class="el-line" d="M658 170Q705 170 744 170"/><path class="el-head" d="M751 170L744 166L744 174Z"/><text class="el-elabel" x="705" y="158">d</text><circle class="el-tok" r="4.5" opacity="0"><animateMotion dur="0.75s" begin="indefinite" fill="freeze" path="M658 170Q705 170 751 170"/><animate attributeName="opacity" values="1;1;0" keyTimes="0;0.8;1" dur="0.75s" begin="indefinite" fill="freeze"/></circle></g><g class="el-state" data-s="0" transform="translate(40 170)"><circle class="el-halo" r="26"/><circle class="el-ring" r="18"/><text class="el-num">0</text></g><g class="el-state" data-s="1" transform="translate(155 170)"><circle class="el-halo" r="26"/><circle class="el-ring" r="18"/><text class="el-num">1</text></g><g class="el-state" data-s="2" transform="translate(270 170)"><circle class="el-halo" r="26"/><circle class="el-ring" r="18"/><text class="el-num">2</text></g><g class="el-state" data-s="3" transform="translate(385 105)"><circle class="el-halo" r="26"/><circle class="el-ring" r="18"/><text class="el-num">3</text></g><g class="el-state" data-s="4" transform="translate(385 235)"><circle class="el-halo" r="26"/><circle class="el-ring" r="18"/><text class="el-num">4</text></g><g class="el-state" data-s="5" transform="translate(500 170)"><circle class="el-halo" r="26"/><circle class="el-ring" r="18"/><text class="el-num">5</text></g><g class="el-state" data-s="6" transform="translate(640 170)"><circle class="el-halo" r="26"/><circle class="el-ring" r="18"/><text class="el-num">6</text></g><g class="el-state" data-s="7" transform="translate(770 170)"><circle class="el-halo" r="26"/><circle class="el-accept" r="22.5"/><circle class="el-ring" r="18"/><text class="el-num">7</text></g><text class="el-title" x="628" y="12">the loop</text><g class="u-code" data-hue="blue" transform="translate(628 20)"><g class="u-line" data-i="0" transform="translate(0 0)"><rect width="178" height="19" rx="3"/><text class="u-line-num" x="16" y="9.5">1</text><text class="u-line-text" x="26" y="9.5">S ← ε-closure({0})</text></g><g class="u-line" data-i="1" transform="translate(0 19)"><rect width="178" height="19" rx="3"/><text class="u-line-num" x="16" y="9.5">2</text><text class="u-line-text" x="26" y="9.5">for each symbol x:</text></g><g class="u-line" data-i="2" transform="translate(0 38)"><rect width="178" height="19" rx="3"/><text class="u-line-num" x="16" y="9.5">3</text><text class="u-line-text" x="26" y="9.5">  S ← δ(S, x)</text></g><g class="u-line" data-i="3" transform="translate(0 57)"><rect width="178" height="19" rx="3"/><text class="u-line-num" x="16" y="9.5">4</text><text class="u-line-text" x="26" y="9.5">  S ← ε-closure(S)</text></g><g class="u-line" data-i="4" transform="translate(0 76)"><rect width="178" height="19" rx="3"/><text class="u-line-num" x="16" y="9.5">5</text><text class="u-line-text" x="26" y="9.5">match if 7 ∈ S</text></g></g><text class="el-title" x="0" y="378">input (click a letter)</text><g class="el-ch" data-p="0" transform="translate(0 390)"><rect width="36" height="36" rx="5"/><text x="18" y="18">a</text></g><g class="el-ch" data-p="1" transform="translate(44 390)"><rect width="36" height="36" rx="5"/><text x="18" y="18">b</text></g><g class="el-ch" data-p="2" transform="translate(88 390)"><rect width="36" height="36" rx="5"/><text x="18" y="18">c</text></g><g class="el-ch" data-p="3" transform="translate(132 390)"><rect width="36" height="36" rx="5"/><text x="18" y="18">b</text></g><g class="el-ch" data-p="4" transform="translate(176 390)"><rect width="36" height="36" rx="5"/><text x="18" y="18">d</text></g><g class="el-ch" data-p="5" data-gone transform="translate(220 390)"><rect width="36" height="36" rx="5"/><text x="18" y="18"></text></g><g class="el-ch" data-p="6" data-gone transform="translate(264 390)"><rect width="36" height="36" rx="5"/><text x="18" y="18"></text></g><g class="el-ch" data-p="7" data-gone transform="translate(308 390)"><rect width="36" height="36" rx="5"/><text x="18" y="18"></text></g><text class="el-title" x="0" y="450">states the NFA is in</text><text class="el-sname" x="0" y="476">S</text><text class="el-set" x="18" y="476">= {0}</text><g class="el-verdict"><text class="el-v1" x="0" y="504"></text><text class="el-v2" x="0" y="523"></text></g><g class="el-drop"><text class="el-d1" x="0" y="504"></text><text class="el-d2" x="0" y="523"></text></g><text class="el-title" x="452" y="366">trace: S at each step</text><text class="el-axis" x="468" y="518" text-anchor="end" dominant-baseline="central">step</text><rect class="el-col" x="470" y="374" width="20" height="150" rx="4" style="transform:translateX(200px)"/><text class="el-gh" data-c="0" data-k="start" x="480" y="384"></text><text class="el-gh" data-c="1" data-k="move" x="500" y="384">a</text><text class="el-gh" data-c="2" data-k="closure" x="520" y="384">ε</text><text class="el-gh" data-c="3" data-k="move" x="540" y="384">b</text><text class="el-gh" data-c="4" data-k="closure" x="560" y="384">ε</text><text class="el-gh" data-c="5" data-k="move" x="580" y="384">c</text><text class="el-gh" data-c="6" data-k="closure" x="600" y="384">ε</text><text class="el-gh" data-c="7" data-k="move" x="620" y="384">b</text><text class="el-gh" data-c="8" data-k="closure" x="640" y="384">ε</text><text class="el-gh" data-c="9" data-k="move" x="660" y="384">d</text><text class="el-gh" data-c="10" data-k="closure" x="680" y="384">ε</text><text class="el-gh" data-c="11" data-k="" x="700" y="384"></text><text class="el-gh" data-c="12" data-k="" x="720" y="384"></text><text class="el-gh" data-c="13" data-k="" x="740" y="384"></text><text class="el-gh" data-c="14" data-k="" x="760" y="384"></text><text class="el-gh" data-c="15" data-k="" x="780" y="384"></text><text class="el-gh" data-c="16" data-k="" x="800" y="384"></text><text class="el-rl" x="460" y="402">0</text><text class="el-rl" x="460" y="416">1</text><text class="el-rl" x="460" y="430">2</text><text class="el-rl" x="460" y="444">3</text><text class="el-rl" x="460" y="458">4</text><text class="el-rl" x="460" y="472">5</text><text class="el-rl" x="460" y="486">6</text><text class="el-rl" x="460" y="500">7</text><rect class="el-cell" data-c="0" data-s="0" data-in x="472" y="397" width="16" height="11" rx="2"/><rect class="el-cell" data-c="0" data-s="1" x="472" y="411" width="16" height="11" rx="2"/><rect class="el-cell" data-c="0" data-s="2" x="472" y="425" width="16" height="11" rx="2"/><rect class="el-cell" data-c="0" data-s="3" x="472" y="439" width="16" height="11" rx="2"/><rect class="el-cell" data-c="0" data-s="4" x="472" y="453" width="16" height="11" rx="2"/><rect class="el-cell" data-c="0" data-s="5" x="472" y="467" width="16" height="11" rx="2"/><rect class="el-cell" data-c="0" data-s="6" x="472" y="481" width="16" height="11" rx="2"/><rect class="el-cell" data-c="0" data-s="7" x="472" y="495" width="16" height="11" rx="2"/><rect class="el-cell" data-c="1" data-s="0" x="492" y="397" width="16" height="11" rx="2"/><rect class="el-cell" data-c="1" data-s="1" data-in x="492" y="411" width="16" height="11" rx="2"/><rect class="el-cell" data-c="1" data-s="2" x="492" y="425" width="16" height="11" rx="2"/><rect class="el-cell" data-c="1" data-s="3" x="492" y="439" width="16" height="11" rx="2"/><rect class="el-cell" data-c="1" data-s="4" x="492" y="453" width="16" height="11" rx="2"/><rect class="el-cell" data-c="1" data-s="5" x="492" y="467" width="16" height="11" rx="2"/><rect class="el-cell" data-c="1" data-s="6" x="492" y="481" width="16" height="11" rx="2"/><rect class="el-cell" data-c="1" data-s="7" x="492" y="495" width="16" height="11" rx="2"/><rect class="el-cell" data-c="2" data-s="0" x="512" y="397" width="16" height="11" rx="2"/><rect class="el-cell" data-c="2" data-s="1" data-in x="512" y="411" width="16" height="11" rx="2"/><rect class="el-cell" data-c="2" data-s="2" data-in x="512" y="425" width="16" height="11" rx="2"/><rect class="el-cell" data-c="2" data-s="3" data-in x="512" y="439" width="16" height="11" rx="2"/><rect class="el-cell" data-c="2" data-s="4" data-in x="512" y="453" width="16" height="11" rx="2"/><rect class="el-cell" data-c="2" data-s="5" x="512" y="467" width="16" height="11" rx="2"/><rect class="el-cell" data-c="2" data-s="6" data-in x="512" y="481" width="16" height="11" rx="2"/><rect class="el-cell" data-c="2" data-s="7" x="512" y="495" width="16" height="11" rx="2"/><rect class="el-cell" data-c="3" data-s="0" x="532" y="397" width="16" height="11" rx="2"/><rect class="el-cell" data-c="3" data-s="1" x="532" y="411" width="16" height="11" rx="2"/><rect class="el-cell" data-c="3" data-s="2" x="532" y="425" width="16" height="11" rx="2"/><rect class="el-cell" data-c="3" data-s="3" x="532" y="439" width="16" height="11" rx="2"/><rect class="el-cell" data-c="3" data-s="4" x="532" y="453" width="16" height="11" rx="2"/><rect class="el-cell" data-c="3" data-s="5" data-in x="532" y="467" width="16" height="11" rx="2"/><rect class="el-cell" data-c="3" data-s="6" x="532" y="481" width="16" height="11" rx="2"/><rect class="el-cell" data-c="3" data-s="7" x="532" y="495" width="16" height="11" rx="2"/><rect class="el-cell" data-c="4" data-s="0" x="552" y="397" width="16" height="11" rx="2"/><rect class="el-cell" data-c="4" data-s="1" data-in x="552" y="411" width="16" height="11" rx="2"/><rect class="el-cell" data-c="4" data-s="2" data-in x="552" y="425" width="16" height="11" rx="2"/><rect class="el-cell" data-c="4" data-s="3" data-in x="552" y="439" width="16" height="11" rx="2"/><rect class="el-cell" data-c="4" data-s="4" data-in x="552" y="453" width="16" height="11" rx="2"/><rect class="el-cell" data-c="4" data-s="5" data-in x="552" y="467" width="16" height="11" rx="2"/><rect class="el-cell" data-c="4" data-s="6" data-in x="552" y="481" width="16" height="11" rx="2"/><rect class="el-cell" data-c="4" data-s="7" x="552" y="495" width="16" height="11" rx="2"/><rect class="el-cell" data-c="5" data-s="0" x="572" y="397" width="16" height="11" rx="2"/><rect class="el-cell" data-c="5" data-s="1" x="572" y="411" width="16" height="11" rx="2"/><rect class="el-cell" data-c="5" data-s="2" x="572" y="425" width="16" height="11" rx="2"/><rect class="el-cell" data-c="5" data-s="3" x="572" y="439" width="16" height="11" rx="2"/><rect class="el-cell" data-c="5" data-s="4" x="572" y="453" width="16" height="11" rx="2"/><rect class="el-cell" data-c="5" data-s="5" data-in x="572" y="467" width="16" height="11" rx="2"/><rect class="el-cell" data-c="5" data-s="6" x="572" y="481" width="16" height="11" rx="2"/><rect class="el-cell" data-c="5" data-s="7" x="572" y="495" width="16" height="11" rx="2"/><rect class="el-cell" data-c="6" data-s="0" x="592" y="397" width="16" height="11" rx="2"/><rect class="el-cell" data-c="6" data-s="1" data-in x="592" y="411" width="16" height="11" rx="2"/><rect class="el-cell" data-c="6" data-s="2" data-in x="592" y="425" width="16" height="11" rx="2"/><rect class="el-cell" data-c="6" data-s="3" data-in x="592" y="439" width="16" height="11" rx="2"/><rect class="el-cell" data-c="6" data-s="4" data-in x="592" y="453" width="16" height="11" rx="2"/><rect class="el-cell" data-c="6" data-s="5" data-in x="592" y="467" width="16" height="11" rx="2"/><rect class="el-cell" data-c="6" data-s="6" data-in x="592" y="481" width="16" height="11" rx="2"/><rect class="el-cell" data-c="6" data-s="7" x="592" y="495" width="16" height="11" rx="2"/><rect class="el-cell" data-c="7" data-s="0" x="612" y="397" width="16" height="11" rx="2"/><rect class="el-cell" data-c="7" data-s="1" x="612" y="411" width="16" height="11" rx="2"/><rect class="el-cell" data-c="7" data-s="2" x="612" y="425" width="16" height="11" rx="2"/><rect class="el-cell" data-c="7" data-s="3" x="612" y="439" width="16" height="11" rx="2"/><rect class="el-cell" data-c="7" data-s="4" x="612" y="453" width="16" height="11" rx="2"/><rect class="el-cell" data-c="7" data-s="5" data-in x="612" y="467" width="16" height="11" rx="2"/><rect class="el-cell" data-c="7" data-s="6" x="612" y="481" width="16" height="11" rx="2"/><rect class="el-cell" data-c="7" data-s="7" x="612" y="495" width="16" height="11" rx="2"/><rect class="el-cell" data-c="8" data-s="0" x="632" y="397" width="16" height="11" rx="2"/><rect class="el-cell" data-c="8" data-s="1" data-in x="632" y="411" width="16" height="11" rx="2"/><rect class="el-cell" data-c="8" data-s="2" data-in x="632" y="425" width="16" height="11" rx="2"/><rect class="el-cell" data-c="8" data-s="3" data-in x="632" y="439" width="16" height="11" rx="2"/><rect class="el-cell" data-c="8" data-s="4" data-in x="632" y="453" width="16" height="11" rx="2"/><rect class="el-cell" data-c="8" data-s="5" data-in x="632" y="467" width="16" height="11" rx="2"/><rect class="el-cell" data-c="8" data-s="6" data-in x="632" y="481" width="16" height="11" rx="2"/><rect class="el-cell" data-c="8" data-s="7" x="632" y="495" width="16" height="11" rx="2"/><rect class="el-cell" data-c="9" data-s="0" x="652" y="397" width="16" height="11" rx="2"/><rect class="el-cell" data-c="9" data-s="1" x="652" y="411" width="16" height="11" rx="2"/><rect class="el-cell" data-c="9" data-s="2" x="652" y="425" width="16" height="11" rx="2"/><rect class="el-cell" data-c="9" data-s="3" x="652" y="439" width="16" height="11" rx="2"/><rect class="el-cell" data-c="9" data-s="4" x="652" y="453" width="16" height="11" rx="2"/><rect class="el-cell" data-c="9" data-s="5" x="652" y="467" width="16" height="11" rx="2"/><rect class="el-cell" data-c="9" data-s="6" x="652" y="481" width="16" height="11" rx="2"/><rect class="el-cell" data-c="9" data-s="7" data-in x="652" y="495" width="16" height="11" rx="2"/><rect class="el-cell" data-c="10" data-s="0" x="672" y="397" width="16" height="11" rx="2"/><rect class="el-cell" data-c="10" data-s="1" x="672" y="411" width="16" height="11" rx="2"/><rect class="el-cell" data-c="10" data-s="2" x="672" y="425" width="16" height="11" rx="2"/><rect class="el-cell" data-c="10" data-s="3" x="672" y="439" width="16" height="11" rx="2"/><rect class="el-cell" data-c="10" data-s="4" x="672" y="453" width="16" height="11" rx="2"/><rect class="el-cell" data-c="10" data-s="5" x="672" y="467" width="16" height="11" rx="2"/><rect class="el-cell" data-c="10" data-s="6" x="672" y="481" width="16" height="11" rx="2"/><rect class="el-cell" data-c="10" data-s="7" data-in x="672" y="495" width="16" height="11" rx="2"/><rect class="el-cell" data-c="11" data-s="0" data-gone x="692" y="397" width="16" height="11" rx="2"/><rect class="el-cell" data-c="11" data-s="1" data-gone x="692" y="411" width="16" height="11" rx="2"/><rect class="el-cell" data-c="11" data-s="2" data-gone x="692" y="425" width="16" height="11" rx="2"/><rect class="el-cell" data-c="11" data-s="3" data-gone x="692" y="439" width="16" height="11" rx="2"/><rect class="el-cell" data-c="11" data-s="4" data-gone x="692" y="453" width="16" height="11" rx="2"/><rect class="el-cell" data-c="11" data-s="5" data-gone x="692" y="467" width="16" height="11" rx="2"/><rect class="el-cell" data-c="11" data-s="6" data-gone x="692" y="481" width="16" height="11" rx="2"/><rect class="el-cell" data-c="11" data-s="7" data-gone x="692" y="495" width="16" height="11" rx="2"/><rect class="el-cell" data-c="12" data-s="0" data-gone x="712" y="397" width="16" height="11" rx="2"/><rect class="el-cell" data-c="12" data-s="1" data-gone x="712" y="411" width="16" height="11" rx="2"/><rect class="el-cell" data-c="12" data-s="2" data-gone x="712" y="425" width="16" height="11" rx="2"/><rect class="el-cell" data-c="12" data-s="3" data-gone x="712" y="439" width="16" height="11" rx="2"/><rect class="el-cell" data-c="12" data-s="4" data-gone x="712" y="453" width="16" height="11" rx="2"/><rect class="el-cell" data-c="12" data-s="5" data-gone x="712" y="467" width="16" height="11" rx="2"/><rect class="el-cell" data-c="12" data-s="6" data-gone x="712" y="481" width="16" height="11" rx="2"/><rect class="el-cell" data-c="12" data-s="7" data-gone x="712" y="495" width="16" height="11" rx="2"/><rect class="el-cell" data-c="13" data-s="0" data-gone x="732" y="397" width="16" height="11" rx="2"/><rect class="el-cell" data-c="13" data-s="1" data-gone x="732" y="411" width="16" height="11" rx="2"/><rect class="el-cell" data-c="13" data-s="2" data-gone x="732" y="425" width="16" height="11" rx="2"/><rect class="el-cell" data-c="13" data-s="3" data-gone x="732" y="439" width="16" height="11" rx="2"/><rect class="el-cell" data-c="13" data-s="4" data-gone x="732" y="453" width="16" height="11" rx="2"/><rect class="el-cell" data-c="13" data-s="5" data-gone x="732" y="467" width="16" height="11" rx="2"/><rect class="el-cell" data-c="13" data-s="6" data-gone x="732" y="481" width="16" height="11" rx="2"/><rect class="el-cell" data-c="13" data-s="7" data-gone x="732" y="495" width="16" height="11" rx="2"/><rect class="el-cell" data-c="14" data-s="0" data-gone x="752" y="397" width="16" height="11" rx="2"/><rect class="el-cell" data-c="14" data-s="1" data-gone x="752" y="411" width="16" height="11" rx="2"/><rect class="el-cell" data-c="14" data-s="2" data-gone x="752" y="425" width="16" height="11" rx="2"/><rect class="el-cell" data-c="14" data-s="3" data-gone x="752" y="439" width="16" height="11" rx="2"/><rect class="el-cell" data-c="14" data-s="4" data-gone x="752" y="453" width="16" height="11" rx="2"/><rect class="el-cell" data-c="14" data-s="5" data-gone x="752" y="467" width="16" height="11" rx="2"/><rect class="el-cell" data-c="14" data-s="6" data-gone x="752" y="481" width="16" height="11" rx="2"/><rect class="el-cell" data-c="14" data-s="7" data-gone x="752" y="495" width="16" height="11" rx="2"/><rect class="el-cell" data-c="15" data-s="0" data-gone x="772" y="397" width="16" height="11" rx="2"/><rect class="el-cell" data-c="15" data-s="1" data-gone x="772" y="411" width="16" height="11" rx="2"/><rect class="el-cell" data-c="15" data-s="2" data-gone x="772" y="425" width="16" height="11" rx="2"/><rect class="el-cell" data-c="15" data-s="3" data-gone x="772" y="439" width="16" height="11" rx="2"/><rect class="el-cell" data-c="15" data-s="4" data-gone x="772" y="453" width="16" height="11" rx="2"/><rect class="el-cell" data-c="15" data-s="5" data-gone x="772" y="467" width="16" height="11" rx="2"/><rect class="el-cell" data-c="15" data-s="6" data-gone x="772" y="481" width="16" height="11" rx="2"/><rect class="el-cell" data-c="15" data-s="7" data-gone x="772" y="495" width="16" height="11" rx="2"/><rect class="el-cell" data-c="16" data-s="0" data-gone x="792" y="397" width="16" height="11" rx="2"/><rect class="el-cell" data-c="16" data-s="1" data-gone x="792" y="411" width="16" height="11" rx="2"/><rect class="el-cell" data-c="16" data-s="2" data-gone x="792" y="425" width="16" height="11" rx="2"/><rect class="el-cell" data-c="16" data-s="3" data-gone x="792" y="439" width="16" height="11" rx="2"/><rect class="el-cell" data-c="16" data-s="4" data-gone x="792" y="453" width="16" height="11" rx="2"/><rect class="el-cell" data-c="16" data-s="5" data-gone x="792" y="467" width="16" height="11" rx="2"/><rect class="el-cell" data-c="16" data-s="6" data-gone x="792" y="481" width="16" height="11" rx="2"/><rect class="el-cell" data-c="16" data-s="7" data-gone x="792" y="495" width="16" height="11" rx="2"/><text class="el-gf" data-c="0" x="480" y="518">0</text><text class="el-gf" data-c="1" x="500" y="518">1</text><text class="el-gf" data-c="2" x="520" y="518">2</text><text class="el-gf" data-c="3" x="540" y="518">3</text><text class="el-gf" data-c="4" x="560" y="518">4</text><text class="el-gf" data-c="5" x="580" y="518">5</text><text class="el-gf" data-c="6" x="600" y="518">6</text><text class="el-gf" data-c="7" x="620" y="518">7</text><text class="el-gf" data-c="8" x="640" y="518">8</text><text class="el-gf" data-c="9" x="660" y="518">9</text><text class="el-gf" data-c="10" x="680" y="518">10</text><text class="el-gf" data-c="11" data-gone x="700" y="518">11</text><text class="el-gf" data-c="12" data-gone x="720" y="518">12</text><text class="el-gf" data-c="13" data-gone x="740" y="518">13</text><text class="el-gf" data-c="14" data-gone x="760" y="518">14</text><text class="el-gf" data-c="15" data-gone x="780" y="518">15</text><text class="el-gf" data-c="16" data-gone x="800" y="518">16</text></g><g class="el-narrow"><g class="el-edge" data-e="e01"><path class="el-line" d="M200 58Q200 80 200 94"/><path class="el-head" d="M200 101L204 94L196 94Z"/><text class="el-elabel" x="214" y="80">a</text><circle class="el-tok" r="4.5" opacity="0"><animateMotion dur="0.75s" begin="indefinite" fill="freeze" path="M200 58Q200 80 200 101"/><animate attributeName="opacity" values="1;1;0" keyTimes="0;0.8;1" dur="0.75s" begin="indefinite" fill="freeze"/></circle></g><g class="el-edge" data-e="e12" data-eps><path class="el-line" d="M200 138Q200 165 200 184"/><path class="el-head" d="M200 191L204 184L196 184Z"/><text class="el-elabel" x="214" y="165">ε</text><circle class="el-tok" r="4.5" opacity="0"><animateMotion dur="0.75s" begin="indefinite" fill="freeze" path="M200 138Q200 165 200 191"/><animate attributeName="opacity" values="1;1;0" keyTimes="0;0.8;1" dur="0.75s" begin="indefinite" fill="freeze"/></circle></g><g class="el-edge" data-e="e16" data-eps><path class="el-line" d="M215.4 129.3Q490 295 222.3 456.6"/><path class="el-head" d="M216.3 460.2L224.3 460L220.2 453.1Z"/><text class="el-elabel" x="360.9" y="294.9" text-anchor="start">ε</text><text class="el-note" x="360.9" y="310.9" text-anchor="start">leave loop</text><circle class="el-tok" r="4.5" opacity="0"><animateMotion dur="0.75s" begin="indefinite" fill="freeze" path="M215.4 129.3Q490 295 216.3 460.2"/><animate attributeName="opacity" values="1;1;0" keyTimes="0;0.8;1" dur="0.75s" begin="indefinite" fill="freeze"/></circle></g><g class="el-edge" data-e="e23" data-eps><path class="el-line" d="M188.6 223.9Q165 252.5 146.5 274.9"/><path class="el-head" d="M142.1 280.3L149.6 277.5L143.4 272.4Z"/><text class="el-elabel" x="150" y="244">ε</text><circle class="el-tok" r="4.5" opacity="0"><animateMotion dur="0.75s" begin="indefinite" fill="freeze" path="M188.6 223.9Q165 252.5 142.1 280.3"/><animate attributeName="opacity" values="1;1;0" keyTimes="0;0.8;1" dur="0.75s" begin="indefinite" fill="freeze"/></circle></g><g class="el-edge" data-e="e24" data-eps><path class="el-line" d="M211.4 223.9Q235 252.5 253.5 274.9"/><path class="el-head" d="M257.9 280.3L256.6 272.4L250.4 277.5Z"/><text class="el-elabel" x="250" y="244">ε</text><circle class="el-tok" r="4.5" opacity="0"><animateMotion dur="0.75s" begin="indefinite" fill="freeze" path="M211.4 223.9Q235 252.5 257.9 280.3"/><animate attributeName="opacity" values="1;1;0" keyTimes="0;0.8;1" dur="0.75s" begin="indefinite" fill="freeze"/></circle></g><g class="el-edge" data-e="e35"><path class="el-line" d="M141.4 308.9Q165 337.5 183.5 359.9"/><path class="el-head" d="M187.9 365.3L186.6 357.4L180.4 362.5Z"/><text class="el-elabel" x="150" y="346">b</text><circle class="el-tok" r="4.5" opacity="0"><animateMotion dur="0.75s" begin="indefinite" fill="freeze" path="M141.4 308.9Q165 337.5 187.9 365.3"/><animate attributeName="opacity" values="1;1;0" keyTimes="0;0.8;1" dur="0.75s" begin="indefinite" fill="freeze"/></circle></g><g class="el-edge" data-e="e45"><path class="el-line" d="M258.6 308.9Q235 337.5 216.5 359.9"/><path class="el-head" d="M212.1 365.3L219.6 362.5L213.4 357.4Z"/><text class="el-elabel" x="250" y="346">c</text><circle class="el-tok" r="4.5" opacity="0"><animateMotion dur="0.75s" begin="indefinite" fill="freeze" path="M258.6 308.9Q235 337.5 212.1 365.3"/><animate attributeName="opacity" values="1;1;0" keyTimes="0;0.8;1" dur="0.75s" begin="indefinite" fill="freeze"/></circle></g><g class="el-edge" data-e="e51" data-eps><path class="el-line" d="M183.4 373Q-110 250 176 130.1"/><path class="el-head" d="M182.5 127.3L174.5 126.4L177.6 133.7Z"/><text class="el-elabel" x="52.5" y="250.1" text-anchor="start">ε</text><text class="el-note" x="52.5" y="266.1" text-anchor="start">loop back</text><circle class="el-tok" r="4.5" opacity="0"><animateMotion dur="0.75s" begin="indefinite" fill="freeze" path="M183.4 373Q-110 250 182.5 127.3"/><animate attributeName="opacity" values="1;1;0" keyTimes="0;0.8;1" dur="0.75s" begin="indefinite" fill="freeze"/></circle></g><g class="el-edge" data-e="e67"><path class="el-line" d="M200 488Q200 515 200 534"/><path class="el-head" d="M200 541L204 534L196 534Z"/><text class="el-elabel" x="214" y="515">d</text><circle class="el-tok" r="4.5" opacity="0"><animateMotion dur="0.75s" begin="indefinite" fill="freeze" path="M200 488Q200 515 200 541"/><animate attributeName="opacity" values="1;1;0" keyTimes="0;0.8;1" dur="0.75s" begin="indefinite" fill="freeze"/></circle></g><g class="el-state" data-s="0" transform="translate(200 40)"><circle class="el-halo" r="26"/><circle class="el-ring" r="18"/><text class="el-num">0</text></g><g class="el-state" data-s="1" transform="translate(200 120)"><circle class="el-halo" r="26"/><circle class="el-ring" r="18"/><text class="el-num">1</text></g><g class="el-state" data-s="2" transform="translate(200 210)"><circle class="el-halo" r="26"/><circle class="el-ring" r="18"/><text class="el-num">2</text></g><g class="el-state" data-s="3" transform="translate(130 295)"><circle class="el-halo" r="26"/><circle class="el-ring" r="18"/><text class="el-num">3</text></g><g class="el-state" data-s="4" transform="translate(270 295)"><circle class="el-halo" r="26"/><circle class="el-ring" r="18"/><text class="el-num">4</text></g><g class="el-state" data-s="5" transform="translate(200 380)"><circle class="el-halo" r="26"/><circle class="el-ring" r="18"/><text class="el-num">5</text></g><g class="el-state" data-s="6" transform="translate(200 470)"><circle class="el-halo" r="26"/><circle class="el-ring" r="18"/><text class="el-num">6</text></g><g class="el-state" data-s="7" transform="translate(200 560)"><circle class="el-halo" r="26"/><circle class="el-accept" r="22.5"/><circle class="el-ring" r="18"/><text class="el-num">7</text></g><text class="el-title" x="252" y="8">the loop</text><g class="u-code" data-hue="blue" transform="translate(252 16)"><g class="u-line" data-i="0" transform="translate(0 0)"><rect width="178" height="19" rx="3"/><text class="u-line-num" x="16" y="9.5">1</text><text class="u-line-text" x="26" y="9.5">S ← ε-closure({0})</text></g><g class="u-line" data-i="1" transform="translate(0 19)"><rect width="178" height="19" rx="3"/><text class="u-line-num" x="16" y="9.5">2</text><text class="u-line-text" x="26" y="9.5">for each symbol x:</text></g><g class="u-line" data-i="2" transform="translate(0 38)"><rect width="178" height="19" rx="3"/><text class="u-line-num" x="16" y="9.5">3</text><text class="u-line-text" x="26" y="9.5">  S ← δ(S, x)</text></g><g class="u-line" data-i="3" transform="translate(0 57)"><rect width="178" height="19" rx="3"/><text class="u-line-num" x="16" y="9.5">4</text><text class="u-line-text" x="26" y="9.5">  S ← ε-closure(S)</text></g><g class="u-line" data-i="4" transform="translate(0 76)"><rect width="178" height="19" rx="3"/><text class="u-line-num" x="16" y="9.5">5</text><text class="u-line-text" x="26" y="9.5">match if 7 ∈ S</text></g></g><text class="el-title" x="40" y="608">input (click a letter)</text><g class="el-ch" data-p="0" transform="translate(40 620)"><rect width="36" height="36" rx="5"/><text x="18" y="18">a</text></g><g class="el-ch" data-p="1" transform="translate(84 620)"><rect width="36" height="36" rx="5"/><text x="18" y="18">b</text></g><g class="el-ch" data-p="2" transform="translate(128 620)"><rect width="36" height="36" rx="5"/><text x="18" y="18">c</text></g><g class="el-ch" data-p="3" transform="translate(172 620)"><rect width="36" height="36" rx="5"/><text x="18" y="18">b</text></g><g class="el-ch" data-p="4" transform="translate(216 620)"><rect width="36" height="36" rx="5"/><text x="18" y="18">d</text></g><g class="el-ch" data-p="5" data-gone transform="translate(260 620)"><rect width="36" height="36" rx="5"/><text x="18" y="18"></text></g><g class="el-ch" data-p="6" data-gone transform="translate(304 620)"><rect width="36" height="36" rx="5"/><text x="18" y="18"></text></g><g class="el-ch" data-p="7" data-gone transform="translate(348 620)"><rect width="36" height="36" rx="5"/><text x="18" y="18"></text></g><text class="el-title" x="40" y="678">states the NFA is in</text><text class="el-sname" x="40" y="704">S</text><text class="el-set" x="58" y="704">= {0}</text><g class="el-verdict"><text class="el-v1" x="40" y="732"></text><text class="el-v2" x="40" y="751"></text></g><g class="el-drop"><text class="el-d1" x="40" y="732"></text><text class="el-d2" x="40" y="751"></text></g><text class="el-title" x="42" y="776">trace: S at each step</text><text class="el-axis" x="58" y="928" text-anchor="end" dominant-baseline="central">step</text><rect class="el-col" x="60" y="784" width="20" height="150" rx="4" style="transform:translateX(200px)"/><text class="el-gh" data-c="0" data-k="start" x="70" y="794"></text><text class="el-gh" data-c="1" data-k="move" x="90" y="794">a</text><text class="el-gh" data-c="2" data-k="closure" x="110" y="794">ε</text><text class="el-gh" data-c="3" data-k="move" x="130" y="794">b</text><text class="el-gh" data-c="4" data-k="closure" x="150" y="794">ε</text><text class="el-gh" data-c="5" data-k="move" x="170" y="794">c</text><text class="el-gh" data-c="6" data-k="closure" x="190" y="794">ε</text><text class="el-gh" data-c="7" data-k="move" x="210" y="794">b</text><text class="el-gh" data-c="8" data-k="closure" x="230" y="794">ε</text><text class="el-gh" data-c="9" data-k="move" x="250" y="794">d</text><text class="el-gh" data-c="10" data-k="closure" x="270" y="794">ε</text><text class="el-gh" data-c="11" data-k="" x="290" y="794"></text><text class="el-gh" data-c="12" data-k="" x="310" y="794"></text><text class="el-gh" data-c="13" data-k="" x="330" y="794"></text><text class="el-gh" data-c="14" data-k="" x="350" y="794"></text><text class="el-gh" data-c="15" data-k="" x="370" y="794"></text><text class="el-gh" data-c="16" data-k="" x="390" y="794"></text><text class="el-rl" x="50" y="812">0</text><text class="el-rl" x="50" y="826">1</text><text class="el-rl" x="50" y="840">2</text><text class="el-rl" x="50" y="854">3</text><text class="el-rl" x="50" y="868">4</text><text class="el-rl" x="50" y="882">5</text><text class="el-rl" x="50" y="896">6</text><text class="el-rl" x="50" y="910">7</text><rect class="el-cell" data-c="0" data-s="0" data-in x="62" y="807" width="16" height="11" rx="2"/><rect class="el-cell" data-c="0" data-s="1" x="62" y="821" width="16" height="11" rx="2"/><rect class="el-cell" data-c="0" data-s="2" x="62" y="835" width="16" height="11" rx="2"/><rect class="el-cell" data-c="0" data-s="3" x="62" y="849" width="16" height="11" rx="2"/><rect class="el-cell" data-c="0" data-s="4" x="62" y="863" width="16" height="11" rx="2"/><rect class="el-cell" data-c="0" data-s="5" x="62" y="877" width="16" height="11" rx="2"/><rect class="el-cell" data-c="0" data-s="6" x="62" y="891" width="16" height="11" rx="2"/><rect class="el-cell" data-c="0" data-s="7" x="62" y="905" width="16" height="11" rx="2"/><rect class="el-cell" data-c="1" data-s="0" x="82" y="807" width="16" height="11" rx="2"/><rect class="el-cell" data-c="1" data-s="1" data-in x="82" y="821" width="16" height="11" rx="2"/><rect class="el-cell" data-c="1" data-s="2" x="82" y="835" width="16" height="11" rx="2"/><rect class="el-cell" data-c="1" data-s="3" x="82" y="849" width="16" height="11" rx="2"/><rect class="el-cell" data-c="1" data-s="4" x="82" y="863" width="16" height="11" rx="2"/><rect class="el-cell" data-c="1" data-s="5" x="82" y="877" width="16" height="11" rx="2"/><rect class="el-cell" data-c="1" data-s="6" x="82" y="891" width="16" height="11" rx="2"/><rect class="el-cell" data-c="1" data-s="7" x="82" y="905" width="16" height="11" rx="2"/><rect class="el-cell" data-c="2" data-s="0" x="102" y="807" width="16" height="11" rx="2"/><rect class="el-cell" data-c="2" data-s="1" data-in x="102" y="821" width="16" height="11" rx="2"/><rect class="el-cell" data-c="2" data-s="2" data-in x="102" y="835" width="16" height="11" rx="2"/><rect class="el-cell" data-c="2" data-s="3" data-in x="102" y="849" width="16" height="11" rx="2"/><rect class="el-cell" data-c="2" data-s="4" data-in x="102" y="863" width="16" height="11" rx="2"/><rect class="el-cell" data-c="2" data-s="5" x="102" y="877" width="16" height="11" rx="2"/><rect class="el-cell" data-c="2" data-s="6" data-in x="102" y="891" width="16" height="11" rx="2"/><rect class="el-cell" data-c="2" data-s="7" x="102" y="905" width="16" height="11" rx="2"/><rect class="el-cell" data-c="3" data-s="0" x="122" y="807" width="16" height="11" rx="2"/><rect class="el-cell" data-c="3" data-s="1" x="122" y="821" width="16" height="11" rx="2"/><rect class="el-cell" data-c="3" data-s="2" x="122" y="835" width="16" height="11" rx="2"/><rect class="el-cell" data-c="3" data-s="3" x="122" y="849" width="16" height="11" rx="2"/><rect class="el-cell" data-c="3" data-s="4" x="122" y="863" width="16" height="11" rx="2"/><rect class="el-cell" data-c="3" data-s="5" data-in x="122" y="877" width="16" height="11" rx="2"/><rect class="el-cell" data-c="3" data-s="6" x="122" y="891" width="16" height="11" rx="2"/><rect class="el-cell" data-c="3" data-s="7" x="122" y="905" width="16" height="11" rx="2"/><rect class="el-cell" data-c="4" data-s="0" x="142" y="807" width="16" height="11" rx="2"/><rect class="el-cell" data-c="4" data-s="1" data-in x="142" y="821" width="16" height="11" rx="2"/><rect class="el-cell" data-c="4" data-s="2" data-in x="142" y="835" width="16" height="11" rx="2"/><rect class="el-cell" data-c="4" data-s="3" data-in x="142" y="849" width="16" height="11" rx="2"/><rect class="el-cell" data-c="4" data-s="4" data-in x="142" y="863" width="16" height="11" rx="2"/><rect class="el-cell" data-c="4" data-s="5" data-in x="142" y="877" width="16" height="11" rx="2"/><rect class="el-cell" data-c="4" data-s="6" data-in x="142" y="891" width="16" height="11" rx="2"/><rect class="el-cell" data-c="4" data-s="7" x="142" y="905" width="16" height="11" rx="2"/><rect class="el-cell" data-c="5" data-s="0" x="162" y="807" width="16" height="11" rx="2"/><rect class="el-cell" data-c="5" data-s="1" x="162" y="821" width="16" height="11" rx="2"/><rect class="el-cell" data-c="5" data-s="2" x="162" y="835" width="16" height="11" rx="2"/><rect class="el-cell" data-c="5" data-s="3" x="162" y="849" width="16" height="11" rx="2"/><rect class="el-cell" data-c="5" data-s="4" x="162" y="863" width="16" height="11" rx="2"/><rect class="el-cell" data-c="5" data-s="5" data-in x="162" y="877" width="16" height="11" rx="2"/><rect class="el-cell" data-c="5" data-s="6" x="162" y="891" width="16" height="11" rx="2"/><rect class="el-cell" data-c="5" data-s="7" x="162" y="905" width="16" height="11" rx="2"/><rect class="el-cell" data-c="6" data-s="0" x="182" y="807" width="16" height="11" rx="2"/><rect class="el-cell" data-c="6" data-s="1" data-in x="182" y="821" width="16" height="11" rx="2"/><rect class="el-cell" data-c="6" data-s="2" data-in x="182" y="835" width="16" height="11" rx="2"/><rect class="el-cell" data-c="6" data-s="3" data-in x="182" y="849" width="16" height="11" rx="2"/><rect class="el-cell" data-c="6" data-s="4" data-in x="182" y="863" width="16" height="11" rx="2"/><rect class="el-cell" data-c="6" data-s="5" data-in x="182" y="877" width="16" height="11" rx="2"/><rect class="el-cell" data-c="6" data-s="6" data-in x="182" y="891" width="16" height="11" rx="2"/><rect class="el-cell" data-c="6" data-s="7" x="182" y="905" width="16" height="11" rx="2"/><rect class="el-cell" data-c="7" data-s="0" x="202" y="807" width="16" height="11" rx="2"/><rect class="el-cell" data-c="7" data-s="1" x="202" y="821" width="16" height="11" rx="2"/><rect class="el-cell" data-c="7" data-s="2" x="202" y="835" width="16" height="11" rx="2"/><rect class="el-cell" data-c="7" data-s="3" x="202" y="849" width="16" height="11" rx="2"/><rect class="el-cell" data-c="7" data-s="4" x="202" y="863" width="16" height="11" rx="2"/><rect class="el-cell" data-c="7" data-s="5" data-in x="202" y="877" width="16" height="11" rx="2"/><rect class="el-cell" data-c="7" data-s="6" x="202" y="891" width="16" height="11" rx="2"/><rect class="el-cell" data-c="7" data-s="7" x="202" y="905" width="16" height="11" rx="2"/><rect class="el-cell" data-c="8" data-s="0" x="222" y="807" width="16" height="11" rx="2"/><rect class="el-cell" data-c="8" data-s="1" data-in x="222" y="821" width="16" height="11" rx="2"/><rect class="el-cell" data-c="8" data-s="2" data-in x="222" y="835" width="16" height="11" rx="2"/><rect class="el-cell" data-c="8" data-s="3" data-in x="222" y="849" width="16" height="11" rx="2"/><rect class="el-cell" data-c="8" data-s="4" data-in x="222" y="863" width="16" height="11" rx="2"/><rect class="el-cell" data-c="8" data-s="5" data-in x="222" y="877" width="16" height="11" rx="2"/><rect class="el-cell" data-c="8" data-s="6" data-in x="222" y="891" width="16" height="11" rx="2"/><rect class="el-cell" data-c="8" data-s="7" x="222" y="905" width="16" height="11" rx="2"/><rect class="el-cell" data-c="9" data-s="0" x="242" y="807" width="16" height="11" rx="2"/><rect class="el-cell" data-c="9" data-s="1" x="242" y="821" width="16" height="11" rx="2"/><rect class="el-cell" data-c="9" data-s="2" x="242" y="835" width="16" height="11" rx="2"/><rect class="el-cell" data-c="9" data-s="3" x="242" y="849" width="16" height="11" rx="2"/><rect class="el-cell" data-c="9" data-s="4" x="242" y="863" width="16" height="11" rx="2"/><rect class="el-cell" data-c="9" data-s="5" x="242" y="877" width="16" height="11" rx="2"/><rect class="el-cell" data-c="9" data-s="6" x="242" y="891" width="16" height="11" rx="2"/><rect class="el-cell" data-c="9" data-s="7" data-in x="242" y="905" width="16" height="11" rx="2"/><rect class="el-cell" data-c="10" data-s="0" x="262" y="807" width="16" height="11" rx="2"/><rect class="el-cell" data-c="10" data-s="1" x="262" y="821" width="16" height="11" rx="2"/><rect class="el-cell" data-c="10" data-s="2" x="262" y="835" width="16" height="11" rx="2"/><rect class="el-cell" data-c="10" data-s="3" x="262" y="849" width="16" height="11" rx="2"/><rect class="el-cell" data-c="10" data-s="4" x="262" y="863" width="16" height="11" rx="2"/><rect class="el-cell" data-c="10" data-s="5" x="262" y="877" width="16" height="11" rx="2"/><rect class="el-cell" data-c="10" data-s="6" x="262" y="891" width="16" height="11" rx="2"/><rect class="el-cell" data-c="10" data-s="7" data-in x="262" y="905" width="16" height="11" rx="2"/><rect class="el-cell" data-c="11" data-s="0" data-gone x="282" y="807" width="16" height="11" rx="2"/><rect class="el-cell" data-c="11" data-s="1" data-gone x="282" y="821" width="16" height="11" rx="2"/><rect class="el-cell" data-c="11" data-s="2" data-gone x="282" y="835" width="16" height="11" rx="2"/><rect class="el-cell" data-c="11" data-s="3" data-gone x="282" y="849" width="16" height="11" rx="2"/><rect class="el-cell" data-c="11" data-s="4" data-gone x="282" y="863" width="16" height="11" rx="2"/><rect class="el-cell" data-c="11" data-s="5" data-gone x="282" y="877" width="16" height="11" rx="2"/><rect class="el-cell" data-c="11" data-s="6" data-gone x="282" y="891" width="16" height="11" rx="2"/><rect class="el-cell" data-c="11" data-s="7" data-gone x="282" y="905" width="16" height="11" rx="2"/><rect class="el-cell" data-c="12" data-s="0" data-gone x="302" y="807" width="16" height="11" rx="2"/><rect class="el-cell" data-c="12" data-s="1" data-gone x="302" y="821" width="16" height="11" rx="2"/><rect class="el-cell" data-c="12" data-s="2" data-gone x="302" y="835" width="16" height="11" rx="2"/><rect class="el-cell" data-c="12" data-s="3" data-gone x="302" y="849" width="16" height="11" rx="2"/><rect class="el-cell" data-c="12" data-s="4" data-gone x="302" y="863" width="16" height="11" rx="2"/><rect class="el-cell" data-c="12" data-s="5" data-gone x="302" y="877" width="16" height="11" rx="2"/><rect class="el-cell" data-c="12" data-s="6" data-gone x="302" y="891" width="16" height="11" rx="2"/><rect class="el-cell" data-c="12" data-s="7" data-gone x="302" y="905" width="16" height="11" rx="2"/><rect class="el-cell" data-c="13" data-s="0" data-gone x="322" y="807" width="16" height="11" rx="2"/><rect class="el-cell" data-c="13" data-s="1" data-gone x="322" y="821" width="16" height="11" rx="2"/><rect class="el-cell" data-c="13" data-s="2" data-gone x="322" y="835" width="16" height="11" rx="2"/><rect class="el-cell" data-c="13" data-s="3" data-gone x="322" y="849" width="16" height="11" rx="2"/><rect class="el-cell" data-c="13" data-s="4" data-gone x="322" y="863" width="16" height="11" rx="2"/><rect class="el-cell" data-c="13" data-s="5" data-gone x="322" y="877" width="16" height="11" rx="2"/><rect class="el-cell" data-c="13" data-s="6" data-gone x="322" y="891" width="16" height="11" rx="2"/><rect class="el-cell" data-c="13" data-s="7" data-gone x="322" y="905" width="16" height="11" rx="2"/><rect class="el-cell" data-c="14" data-s="0" data-gone x="342" y="807" width="16" height="11" rx="2"/><rect class="el-cell" data-c="14" data-s="1" data-gone x="342" y="821" width="16" height="11" rx="2"/><rect class="el-cell" data-c="14" data-s="2" data-gone x="342" y="835" width="16" height="11" rx="2"/><rect class="el-cell" data-c="14" data-s="3" data-gone x="342" y="849" width="16" height="11" rx="2"/><rect class="el-cell" data-c="14" data-s="4" data-gone x="342" y="863" width="16" height="11" rx="2"/><rect class="el-cell" data-c="14" data-s="5" data-gone x="342" y="877" width="16" height="11" rx="2"/><rect class="el-cell" data-c="14" data-s="6" data-gone x="342" y="891" width="16" height="11" rx="2"/><rect class="el-cell" data-c="14" data-s="7" data-gone x="342" y="905" width="16" height="11" rx="2"/><rect class="el-cell" data-c="15" data-s="0" data-gone x="362" y="807" width="16" height="11" rx="2"/><rect class="el-cell" data-c="15" data-s="1" data-gone x="362" y="821" width="16" height="11" rx="2"/><rect class="el-cell" data-c="15" data-s="2" data-gone x="362" y="835" width="16" height="11" rx="2"/><rect class="el-cell" data-c="15" data-s="3" data-gone x="362" y="849" width="16" height="11" rx="2"/><rect class="el-cell" data-c="15" data-s="4" data-gone x="362" y="863" width="16" height="11" rx="2"/><rect class="el-cell" data-c="15" data-s="5" data-gone x="362" y="877" width="16" height="11" rx="2"/><rect class="el-cell" data-c="15" data-s="6" data-gone x="362" y="891" width="16" height="11" rx="2"/><rect class="el-cell" data-c="15" data-s="7" data-gone x="362" y="905" width="16" height="11" rx="2"/><rect class="el-cell" data-c="16" data-s="0" data-gone x="382" y="807" width="16" height="11" rx="2"/><rect class="el-cell" data-c="16" data-s="1" data-gone x="382" y="821" width="16" height="11" rx="2"/><rect class="el-cell" data-c="16" data-s="2" data-gone x="382" y="835" width="16" height="11" rx="2"/><rect class="el-cell" data-c="16" data-s="3" data-gone x="382" y="849" width="16" height="11" rx="2"/><rect class="el-cell" data-c="16" data-s="4" data-gone x="382" y="863" width="16" height="11" rx="2"/><rect class="el-cell" data-c="16" data-s="5" data-gone x="382" y="877" width="16" height="11" rx="2"/><rect class="el-cell" data-c="16" data-s="6" data-gone x="382" y="891" width="16" height="11" rx="2"/><rect class="el-cell" data-c="16" data-s="7" data-gone x="382" y="905" width="16" height="11" rx="2"/><text class="el-gf" data-c="0" x="70" y="928">0</text><text class="el-gf" data-c="1" x="90" y="928">1</text><text class="el-gf" data-c="2" x="110" y="928">2</text><text class="el-gf" data-c="3" x="130" y="928">3</text><text class="el-gf" data-c="4" x="150" y="928">4</text><text class="el-gf" data-c="5" x="170" y="928">5</text><text class="el-gf" data-c="6" x="190" y="928">6</text><text class="el-gf" data-c="7" x="210" y="928">7</text><text class="el-gf" data-c="8" x="230" y="928">8</text><text class="el-gf" data-c="9" x="250" y="928">9</text><text class="el-gf" data-c="10" x="270" y="928">10</text><text class="el-gf" data-c="11" data-gone x="290" y="928">11</text><text class="el-gf" data-c="12" data-gone x="310" y="928">12</text><text class="el-gf" data-c="13" data-gone x="330" y="928">13</text><text class="el-gf" data-c="14" data-gone x="350" y="928">14</text><text class="el-gf" data-c="15" data-gone x="370" y="928">15</text><text class="el-gf" data-c="16" data-gone x="390" y="928">16</text></g></svg><div class="u-controls"><div class="u-ctl"><label>input <input type="text" data-input value="abcbd" maxlength="8" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="Input string: up to 8 letters"></label><button type="button" data-preset="abcbd" aria-pressed="true">abcbd (match)</button><button type="button" data-preset="abdc" aria-pressed="false">abdc (no match)</button></div><div class="u-time" data-label="step"><button type="button" data-step="-1" aria-label="Previous step">‹</button><input type="range" min="0" max="10" value="0" aria-label="step"><button type="button" data-step="1" aria-label="Next step">›</button><output>step 0 / 10</output></div></div><div class="u-cc"><p class="u-at" data-at="0">An NFA can be in several states at once, so it keeps a <b data-hue="blue">set S</b>. It matches if <b data-hue="green">accept state 7</b> is in S when the input ends.</p><p class="u-at" data-at="1">Each piece of the regex becomes a piece of the graph. The star adds two <b data-hue="purple">ε edges</b>, which move without reading input.</p><p class="u-at" data-at="2">A state can only follow an edge that carries the <b data-hue="yellow">symbol read</b>. The machine checks every state in S, not one path.</p><p class="u-at" data-at="3">Next the machine follows every <b data-hue="purple">ε edge</b> it can reach, because they read no input. This step is the ε-closure.</p><p class="u-at" data-at="4">States without an edge for the symbol <b data-hue="red">drop out</b>. When 5 is in S, the ε edge from 5 to 1 adds the loop states to S again.</p><p class="u-at" data-at="5">After the last symbol, the machine checks S once. The input matches only if <b data-hue="green">accept state 7</b> is in S.</p></div><nav class="u-steps" aria-label="Scenes"><button type="button" class="u-play" aria-pressed="false"><span>▶</span>Play</button><button type="button" class="u-voice" aria-pressed="true" hidden><span>♪</span>Voice</button><button type="button" data-go="0" aria-current="step"><span>1</span>Overview</button><button type="button" data-go="1"><span>2</span>Build</button><button type="button" data-go="2"><span>3</span>Read</button><button type="button" data-go="3"><span>4</span>ε-closure</button><button type="button" data-go="4"><span>5</span>Loop</button><button type="button" data-go="5"><span>6</span>End</button></nav><div class="u-key"><span data-hue="blue"><i></i>in S (active state)</span><span data-hue="yellow"><i></i>symbol read</span><span data-hue="purple"><i></i>ε edge (reads no input)</span><span data-hue="red"><i></i>dropped: no edge for the symbol</span><span data-hue="green"><i></i>accept state</span></div></div></div><figcaption class="iso-legend"><span class="iso-caption">The NFA follows Thompson's construction in the compact form with split states. The preset input abcbd was chosen by hand, and the field under the drawing takes any input up to 8 letters. Every set comes from a small simulator. It agrees with the JavaScript RegExp engine on 39,531 test strings, and the figure checks your input with RegExp too.</span></figcaption></figure><details class="u-more"><summary>Reference: what differs, what is left out, terms</summary><section class="u-notes"><h2>Other inputs</h2><p>Each row shows S at the start and after each symbol, with the ε-closure done. The same NFA and the same rule decide every row.</p><table><thead><tr><th>Input</th><th>S after each symbol</th><th>Result</th></tr></thead><tbody><tr><td data-th="Input"><code>ad</code></td><td data-th="S after each symbol"><code>{0} → {1,2,3,4,6} → {7}</code></td><td data-th="Result">match</td></tr><tr><td data-th="Input"><code>abcbd</code></td><td data-th="S after each symbol"><code>{0} → {1,2,3,4,6} → {1,2,3,4,5,6} → {1,2,3,4,5,6} → {1,2,3,4,5,6} → {7}</code></td><td data-th="Result">match</td></tr><tr><td data-th="Input"><code>abcb</code></td><td data-th="S after each symbol"><code>{0} → {1,2,3,4,6} → {1,2,3,4,5,6} → {1,2,3,4,5,6} → {1,2,3,4,5,6}</code></td><td data-th="Result">no match: 7 is not in S at the end</td></tr><tr><td data-th="Input"><code>abdc</code></td><td data-th="S after each symbol"><code>{0} → {1,2,3,4,6} → {1,2,3,4,5,6} → {7} → {}</code></td><td data-th="Result">no match: S is empty, so no state can continue</td></tr></tbody></table><h2>Sets, backtracking and DFAs</h2><p>Real engines use one of three ways to handle the choices in an NFA. For this regex, subset construction gives 4 DFA states plus an empty dead state: <code>{0} {1,2,3,4,6} {1,2,3,4,5,6} {7}</code>.</p><table><thead><tr><th>Approach</th><th>How it handles a choice</th><th>Time for n symbols, m states</th><th>Used by</th></tr></thead><tbody><tr><td data-th="Approach">Set simulation (this figure)</td><td data-th="How it handles a choice">keeps every choice in S at once</td><td data-th="Time for n symbols, m states">O(n·m)</td><td data-th="Used by">RE2, Go regexp, Rust regex (one of its engines)</td></tr><tr><td data-th="Approach">Backtracking</td><td data-th="How it handles a choice">tries one path, and goes back to the last choice if it fails</td><td data-th="Time for n symbols, m states">exponential for some patterns, for example (a*)*b</td><td data-th="Used by">PCRE, Perl, Python re, JavaScript, Java</td></tr><tr><td data-th="Approach">DFA (subset construction)</td><td data-th="How it handles a choice">turns each reachable set into one state before it reads input</td><td data-th="Time for n symbols, m states">O(n), but up to 2<sup>m</sup> states</td><td data-th="Used by">lex and flex; grep and RE2 build DFA states as needed</td></tr></tbody></table><h2>What the figure leaves out</h2><table><thead><tr><th>Left out</th><th>What really happens</th></tr></thead><tbody><tr><td data-th="Left out">Search</td><td data-th="What really happens">The figure checks the whole input. To find a match inside a longer text, the engine adds state 0 to S before each symbol.</td></tr><tr><td data-th="Left out">Capture groups</td><td data-th="What really happens">A Pike VM keeps the start and end of each group next to each state in S. The figure keeps only the states.</td></tr><tr><td data-th="Left out">Backreferences</td><td data-th="What really happens"><code>(a)\1</code> needs to remember text, which no finite set of states can do. Only backtracking engines support it.</td></tr><tr><td data-th="Left out">Order of ε edges</td><td data-th="What really happens">The order does not change match or no match. It only decides which submatch an engine reports.</td></tr><tr><td data-th="Left out">Other patterns</td><td data-th="What really happens">The graph is drawn by hand for <code>a(b|c)*d</code>. The input is yours to change, the pattern is fixed.</td></tr></tbody></table><h2>Words used here</h2><table><thead><tr><th>Term</th><th>Meaning</th></tr></thead><tbody><tr><td data-th="Term">NFA</td><td data-th="Meaning">nondeterministic finite automaton: states and edges, can be in many states</td></tr><tr><td data-th="Term">State</td><td data-th="Meaning">a numbered circle. S holds the states the NFA is in now.</td></tr><tr><td data-th="Term">Edge</td><td data-th="Meaning">an arrow between states, labelled with the symbol it reads</td></tr><tr><td data-th="Term">ε edge</td><td data-th="Meaning">an edge that the NFA follows without reading a symbol</td></tr><tr><td data-th="Term">ε-closure</td><td data-th="Meaning">S plus every state reachable from S by ε edges only</td></tr><tr><td data-th="Term">δ(S, x)</td><td data-th="Meaning">the states reached from S by one edge that reads x</td></tr><tr><td data-th="Term">Accept state</td><td data-th="Meaning">a state (double ring) that means match if the input ends there</td></tr></tbody></table></section></details></main><script type="module">function fmt(value, places = 1) {
+  if (value === -Infinity) return "−∞";
+  const text = value.toFixed(places);
+  return Number(text) === 0 ? (0).toFixed(places) : text.replace("-", "−");
+}
+function mark(root, i, selector = ".u-mark") {
+  root.querySelectorAll(`${selector}[data-r],${selector}[data-i]`).forEach((el) => el.toggleAttribute("data-on", Number(el.dataset.r ?? el.dataset.i) === i));
+}
+function setLive(values, root = document) {
+  for (const [name, v] of Object.entries(values))
+    root.querySelectorAll(`[data-live="${name}"]`).forEach((el) => (el.textContent = typeof v === "number" ? fmt(v, Number(el.dataset.places ?? (Number.isInteger(v) ? 0 : 1))) : v));
+}
+function runtime() {
+  const stage = document.querySelector(".u-stage");
+  const count = Number(stage.dataset.count);
+  const dwell = Number(stage.dataset.dwell);
+  const still = matchMedia("(prefers-reduced-motion: reduce)");
+  let scene = 0;
+  let visible = false;
+  let playing = false;
+  let held = false;
+  let next = 0;
+  const beats = [];
+  const total = (b) => (typeof b.count === "function" ? b.count() : b.count);
+  // Voice: a scene's narration plays when the scene opens, from its recorded clip (data-audio) or else the browser's
+  // own voice, which reads the current text, live numbers included. Voice off shows the narration as text.
+  // The tour waits until the narration ends. A replay of the same scene (go(scene())) does not restart it.
+  const cc = stage.querySelector(".u-cc");
+  const voiceBtn = stage.querySelector(".u-voice");
+  const synth = window.speechSynthesis;
+  const clips = !!cc?.querySelector("[data-audio]");
+  let voiceOn = !!cc && (clips || !!synth);
+  let speaking = false;
+  let spoken = -1;
+  let talk = 0;
+  let clip = null;
+  let audio = null;
+  const recorded = [...(cc?.children ?? [])].map((p) => p.textContent.trim());
+  // ponytail: name heuristic. Neural and online voices (Edge "Natural", Chrome "Google", Apple "Premium") sound human.
+  const bestVoice = () => {
+    const en = synth.getVoices().filter((v) => v.lang.startsWith("en"));
+    return en.find((v) => /natural|neural|online/i.test(v.name)) ?? en.find((v) => /google|premium|enhanced|siri/i.test(v.name)) ?? en.find((v) => v.default) ?? en[0] ?? null;
+  };
+  // Beats: while the voice says line k of the script, the stage has data-speaking and data-cue="<cue of line k>".
+  // The build's CSS lights what that line talks about. When the narration ends, both go and the full scene shows.
+  let timers = [];
+  const quiet = () => {
+    timers.forEach(clearTimeout);
+    timers = [];
+    stage.removeAttribute("data-speaking");
+    delete stage.dataset.cue;
+  };
+  const followBeats = (p, total) => {
+    const cues = p.dataset.cues?.split("|");
+    if (!cues) return;
+    let times = p.dataset.beats?.split(" ").map(Number);
+    if (!times) {
+      // No times from the build (the browser's voice): spread the beats by text length.
+      const chars = p.dataset.chars.split(" ").map(Number);
+      const sum = chars.reduce((a, b) => a + b, 0);
+      times = chars.map((_, k) => (total * chars.slice(0, k).reduce((a, b) => a + b, 0)) / sum);
+    }
+    stage.toggleAttribute("data-speaking", true);
+    times.forEach((t, k) => timers.push(setTimeout(() => (stage.dataset.cue = cues[k]), t * 1000)));
+  };
+  const hush = () => {
+    talk++;
+    speaking = false;
+    spoken = -1;
+    clip?.stop();
+    clip = null;
+    synth?.cancel();
+    quiet();
+  };
+  const speak = () => {
+    if (!voiceOn || spoken === scene) return;
+    // Browsers play no sound before the reader's first click. Wait for it: Play and the scene buttons start the voice.
+    if (navigator.userActivation && !navigator.userActivation.hasBeenActive) return;
+    hush();
+    spoken = scene;
+    const p = cc.querySelector(`[data-at="${scene}"]`);
+    const text = p?.textContent.trim();
+    if (!text) return;
+    const token = talk;
+    const end = () => {
+      if (token !== talk || !speaking) return;
+      speaking = false;
+      quiet();
+      next = performance.now() + 900;
+    };
+    speaking = true;
+    // The clip was recorded from the build's text. After an input changes a live number, the browser reads the new text.
+    // Web Audio decodes the clip from the page itself, so a sandbox that blocks data: media URLs (a file preview,
+    // an Artifact) still plays it.
+    if (p.dataset.audio && text === recorded[scene] && window.AudioContext) {
+      audio ??= new AudioContext();
+      audio.resume();
+      const bytes = Uint8Array.from(atob(p.dataset.audio.split(",")[1]), (c) => c.charCodeAt(0));
+      audio.decodeAudioData(bytes.buffer).then((buffer) => {
+        if (token !== talk) return;
+        clip = audio.createBufferSource();
+        clip.buffer = buffer;
+        clip.connect(audio.destination);
+        clip.onended = end;
+        clip.start();
+        followBeats(p, buffer.duration);
+      }, end);
+    } else if (synth) {
+      const u = new SpeechSynthesisUtterance(text);
+      u.voice = bestVoice();
+      u.rate = 0.95;
+      u.onend = u.onerror = end;
+      synth.speak(u);
+      // ponytail: a browser voice may never report its end, so the tour stops waiting after 0.6 s a word.
+      setTimeout(end, 3000 + text.split(/\s+/).length * 600);
+      followBeats(p, text.length / 14);
+    } else end();
+  };
+  const setVoice = (on) => {
+    voiceOn = on;
+    stage.toggleAttribute("data-voice", on);
+    voiceBtn?.setAttribute("aria-pressed", String(on));
+    on ? speak() : hush();
+  };
+  if (voiceBtn && voiceOn) voiceBtn.hidden = false;
+  stage.toggleAttribute("data-voice", voiceOn);
+  voiceBtn?.addEventListener("click", () => setVoice(!voiceOn));
+  const go = (i, by = "user") => {
+    scene = Math.max(0, Math.min(count - 1, i));
+    stage.dataset.scene = String(scene);
+    stage.querySelectorAll("[data-go]").forEach((b) => (Number(b.dataset.go) === scene ? b.setAttribute("aria-current", "step") : b.removeAttribute("aria-current")));
+    stage.querySelectorAll("[data-ds]").forEach((el) => {
+      const d = JSON.parse(el.dataset.ds)[scene];
+      el.toggleAttribute("data-off", !d);
+      if (!d) return;
+      if (CSS.supports("d", 'path("M0 0")')) el.style.d = `path("${d}")`;
+      else el.setAttribute("d", d);
+    });
+    scope();
+    fit();
+    stage.dispatchEvent(new CustomEvent("unfold:scene", { detail: { scene, by } }));
+    if (by === "user") setPlaying(false);
+    held = false;
+    next = performance.now() + dwell;
+    if (scene !== spoken) speak();
+    for (const b of beats) {
+      b.n = 0;
+      b.at = performance.now() + b.wait - b.ms;
+      if (still.matches && b.scene === scene) b.fn(-1);
+    }
+    setBusy();
+  };
+  // data-busy is on the stage while a counted sweep of this scene still runs. The tour and shoot.mjs wait for it.
+  // A sweep is done one `ms` after its last call, so the last step has time to move. The tour then holds that
+  // last step for `hold` ms before the next scene, so the reader sees the result.
+  const hold = 1800;
+  const setBusy = (now = performance.now()) => {
+    const busy = !held && !still.matches && beats.some((b) => b.scene === scene && total(b) && (b.n < total(b) || now - b.at < b.ms));
+    if (busy === stage.hasAttribute("data-busy")) return;
+    stage.toggleAttribute("data-busy", busy);
+    if (!busy) next = Math.max(next, now + hold);
+  };
+  // The tour runs only after the reader presses Play, and stops at the last scene or at any input.
+  const playBtn = stage.querySelector(".u-play");
+  const setPlaying = (on) => {
+    playing = on;
+    playBtn.setAttribute("aria-pressed", String(on));
+    playBtn.firstChild.textContent = on ? "❚❚" : "▶";
+    playBtn.lastChild.textContent = on ? "Pause" : "Play";
+  };
+  playBtn.addEventListener("click", () => {
+    if (playing) {
+      hush();
+      return setPlaying(false);
+    }
+    if (scene === count - 1) go(0, "tour");
+    next = performance.now() + dwell;
+    setPlaying(true);
+    // A clip that the browser blocked before this click plays now.
+    if (!speaking) (spoken = -1), speak();
+  });
+  const tour = (now) => {
+    if (playing && visible && now > next && !speaking && !stage.hasAttribute("data-busy")) scene === count - 1 ? setPlaying(false) : go(scene + 1, "tour");
+    for (const b of beats) {
+      if (b.scene === scene && visible && !held && !still.matches && now - b.at >= b.ms && !(total(b) && b.n >= total(b))) {
+        b.at = now;
+        b.fn(b.n++);
+      }
+    }
+    setBusy(now);
+    requestAnimationFrame(tour);
+  };
+  stage.querySelector(".u-steps").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-go]");
+    if (b) go(Number(b.dataset.go));
+  });
+  stage.addEventListener("keydown", (e) => {
+    const to = { ArrowRight: scene + 1, ArrowLeft: scene - 1, Home: 0, End: count - 1 }[e.key];
+    if (to === undefined) return;
+    e.preventDefault();
+    go(to);
+  });
+  // Time by hand: the step control and the "," and "." keys call the page's onTime(t). Its keys stay inside it.
+  const timer = stage.querySelector(".u-time");
+  let onTime = () => {};
+  const range = timer?.querySelector("input");
+  // onTime first: it may call go(), which releases the sweeps. pause() after it holds them again.
+  const byHand = (t) => {
+    onTime(Math.max(0, Math.min(Number(range.max), t)));
+    pause();
+  };
+  if (timer) {
+    range.addEventListener("input", () => byHand(Number(range.value)));
+    timer.addEventListener("click", (e) => {
+      const b = e.target.closest("[data-step]");
+      if (b) byHand(Number(range.value) + Number(b.dataset.step));
+    });
+    stage.addEventListener("keydown", (e) => {
+      const by = { ",": -1, ".": 1 }[e.key];
+      if (by === undefined) return;
+      e.preventDefault();
+      byHand(Number(range.value) + by);
+    });
+  }
+  // Keys typed in a control (a scrubber, a number field) stay in it: no scene or focus change.
+  stage.querySelectorAll(".u-controls :is(input,select,textarea)").forEach((el) => el.addEventListener("keydown", (e) => e.stopPropagation()));
+  // A scene-scoped control (stageHtml controlScenes, or any element in the controls with data-scenes) is dimmed
+  // in the other scenes, and an input there moves to the first scene that uses it.
+  const ownersOf = (el) => el.dataset.scenes.trim().split(/\s+/).map(Number);
+  function scope() {
+    stage.querySelectorAll(".u-controls [data-scenes]").forEach((el) => el.toggleAttribute("data-idle", !ownersOf(el).includes(scene)));
+  }
+  const toOwner = (e) => {
+    const el = e.target.closest(".u-controls [data-scenes]");
+    if (el && !ownersOf(el).includes(scene)) go(ownersOf(el)[0]);
+  };
+  // Capture phase: the move runs before the page's own handler, so a preset applied on scene entry
+  // does not overwrite what the reader just set.
+  const panel = stage.querySelector(".u-controls");
+  panel?.addEventListener("input", toOwner, true);
+  panel?.addEventListener("click", (e) => e.target.closest("button") && toOwner(e), true);
+  // timeAt(t, steps): show step t. Pass steps when the run's length changed (a live input made a longer trace).
+  const timeAt = (t, steps) => {
+    if (!timer) return;
+    if (steps) range.max = String(steps - 1);
+    range.value = String(t);
+    timer.querySelector("output").textContent = `${timer.dataset.label} ${t} / ${range.max}`;
+  };
+  // Narrow layout: below 560 px the drawing takes its second viewBox and the stage gets data-narrow.
+  // With one narrow height per scene (data-narrow-h), the viewBox follows the scene.
+  const svg = stage.querySelector("svg");
+  const wide = svg?.getAttribute("viewBox");
+  const heights = stage.dataset.narrowH?.split(" ");
+  function fit() {
+    if (!stage.dataset.narrowBox) return;
+    const box = stage.dataset.narrowBox.split(" ");
+    if (heights) box[3] = heights[scene] ?? box[3];
+    svg.setAttribute("viewBox", stage.hasAttribute("data-narrow") ? box.join(" ") : wide);
+  }
+  if (stage.dataset.narrowBox)
+    new ResizeObserver(([entry]) => {
+      const on = entry.contentRect.width < 560;
+      if (on === stage.hasAttribute("data-narrow")) return;
+      stage.toggleAttribute("data-narrow", on);
+      fit();
+      stage.dispatchEvent(new CustomEvent("unfold:layout", { detail: { narrow: on } }));
+    }).observe(stage);
+  scope();
+  new IntersectionObserver((entries) => (visible = entries[entries.length - 1].isIntersecting), { rootMargin: "120px 0px" }).observe(stage);
+  next = performance.now() + dwell;
+  requestAnimationFrame(tour);
+  // beat(scene, ms, fn, wait, count): call fn(0), fn(1), … every ms while that scene shows, starting `wait` ms after it opens.
+  // With count, it stops after fn(count - 1) and the stage loses data-busy. Without it, the sweep never ends (a loop).
+  // count may be a function, read on every frame, for a run whose length a live input changes.
+  // Under reduced motion fn(-1) is called once instead: show the resting state.
+  const beat = (sceneIndex, ms, fn, wait = 1000, count = 0) => {
+    // No setBusy() here: the next frame runs it, so a count function may read data the page sets up after this call.
+    beats.push({ scene: sceneIndex, ms, fn, wait, count, n: 0, at: performance.now() + wait - ms });
+    // The scene open at load had no go() after this beat existed: show its resting state too, after the page script ran.
+    requestAnimationFrame(() => still.matches && scene === sceneIndex && fn(-1));
+  };
+  // pause(): the user took control. The tour stops, and the sweeps hold until the scene changes.
+  const pause = () => {
+    setPlaying(false);
+    held = true;
+    setBusy();
+  };
+  return { stage, go, beat, pause, scene: () => scene, onTime: (fn) => (onTime = fn), timeAt, narrow: () => stage.hasAttribute("data-narrow") };
+}
+const UNFOLD = runtime();
+
+const EDGES = [{"id":"e01","from":0,"to":1,"sym":"a"},{"id":"e12","from":1,"to":2,"sym":null},{"id":"e16","from":1,"to":6,"sym":null},{"id":"e23","from":2,"to":3,"sym":null},{"id":"e24","from":2,"to":4,"sym":null},{"id":"e35","from":3,"to":5,"sym":"b"},{"id":"e45","from":4,"to":5,"sym":"c"},{"id":"e51","from":5,"to":1,"sym":null},{"id":"e67","from":6,"to":7,"sym":"d"}];
+const ACCEPT = 7;
+const MAXLEN = 8;
+const REGEX = "a(b|c)*d";
+function sortNums(set) {
+  return [...set].sort((x, y) => x - y);
+}
+function fmtSet(s) {
+  return "{" + s.join(",") + "}";
+}
+function closure(set) {
+  const seen = new Set(set);
+  const used = [];
+  const todo = [...set];
+  while (todo.length) {
+    const s = todo.pop();
+    for (const e of EDGES) {
+      if (e.from !== s || e.sym !== null) continue;
+      used.push(e.id);
+      if (!seen.has(e.to)) (seen.add(e.to), todo.push(e.to));
+    }
+  }
+  return { set: sortNums(seen), used };
+}
+function move(set, x) {
+  const fired = EDGES.filter((e) => e.sym === x && set.includes(e.from));
+  const out = sortNums(new Set(fired.map((e) => e.to)));
+  const died = set.filter((s) => !fired.some((e) => e.from === s));
+  const back = died.filter((s) => out.includes(s));
+  return { set: out, fired: fired.map((e) => e.id), died, back };
+}
+function run(input) {
+  const steps = [];
+  const start = closure([0]);
+  steps.push({ kind: "start", pos: -1, sym: null, set: start.set, before: [0], edges: start.used, died: [], back: [], text: "start · ε-closure({0}) = " + fmtSet(start.set) });
+  let cur = start.set;
+  for (let i = 0; i < input.length; i++) {
+    const x = input[i];
+    const m = move(cur, x);
+    const who = m.fired.map((id) => EDGES.find((e) => e.id === id)).map((e) => e.from + "→" + e.to).join(", ");
+    steps.push({ kind: "move", pos: i, sym: x, set: m.set, before: cur, edges: m.fired, died: m.died, back: m.back, text: "read " + x + " · δ(" + fmtSet(cur) + ", " + x + ") = " + fmtSet(m.set) + " · " + (who ? "edge " + who : "no edge reads " + x) });
+    const c = closure(m.set);
+    const added = c.set.filter((s) => !m.set.includes(s));
+    steps.push({ kind: "closure", pos: i, sym: x, set: c.set, before: m.set, edges: c.used, died: [], back: [], text: "ε-closure(" + fmtSet(m.set) + ") = " + fmtSet(c.set) + (added.length ? " · adds " + added.join(", ") : " · adds nothing") });
+    cur = c.set;
+  }
+  const match = cur.includes(ACCEPT);
+  steps[steps.length - 1].text += match ? " · 7 ∈ S: match" : cur.length ? " · 7 ∉ S: no match" : " · S is empty: no match";
+  return { steps, match };
+}
+function chapters(last) {
+  const c = (t) => Math.min(t, last);
+  return [[0, last], [0, 0], [0, c(1)], [c(2), c(2)], [c(3), Math.max(c(3), last - 2)], [Math.max(0, last - 1), last]];
+}
+
+const LINE = {"start":0,"move":2,"closure":3};
+const CW = 20;
+const root = UNFOLD.stage;
+const readout = document.querySelector("[data-readout]");
+const field = root.querySelector("[data-input]");
+const still = matchMedia("(prefers-reduced-motion: reduce)");
+const all = (sel) => root.querySelectorAll(sel);
+let word = "";
+let STEPS = [];
+let LAST = 0;
+let MATCH = false;
+let RANGES = [];
+let OWNER = [];
+let step = -1;
+let crossing = false;
+
+// A new input: run the model, then redraw the tape and the trace grid for the new run.
+function setRun(w) {
+  word = w;
+  const r = run(w);
+  STEPS = r.steps;
+  MATCH = r.match;
+  LAST = STEPS.length - 1;
+  RANGES = chapters(LAST);
+  OWNER = STEPS.map((_, t) => 2 + RANGES.slice(2).findIndex(([a, b]) => t >= a && t <= b));
+  all(".el-ch").forEach((el) => {
+    const p = Number(el.dataset.p);
+    el.toggleAttribute("data-gone", p >= w.length);
+    el.querySelector("text").textContent = w[p] ?? "";
+  });
+  all(".el-cell").forEach((el) => {
+    const t = Number(el.dataset.c);
+    el.toggleAttribute("data-gone", t > LAST);
+    el.toggleAttribute("data-in", t <= LAST && STEPS[t].set.includes(Number(el.dataset.s)));
+  });
+  all(".el-gh").forEach((el) => {
+    const s = STEPS[Number(el.dataset.c)];
+    el.textContent = !s ? "" : s.kind === "move" ? s.sym : s.kind === "closure" ? "ε" : "";
+    el.dataset.k = s ? s.kind : "";
+  });
+  all(".el-gf").forEach((el) => el.toggleAttribute("data-gone", Number(el.dataset.c) > LAST));
+  // The independent check: the browser's own regex engine on the same input.
+  const engine = new RegExp("^" + REGEX + "$").test(w);
+  const last = STEPS[LAST].set;
+  all(".el-v1").forEach((el) => (el.textContent = MATCH ? "7 ∈ S at the end: match" : last.length ? "7 ∉ S at the end: no match" : "S is empty: no match"));
+  all(".el-v2").forEach((el) => (el.textContent = "JavaScript RegExp: " + (engine ? "match" : "no match") + (engine === MATCH ? ", agrees" : ", DISAGREES")));
+  all(".el-verdict").forEach((el) => el.toggleAttribute("data-no", !MATCH));
+  all("[data-preset]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.preset === w)));
+}
+
+function show(t) {
+  t = Math.max(0, Math.min(LAST, t));
+  const changed = t !== step;
+  step = t;
+  const s = STEPS[t];
+  root.dataset.kind = s.kind;
+  all(".el-state").forEach((el) => {
+    const k = Number(el.dataset.s);
+    el.toggleAttribute("data-on", s.set.includes(k));
+    el.toggleAttribute("data-died", s.died.includes(k));
+  });
+  all(".el-edge").forEach((el) => {
+    const fire = s.edges.includes(el.dataset.e);
+    el.toggleAttribute("data-fire", fire);
+    if (fire && changed && !still.matches) el.querySelectorAll("animateMotion,animate").forEach((a) => a.beginElement());
+  });
+  all(".el-ch").forEach((el) => {
+    const p = Number(el.dataset.p);
+    el.toggleAttribute("data-done", p < s.pos);
+    el.toggleAttribute("data-cur", p === s.pos);
+  });
+  all(".el-set").forEach((el) => (el.textContent = "= {" + s.set.join(", ") + "}"));
+  all(".el-d1").forEach((el) => (el.textContent = s.died.length ? "dropped " + s.died.join(", ") + ": no " + s.sym + " edge" : ""));
+  const via = s.back.map((q) => s.before.find((p) => EDGES.some((e) => e.from === p && e.to === q && e.sym === s.sym)) + "→" + q);
+  all(".el-d2").forEach((el) => (el.textContent = s.back.length ? s.back.join(", ") + " is in S again: edge " + via.join(", ") + " reads " + s.sym : ""));
+  all(".el-verdict").forEach((el) => el.toggleAttribute("data-on", t === LAST));
+  all(".el-cell").forEach((el) => el.toggleAttribute("data-later", Number(el.dataset.c) > t));
+  all(".el-col").forEach((el) => (el.style.transform = "translateX(" + t * CW + "px)"));
+  all(".u-code").forEach((code) => {
+    mark(code, LINE[s.kind], ".u-line");
+    if (t === LAST) code.querySelector('.u-line[data-i="4"]').toggleAttribute("data-on", true);
+  });
+  setLive({ from: s.before.join(", "), to: s.set.join(", "), x: s.sym ?? "" });
+  UNFOLD.timeAt(t, LAST + 1);
+  const text = "step " + t + " · " + s.text;
+  if (readout.textContent !== text) readout.textContent = text;
+}
+
+function stepTo(t) {
+  show(t);
+  const sc = UNFOLD.scene();
+  const [a, b] = RANGES[sc];
+  if (sc > 0 && (step < a || step > b)) {
+    crossing = true;
+    UNFOLD.go(OWNER[step]);
+    crossing = false;
+  }
+  UNFOLD.pause();
+}
+
+// The reader's input: letters a to z, up to MAXLEN.
+const clean = (v) => v.toLowerCase().replace(/[^a-z]/g, "").slice(0, MAXLEN);
+setRun(clean(field.value));
+
+root.addEventListener("unfold:scene", (e) => {
+  if (!crossing) show(RANGES[e.detail.scene][0]);
+});
+// Each chapter plays its steps once. The count follows the input, so a longer input plays longer.
+[0, 1, 2, 3, 4, 5].forEach((sc) =>
+  UNFOLD.beat(sc, sc === 0 ? 800 : 1300, (n) => show(n < 0 ? RANGES[sc][1] : Math.min(RANGES[sc][0] + n, RANGES[sc][1])), 700, () => RANGES[sc][1] - RANGES[sc][0] + 1),
+);
+UNFOLD.onTime(stepTo);
+root.addEventListener("keydown", (e) => {
+  const to = { ArrowUp: step - 1, ArrowDown: step + 1 }[e.key];
+  if (to === undefined) return;
+  e.preventDefault();
+  stepTo(to);
+});
+// Direct manipulation: a letter on the tape jumps to the step that reads it, a trace column to its step.
+root.addEventListener("click", (e) => {
+  const ch = e.target.closest(".el-ch");
+  if (ch) return stepTo(1 + 2 * Number(ch.dataset.p));
+  const cell = e.target.closest(".el-cell");
+  if (cell) stepTo(Number(cell.dataset.c));
+});
+
+// The reader's input. The overview shows the verdict, a chapter shows its first step.
+function useInput(w) {
+  UNFOLD.pause();
+  setRun(w);
+  const sc = UNFOLD.scene();
+  step = -1;
+  show(sc === 0 ? LAST : RANGES[sc][0]);
+}
+field.addEventListener("input", () => {
+  const w = clean(field.value);
+  if (w !== word) useInput(w);
+  else UNFOLD.pause();
+});
+field.addEventListener("change", () => (field.value = word));
+all("[data-preset]").forEach((b) =>
+  b.addEventListener("click", () => {
+    field.value = b.dataset.preset;
+    useInput(b.dataset.preset);
+  }),
+);
+
+show(still.matches ? LAST : 0);
+</script></body></html>

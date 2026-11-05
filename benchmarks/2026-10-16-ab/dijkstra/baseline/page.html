@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dijkstra, Step by Step</title>
+<style>
+:root{
+  --bg:#f6f5f1; --card:#ffffff; --ink:#1d1f24; --muted:#6a6f7a; --line:#d9d8d2; --soft:#efeee9;
+  --unseen:#9aa0aa; --frontier:#d98a00; --frontier-bg:#fff3d6; --current:#2f6fdb; --current-bg:#e3ecfc;
+  --done:#1f9d55; --done-bg:#def4e6; --bad:#d64545; --tree:#1f9d55; --code-hl:#fff1c2;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#14161a; --card:#1c1f25; --ink:#e8e9ec; --muted:#9aa1ad; --line:#30343c; --soft:#252931;
+    --unseen:#6d7480; --frontier:#f0a92a; --frontier-bg:#3a2f14; --current:#6aa0ff; --current-bg:#1b2b48;
+    --done:#3fc77a; --done-bg:#163223; --bad:#ff6b6b; --tree:#3fc77a; --code-hl:#3a3418;
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:1280px;margin:0 auto;padding:24px 16px 40px}
+header h1{margin:0 0 4px;font-size:26px;letter-spacing:-.01em}
+header p{margin:0;color:var(--muted);max-width:820px}
+.grid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:16px;margin-top:18px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.card h2{margin:0 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
+svg{display:block;width:100%;height:auto}
+.edge line{stroke:var(--line);stroke-width:3;transition:stroke .3s,stroke-width .3s}
+.edge.tree line{stroke:var(--tree);stroke-width:5}
+.edge.active line{stroke:var(--current);stroke-width:6}
+.edge.active.bad line{stroke:var(--bad)}
+.edge.path line{stroke:var(--current);stroke-width:7}
+.edge rect{fill:var(--card);stroke:var(--line)}
+.edge text{fill:var(--ink);font:600 15px system-ui,sans-serif;text-anchor:middle;dominant-baseline:central}
+.edge.active rect{stroke:var(--current);stroke-width:2}
+.node circle{fill:var(--card);stroke:var(--unseen);stroke-width:3;transition:fill .3s,stroke .3s}
+.node.frontier circle{stroke:var(--frontier);fill:var(--frontier-bg)}
+.node.done circle{stroke:var(--done);fill:var(--done-bg)}
+.node.current circle{stroke:var(--current);fill:var(--current-bg);stroke-width:5}
+.node.target circle{stroke:var(--bad);stroke-width:5}
+.node .name{fill:var(--ink);font:700 20px system-ui,sans-serif;text-anchor:middle;dominant-baseline:central}
+.node .dist{font:600 14px ui-monospace,SFMono-Regular,Menlo,monospace;text-anchor:middle;fill:var(--muted)}
+.node.frontier .dist{fill:var(--frontier)} .node.done .dist{fill:var(--done)} .node.current .dist{fill:var(--current)}
+.node{cursor:pointer}
+.node:focus{outline:none} .node:focus-visible circle{stroke-dasharray:4 3}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;color:var(--muted);margin-top:6px}
+.legend span::before{content:"";display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:6px;vertical-align:-1px;border:2px solid var(--c);background:var(--b)}
+.caption{margin-top:12px;padding:12px 14px;border-radius:10px;background:var(--soft);min-height:76px}
+.caption .stepno{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.caption .msg{font-size:16px;margin-top:2px}
+.caption b{font-weight:650}
+.controls{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:12px}
+button,select{font:inherit;font-size:14px;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:8px;padding:7px 12px;cursor:pointer}
+button:hover:not(:disabled),select:hover{border-color:var(--muted)}
+button:disabled{opacity:.4;cursor:default}
+button.primary{background:var(--current);border-color:var(--current);color:#fff}
+input[type=range]{flex:1;min-width:140px;accent-color:var(--current)}
+.controls label{color:var(--muted);font-size:14px;display:flex;align-items:center;gap:6px}
+.side{display:flex;flex-direction:column;gap:16px}
+pre.code{margin:0;font:13px/1.65 ui-monospace,SFMono-Regular,Menlo,monospace;overflow-x:auto}
+pre.code div{padding:0 8px;border-radius:5px;white-space:pre}
+pre.code div.hl{background:var(--code-hl)}
+pre.code .ln{color:var(--muted);display:inline-block;width:2ch;text-align:right;margin-right:10px;user-select:none}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:left;padding:5px 8px;border-bottom:1px solid var(--line)}
+th{font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+td.num{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+tr.changed td{background:var(--done-bg)}
+tr.current td{background:var(--current-bg)}
+.tag{font-size:12px;padding:1px 7px;border-radius:99px;border:1px solid var(--c);color:var(--c)}
+.pq{display:flex;flex-wrap:wrap;gap:6px;min-height:34px;align-items:center}
+.pq .item{font:13px ui-monospace,SFMono-Regular,Menlo,monospace;padding:4px 9px;border-radius:7px;border:1px solid var(--frontier);background:var(--frontier-bg)}
+.pq .item.min{border-width:2px;font-weight:700}
+.pq .item.stale{border-color:var(--line);background:transparent;color:var(--muted);text-decoration:line-through}
+.pq .item.popped{border-color:var(--current);background:var(--current-bg)}
+.pq .empty{color:var(--muted);font-size:14px}
+.note{font-size:13px;color:var(--muted);margin:8px 0 0}
+.why{margin-top:16px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.why p{margin:0;font-size:14px}
+kbd{font:12px ui-monospace,monospace;border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 4px}
+@media (max-width:900px){
+  .grid{grid-template-columns:minmax(0,1fr)}
+  .why{grid-template-columns:1fr}
+}
+@media (max-width:520px){
+  header h1{font-size:22px}
+  .card{padding:12px}
+  .caption .msg{font-size:15px}
+  th,td{padding:4px 5px}
+  pre.code{font-size:11.5px} pre.code div{padding:0 4px} pre.code .ln{margin-right:6px}
+  .node .name{font-size:26px} .node .dist{font-size:22px} .edge text{font-size:20px}
+}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>Dijkstra's shortest-path algorithm, step by step</h1>
+  <p>Find the cheapest route from one source node to every other node. The algorithm always settles the closest unsettled node next, then uses it to improve the estimates of its neighbours. Step through it with the buttons or the <kbd>&larr;</kbd> <kbd>&rarr;</kbd> keys.</p>
+</header>
+
+<div class="grid">
+  <section class="card">
+    <h2>Graph (undirected, non-negative weights)</h2>
+    <svg id="g" viewBox="0 0 620 420" role="img" aria-label="Weighted graph with nodes A to F"></svg>
+    <div class="legend">
+      <span style="--c:var(--unseen);--b:var(--card)">not reached (&infin;)</span>
+      <span style="--c:var(--frontier);--b:var(--frontier-bg)">tentative distance</span>
+      <span style="--c:var(--current);--b:var(--current-bg)">being processed</span>
+      <span style="--c:var(--done);--b:var(--done-bg)">settled (final)</span>
+      <span style="--c:var(--tree);--b:var(--tree);border-radius:0">best-known edge (prev)</span>
+    </div>
+    <div class="caption" aria-live="polite">
+      <div class="stepno" id="stepno"></div>
+      <div class="msg" id="msg"></div>
+    </div>
+    <div class="controls">
+      <button id="reset" title="Back to start">&#x23EE; Reset</button>
+      <button id="prev" title="Previous step (&larr;)">&larr; Prev</button>
+      <button id="play" class="primary" title="Play / pause (space)">&#9654; Play</button>
+      <button id="next" title="Next step (&rarr;)">Next &rarr;</button>
+      <input id="scrub" type="range" min="0" value="0" aria-label="Step">
+      <label>Source <select id="src"></select></label>
+    </div>
+    <p class="note">Tip: click a node to trace the best path to it known at this step.</p>
+  </section>
+
+  <div class="side">
+    <section class="card">
+      <h2>Pseudocode</h2>
+      <pre class="code" id="code"></pre>
+    </section>
+    <section class="card">
+      <h2>Distance table</h2>
+      <table>
+        <thead><tr><th>Node</th><th>dist</th><th>prev</th><th>State</th></tr></thead>
+        <tbody id="tbl"></tbody>
+      </table>
+    </section>
+    <section class="card">
+      <h2>Priority queue (min-heap, ordered by distance)</h2>
+      <div class="pq" id="pq"></div>
+      <p class="note">Entries are never updated in place. A better distance adds a new entry; the old one becomes <s>stale</s> and is skipped when popped (lazy deletion).</p>
+    </section>
+  </div>
+</div>
+
+<div class="why">
+  <section class="card"><h2>Why it is correct</h2><p>When a node <i>u</i> is popped with the smallest tentative distance, every other route to <i>u</i> must leave the settled set through some frontier node that is already at least as far. Since weights are non-negative, that detour can only add cost. So <code>dist[u]</code> is final.</p></section>
+  <section class="card"><h2>Relaxation</h2><p>For edge (<i>u</i>, <i>v</i>) with weight <i>w</i>: if <code>dist[u] + w &lt; dist[v]</code>, we found a shorter way to <i>v</i> through <i>u</i>. Update <code>dist[v]</code>, remember <code>prev[v] = u</code>, and push <i>v</i> into the queue.</p></section>
+  <section class="card"><h2>Cost</h2><p>With a binary heap: each edge pushes at most one entry, so <b>O((V + E) log V)</b>. Negative weights break the proof above; use Bellman-Ford for those.</p></section>
+</div>
+</div>
+
+<script>
+const NODES = {A:[60,210],B:[230,80],C:[230,340],D:[410,80],E:[410,340],F:[560,210]};
+const EDGES = [["A","B",4],["A","C",2],["B","C",1],["B","D",5],["C","D",8],["C","E",10],["D","E",2],["D","F",6],["E","F",2]];
+const CODE = [
+  "for each v: dist[v] = ∞, prev[v] = none",
+  "dist[s] = 0;  PQ.push((0, s))",
+  "while PQ not empty:",
+  "  (d, u) = PQ.popMin()",
+  "  if u is settled: continue   # stale entry",
+  "  settle u",
+  "  for each edge (u, v, w), v not settled:",
+  "    if dist[u] + w < dist[v]:",
+  "      dist[v] = dist[u] + w;  prev[v] = u",
+  "      PQ.push((dist[v], v))",
+  "return dist, prev"
+];
+const names = Object.keys(NODES);
+const adj = {}; names.forEach(n => adj[n] = []);
+EDGES.forEach(([a,b,w]) => { adj[a].push([b,w]); adj[b].push([a,w]); });
+names.forEach(n => adj[n].sort((x,y) => x[0] < y[0] ? -1 : 1));
+const fmt = d => d === Infinity ? "∞" : String(d);
+
+// Run Dijkstra once and record a full snapshot after every elementary step.
+function trace(s){
+  const dist = {}, prev = {}, settled = {};
+  names.forEach(n => { dist[n] = Infinity; prev[n] = null; settled[n] = false; });
+  let pq = [], seq = 0;
+  const steps = [];
+  const snap = (o) => steps.push(Object.assign({
+    dist: {...dist}, prev: {...prev}, settled: {...settled},
+    pq: pq.map(e => ({...e, stale: settled[e.v] || e.d > dist[e.v]})),
+    u: null, edge: null, ok: null, changed: null, popped: null
+  }, o));
+  snap({line:0, msg:`Start: every node's distance is unknown, so it is set to <b>∞</b>. No node is settled.`});
+  dist[s] = 0; pq.push({d:0, v:s, id:seq++});
+  snap({line:1, changed:s, msg:`The source <b>${s}</b> is 0 away from itself. Push <b>(0, ${s})</b> into the priority queue.`});
+  while (pq.length){
+    pq.sort((x,y) => x.d - y.d || x.id - y.id);
+    const top = pq.shift();
+    const u = top.v;
+    if (settled[u]){
+      snap({line:4, popped:top, u:null, msg:`Pop <b>(${top.d}, ${u})</b>. But ${u} is already settled with distance ${dist[u]}, so this is a <b>stale</b> entry. Skip it.`});
+      continue;
+    }
+    settled[u] = true;
+    const open = adj[u].filter(([v]) => !settled[v]).map(([v])=>v);
+    snap({line:5, u, popped:top, msg:`Pop <b>(${top.d}, ${u})</b>, the smallest distance in the queue. No route can do better, so <b>${u}</b> is settled at <b>${dist[u]}</b>.` +
+      (open.length ? ` Next, check its unsettled neighbours: ${open.join(", ")}.` : ` It has no unsettled neighbours.`)});
+    for (const [v,w] of adj[u]){
+      if (settled[v]) continue;
+      const cand = dist[u] + w, old = dist[v];
+      if (cand < old){
+        dist[v] = cand; prev[v] = u; pq.push({d:cand, v, id:seq++});
+        snap({line:8, u, edge:[u,v], ok:true, changed:v, msg:`Relax ${u}&ndash;${v}: ${dist[u]} + ${w} = <b>${cand}</b> &lt; ${fmt(old)}. Shorter! Set dist[${v}] = ${cand}, prev[${v}] = ${u}, and push (${cand}, ${v}).`});
+      } else {
+        snap({line:7, u, edge:[u,v], ok:false, msg:`Relax ${u}&ndash;${v}: ${dist[u]} + ${w} = <b>${cand}</b>, which is not less than ${fmt(old)}. Keep the old route through ${prev[v]}.`});
+      }
+    }
+  }
+  snap({line:10, msg:`The queue is empty. Every distance is final. The green edges form the <b>shortest-path tree</b> from ${s}. Click any node to see its route.`});
+  return steps;
+}
+
+// ---------- drawing ----------
+const svg = document.getElementById("g");
+const NS = "http://www.w3.org/2000/svg";
+const el = (tag, attrs, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); parent && parent.appendChild(e); return e; };
+const edgeEls = {}, nodeEls = {};
+const key = (a,b) => a < b ? a+b : b+a;
+const eLayer = el("g",{},svg), nLayer = el("g",{},svg);
+EDGES.forEach(([a,b,w]) => {
+  const [x1,y1] = NODES[a], [x2,y2] = NODES[b];
+  const g = el("g",{class:"edge"},eLayer);
+  el("line",{x1,y1,x2,y2},g);
+  const mx = (x1+x2)/2, my = (y1+y2)/2;
+  el("rect",{x:mx-17,y:my-14,width:34,height:28,rx:8},g);
+  el("text",{x:mx,y:my},g).textContent = w;
+  edgeEls[key(a,b)] = g;
+});
+names.forEach(n => {
+  const [x,y] = NODES[n];
+  const g = el("g",{class:"node",tabindex:0,role:"button","aria-label":"Node "+n},nLayer);
+  el("circle",{cx:x,cy:y,r:26},g);
+  el("text",{x,y,class:"name"},g).textContent = n;
+  const dy = y < 150 ? -38 : (y > 300 ? 50 : -38);
+  const t = el("text",{x,y:y+dy,class:"dist"},g);
+  g.addEventListener("click", () => { pause(); target = target === n ? null : n; render(); });
+  g.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); g.dispatchEvent(new Event("click")); } });
+  nodeEls[n] = {g, t};
+});
+
+document.getElementById("code").innerHTML = CODE.map((c,i) =>
+  `<div data-l="${i}"><span class="ln">${i+1}</span>${c.replace(/&/g,"&amp;").replace(/</g,"&lt;")}</div>`).join("");
+
+// ---------- state ----------
+const srcSel = document.getElementById("src");
+names.forEach(n => srcSel.add(new Option(n, n)));
+let steps = trace("A"), i = 0, target = null, timer = null;
+const scrub = document.getElementById("scrub");
+scrub.max = steps.length - 1;
+
+function render(){
+  const S = steps[i];
+  names.forEach(n => {
+    const {g, t} = nodeEls[n];
+    const state = S.u === n ? "current" : S.settled[n] ? "done" : S.dist[n] < Infinity ? "frontier" : "";
+    g.setAttribute("class", "node " + state + (target === n ? " target" : ""));
+    t.textContent = fmt(S.dist[n]);
+  });
+  const path = new Set();
+  if (target) for (let v = target; S.prev[v]; v = S.prev[v]) path.add(key(v, S.prev[v]));
+  EDGES.forEach(([a,b]) => {
+    const k = key(a,b);
+    const tree = S.prev[a] === b || S.prev[b] === a;
+    const act = S.edge && key(S.edge[0], S.edge[1]) === k;
+    edgeEls[k].setAttribute("class", "edge" + (tree ? " tree" : "") + (act ? " active" + (S.ok ? "" : " bad") : "") + (path.has(k) ? " path" : ""));
+  });
+  document.querySelectorAll("#code div").forEach(d => d.classList.toggle("hl", +d.dataset.l === S.line));
+  document.getElementById("tbl").innerHTML = names.map(n => {
+    const st = S.u === n ? ["processing","var(--current)"] : S.settled[n] ? ["settled","var(--done)"] : S.dist[n] < Infinity ? ["tentative","var(--frontier)"] : ["unreached","var(--unseen)"];
+    const cls = S.changed === n ? "changed" : S.u === n ? "current" : "";
+    return `<tr class="${cls}"><td><b>${n}</b></td><td class="num">${fmt(S.dist[n])}</td><td class="num">${S.prev[n] || "&ndash;"}</td><td><span class="tag" style="--c:${st[1]}">${st[0]}</span></td></tr>`;
+  }).join("");
+  let pqHtml = "";
+  if (S.popped) pqHtml += `<span class="item popped" title="just popped">popped (${S.popped.d}, ${S.popped.v})</span>`;
+  const sorted = [...S.pq].sort((x,y) => x.d - y.d || x.id - y.id);
+  pqHtml += sorted.map(e => `<span class="item${e.stale ? " stale" : ""}${e === sorted[0] ? " min" : ""}">(${e.d}, ${e.v})</span>`).join("");
+  if (!sorted.length) pqHtml += `<span class="empty">empty</span>`;
+  document.getElementById("pq").innerHTML = pqHtml;
+  let msg = S.msg;
+  if (target){
+    const route = []; for (let v = target; v; v = S.prev[v]) route.unshift(v);
+    msg += S.dist[target] < Infinity
+      ? `<br><span style="color:var(--current)">Best known route to ${target}: <b>${route.join(" → ")}</b>, cost ${S.dist[target]}${S.settled[target] ? " (final)" : " (may still improve)"}.</span>`
+      : `<br><span style="color:var(--current)">${target} has not been reached yet.</span>`;
+  }
+  document.getElementById("msg").innerHTML = msg;
+  document.getElementById("stepno").textContent = `Step ${i} of ${steps.length - 1}`;
+  scrub.value = i;
+  document.getElementById("prev").disabled = i === 0;
+  document.getElementById("next").disabled = i === steps.length - 1;
+}
+
+function go(n){ i = Math.max(0, Math.min(steps.length - 1, n)); render(); if (i === steps.length - 1) pause(); }
+function pause(){ clearInterval(timer); timer = null; document.getElementById("play").innerHTML = "&#9654; Play"; }
+function play(){
+  if (timer) return pause();
+  if (i === steps.length - 1) i = 0;
+  timer = setInterval(() => go(i + 1), 1600);
+  document.getElementById("play").innerHTML = "&#10074;&#10074; Pause";
+  render();
+}
+document.getElementById("next").onclick = () => { pause(); go(i + 1); };
+document.getElementById("prev").onclick = () => { pause(); go(i - 1); };
+document.getElementById("reset").onclick = () => { pause(); target = null; go(0); };
+document.getElementById("play").onclick = play;
+scrub.oninput = () => { pause(); go(+scrub.value); };
+srcSel.onchange = () => { pause(); steps = trace(srcSel.value); scrub.max = steps.length - 1; target = null; go(0); };
+document.addEventListener("keydown", e => {
+  if (e.target.tagName === "SELECT" || e.target.tagName === "INPUT") return;
+  if (e.key === "ArrowRight") { pause(); go(i + 1); }
+  else if (e.key === "ArrowLeft") { pause(); go(i - 1); }
+  else if (e.key === " " && e.target.tagName !== "BUTTON") { e.preventDefault(); play(); }
+});
+render();
+
+// Self-check: final distances from A for this graph (worked by hand).
+(() => { const f = trace("A").at(-1).dist; const want = {A:0,B:3,C:2,D:8,E:10,F:12};
+  for (const n in want) console.assert(f[n] === want[n], `dist[${n}] = ${f[n]}, expected ${want[n]}`); })();
+</script>
+</body>
+</html>

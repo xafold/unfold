@@ -1,0 +1,3 @@
+bsearch	Explain how binary search finds a number in a sorted array, and why it needs only about log2(n) steps, as an interactive figure for a programming blog post.
+backprop	Make an interactive explainer of how backpropagation computes the gradients of a tiny neural network, for a machine learning course.
+hashtable	Show how a hash table stores keys, handles collisions, and grows when it gets too full, as an interactive figure for a docs page.

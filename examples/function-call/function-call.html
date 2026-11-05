@@ -1,0 +1,728 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>How a function call works</title><style>
+.iso{
+  --anatomy-page:#0b0b0b;--anatomy-card:#131313;--anatomy-text:#a3a3a3;--anatomy-strong:#e6e6e6;--anatomy-muted:#6e6e6e;
+  --anatomy-paper:#131313;--anatomy-face:#1b1b1b;--anatomy-top:#1c1c1c;
+  --anatomy-shade-0:#0f0f0f;--anatomy-shade-1:#121212;--anatomy-shade-2:#151515;--anatomy-shade-3:#181818;
+  --anatomy-lit-top:#262626;--anatomy-lit-shade:#1d1d1d;
+  --anatomy-hi:#d4d4d4;--anatomy-mid:#6a6a6a;--anatomy-lo:#3e3e3e;--anatomy-faint:#2a2a2a;--anatomy-lit:#ffffff;
+  --anatomy-halo:#050505;--anatomy-halo-opacity:.9;--anatomy-dot:#e6e6e6;
+  --anatomy-red:#ff6b6b;--anatomy-green:#6be0a0;--anatomy-blue:#6b9bff;
+  --anatomy-weight:.6px;--anatomy-ease:cubic-bezier(.32,.72,0,1);
+  --anatomy-mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --anatomy-lift:inset 0 1px 0 0 #ffffff0a,inset 0 0 0 1px #ffffff06,0 0 0 1px #00000026,0 1px 1px -.5px #00000014,0 3px 3px -1.5px #00000014,0 6px 6px -3px #00000014,0 12px 12px -6px #00000014;
+}
+.iso[data-theme="light"]{
+  --anatomy-page:#f2f2ef;--anatomy-card:#fbfbfa;--anatomy-text:#57575a;--anatomy-strong:#18181a;--anatomy-muted:#8c8c90;
+  --anatomy-paper:#fbfbfa;--anatomy-face:#ffffff;--anatomy-top:#ffffff;
+  --anatomy-shade-0:#dcdcd9;--anatomy-shade-1:#e5e5e2;--anatomy-shade-2:#ededea;--anatomy-shade-3:#f4f4f1;
+  --anatomy-lit-top:#ffffff;--anatomy-lit-shade:#eeeeeb;
+  --anatomy-hi:#26262a;--anatomy-mid:#8a8a8f;--anatomy-lo:#b4b4b8;--anatomy-faint:#d4d4d6;--anatomy-lit:#000000;
+  --anatomy-halo:#8a8a80;--anatomy-halo-opacity:.32;--anatomy-dot:#3a3a3e;
+  --anatomy-red:#e5484d;--anatomy-green:#30a46c;--anatomy-blue:#3e63dd;
+  --anatomy-lift:inset 0 1px 0 0 #ffffff,0 0 0 1px #0000000f,0 1px 1px -.5px #0000000a,0 3px 3px -1.5px #0000000a,0 6px 6px -3px #0000000a,0 12px 12px -6px #0000000a;
+}
+.iso-svg{display:block;width:100%;height:auto;overflow:visible}
+.iso-svg path,.iso-svg circle{vector-effect:non-scaling-stroke}
+.iso-fill{fill:var(--anatomy-paper);stroke:none}
+.iso-solid[data-lit]>.iso-fill{fill:var(--anatomy-face)}
+.iso-shade,.iso-top{stroke:none}
+.iso-shade[data-shade="0"]{fill:var(--anatomy-shade-0)}
+.iso-shade[data-shade="1"]{fill:var(--anatomy-shade-1)}
+.iso-shade[data-shade="2"]{fill:var(--anatomy-shade-2)}
+.iso-shade[data-shade="3"]{fill:var(--anatomy-shade-3)}
+.iso-top{fill:var(--anatomy-top)}
+.iso-solid[data-lit]>.iso-top{fill:var(--anatomy-lit-top)}
+.iso-solid[data-lit]>.iso-shade{fill:var(--anatomy-lit-shade)}
+.iso-solid[data-seamless]>.iso-shade,.iso-solid[data-seamless]>.iso-top{stroke-width:.4;stroke-linejoin:round}
+.iso-solid[data-seamless]>.iso-shade[data-shade="0"]{stroke:var(--anatomy-shade-0)}
+.iso-solid[data-seamless]>.iso-shade[data-shade="1"]{stroke:var(--anatomy-shade-1)}
+.iso-solid[data-seamless]>.iso-shade[data-shade="2"]{stroke:var(--anatomy-shade-2)}
+.iso-solid[data-seamless]>.iso-shade[data-shade="3"]{stroke:var(--anatomy-shade-3)}
+.iso-solid[data-seamless]>.iso-top{stroke:var(--anatomy-top)}
+.iso-solid[data-seamless][data-lit]>.iso-top{stroke:var(--anatomy-lit-top)}
+.iso-solid[data-seamless][data-lit]>.iso-shade{stroke:var(--anatomy-lit-shade)}
+.iso-solid[data-lit]>.iso-edge{stroke:var(--anatomy-lit)}
+.iso-halo{fill:var(--anatomy-halo);stroke:none;filter:blur(9px);opacity:var(--anatomy-halo-opacity);transform:translateY(3px)}
+.iso-line{fill:none;stroke:var(--anatomy-lo);stroke-width:var(--anatomy-weight);stroke-linecap:round;stroke-linejoin:round}
+.iso-line[data-tone="hi"]{stroke:var(--anatomy-hi)}
+.iso-line[data-tone="mid"]{stroke:var(--anatomy-mid)}
+.iso-line[data-tone="lo"]{stroke:var(--anatomy-lo)}
+.iso-line[data-tone="faint"]{stroke:var(--anatomy-faint)}
+.iso-line[data-tone="lit"]{stroke:var(--anatomy-lit)}
+.iso-line[data-tone="red"]{stroke:var(--anatomy-red)}
+.iso-line[data-tone="green"]{stroke:var(--anatomy-green)}
+.iso-line[data-tone="blue"]{stroke:var(--anatomy-blue)}
+.iso-line[data-dotted]{stroke-dasharray:.01 3.5;stroke-width:1}
+.iso-line[data-dashed]{stroke-dasharray:3 3}
+.iso-line[data-flow]{stroke-dasharray:2 6}
+.iso-wire-end{fill:var(--anatomy-paper);stroke:var(--anatomy-lo);stroke-width:var(--anatomy-weight)}
+.iso-wire[data-tone="hi"] .iso-wire-end{stroke:var(--anatomy-hi)}
+.iso-wire[data-tone="mid"] .iso-wire-end{stroke:var(--anatomy-mid)}
+.iso-wire[data-tone="faint"] .iso-wire-end{stroke:var(--anatomy-faint)}
+.iso-wire[data-tone="lit"] .iso-wire-end{stroke:var(--anatomy-lit)}
+.iso-dots circle{fill:var(--anatomy-dot);stroke:none;opacity:.32}
+.iso-dots[data-tone="hi"] circle{opacity:.85}
+.iso-dots[data-tone="mid"] circle{opacity:.45}
+.iso-dots[data-tone="lo"] circle{opacity:.22}
+.iso-dots[data-tone="faint"] circle{opacity:.12}
+.iso-face-text{fill:var(--anatomy-mid);font-family:var(--anatomy-mono);letter-spacing:.04em}
+.iso-face-text[data-tone="hi"]{fill:var(--anatomy-hi)}
+.iso-face-text[data-tone="lo"]{fill:var(--anatomy-lo)}
+.iso-face-text[data-tone="faint"]{fill:var(--anatomy-faint)}
+.tb-body{fill:var(--anatomy-shade-2);stroke:none}
+.tb-shine{fill:var(--anatomy-top);stroke:none}
+.tb-shade{fill:var(--anatomy-shade-0);stroke:none}
+.tb-ring{fill:none;stroke:var(--anatomy-lo);stroke-width:.45;stroke-linecap:butt;stroke-linejoin:round}
+.tb-ring[data-tone="mid"]{stroke:var(--anatomy-mid)}
+.tb-ring[data-tone="faint"]{stroke:var(--anatomy-faint)}
+.tb-ring[data-tone="hi"]{stroke:var(--anatomy-hi)}
+@keyframes iso-flow{to{stroke-dashoffset:-32}}
+@keyframes iso-pulse{0%,100%{opacity:.18}12%{opacity:1}40%{opacity:.18}}
+.iso-line[data-flow]{animation:iso-flow 1600ms linear infinite}
+.iso-dots circle[data-pulse]{animation:iso-pulse 1600ms steps(1,end) infinite;animation-delay:var(--pulse-at,0ms)}
+.iso-figure{margin:32px 0 36px}
+.iso-plate{position:relative;padding:52px 24px;border-radius:0;background:var(--anatomy-card);box-shadow:0 0 0 1px var(--anatomy-mid);--anatomy-paper:var(--anatomy-card)}
+.iso-plate-corners{position:absolute;inset:18px 20px;pointer-events:none}
+.iso-plate-corner{position:absolute;color:var(--anatomy-muted);font-family:var(--anatomy-mono);font-size:10.5px;line-height:1;letter-spacing:.04em;white-space:nowrap}
+.iso-plate-corner[data-corner="fig"]{top:0;left:0;color:var(--anatomy-text)}
+.iso-plate-corner[data-corner="title"]{top:0;right:0;text-transform:uppercase;letter-spacing:.1em}
+.iso-plate-corner[data-corner="hint"]{bottom:0;left:0;text-transform:uppercase;letter-spacing:.1em}
+.iso-plate-corner[data-corner="readout"]{right:0;bottom:0;color:var(--anatomy-text);font-variant-numeric:tabular-nums}
+.iso-plate .iso-svg{margin:0 auto}
+.iso-legend{display:grid;gap:8px;margin-top:12px;color:var(--anatomy-muted);font-size:13px;line-height:1.55}
+.iso-keys{display:flex;flex-wrap:wrap;gap:6px 18px}
+.iso-key{display:inline-flex;align-items:center;gap:7px}
+.iso-swatch{width:16px;height:10px;flex:none;overflow:visible}
+.iso-swatch path{fill:none;stroke:var(--anatomy-hi);stroke-width:1;vector-effect:non-scaling-stroke;stroke-linejoin:round;stroke-linecap:round}
+.iso-swatch[data-mark="raised"] path,.iso-swatch[data-mark="flat"] path{stroke:var(--anatomy-mid)}
+.iso-swatch[data-mark="lit"] path{stroke:var(--anatomy-lit)}
+.iso-swatch[data-mark="dim"] path{stroke:var(--anatomy-lo)}
+.iso-swatch[data-mark="dotted"] path{stroke-dasharray:.01 3;stroke-width:1.4}
+.iso-swatch[data-mark="dashed"] path{stroke-dasharray:3 2.5}
+.iso-swatch[data-mark="red"] path{stroke:var(--anatomy-red)}
+.iso-swatch[data-mark="green"] path{stroke:var(--anatomy-green)}
+.iso-swatch[data-mark="blue"] path{stroke:var(--anatomy-blue)}
+.iso-swatch-crease{stroke:var(--anatomy-lo)!important}
+@media (max-width:560px){.iso-plate{padding:48px 12px 70px}.iso-plate-corner[data-corner="hint"]{bottom:18px}}
+@media (prefers-reduced-motion:reduce){.iso-line[data-flow],.iso-dots circle[data-pulse]{animation:none}}
+
+*{box-sizing:border-box}
+html{color-scheme:dark}
+body[data-theme="light"]{color-scheme:light}
+body{margin:0;background:var(--anatomy-page);color:var(--anatomy-text);font:14px/1.6 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+.iso-page{width:min(900px,100% - 32px);margin:64px auto 96px}
+</style></head><body class="iso" data-theme="dark"><main class="iso-page"><style>
+.iso{--unfold-blue:#58c4dd;--unfold-yellow:#f4d345;--unfold-red:#fc6255;--unfold-green:#83c167;--unfold-teal:#5cd0b3;--unfold-purple:#b48ad1;--unfold-gold:#f0ac5f;--unfold-on-hot:#0b0b0b;--unfold-serif:"Latin Modern Math","STIX Two Math","Cambria Math",math,serif}
+.iso[data-theme="light"]{--unfold-blue:#1f78a4;--unfold-yellow:#a67c00;--unfold-red:#cf3b2e;--unfold-green:#3e8a2a;--unfold-teal:#16866b;--unfold-purple:#7a4fa3;--unfold-gold:#b8661a;--unfold-on-hot:#ffffff}
+[data-hue="blue"]{--hue:var(--unfold-blue)}[data-hue="yellow"]{--hue:var(--unfold-yellow)}[data-hue="red"]{--hue:var(--unfold-red)}[data-hue="green"]{--hue:var(--unfold-green)}[data-hue="teal"]{--hue:var(--unfold-teal)}[data-hue="purple"]{--hue:var(--unfold-purple)}[data-hue="gold"]{--hue:var(--unfold-gold)}[data-hue="ink"]{--hue:var(--anatomy-hi)}
+.u-key{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 16px;margin-top:10px;color:var(--anatomy-muted);font-size:12px}
+.u-key>span{display:inline-flex;align-items:center;gap:6px}
+.u-key i{width:10px;height:10px;border-radius:2px;background:var(--hue)}
+.u-key i.u-hollow{background:none;box-shadow:inset 0 0 0 1.2px var(--anatomy-mid)}
+.u-key i.u-solid{background:var(--anatomy-mid)}
+.u-stage{position:relative;outline:none;container-type:inline-size;--u-fade:.5s;--u-fade-at:.22s}
+.u-stage:focus-visible{outline:1px solid var(--anatomy-faint);outline-offset:8px}
+.u-stage .iso-svg{overflow:visible}
+.u-eq,.u-say,.u-cc{display:grid;align-items:center}
+.u-eq>.u-at,.u-say>.u-at,.u-cc>.u-at{grid-area:1/1;opacity:0;visibility:hidden;transition:opacity .2s var(--anatomy-ease),visibility 0s .2s;margin:0}
+.u-eq{min-height:44px;margin-bottom:8px;overflow-x:auto;overflow-y:hidden}
+.u-eq math{font-family:var(--unfold-serif);font-size:20px;color:var(--anatomy-strong)}
+.u-eq [data-hue]{color:var(--hue)}
+.u-say{min-height:48px;margin-top:6px;color:var(--anatomy-text);font-size:14px;line-height:1.55;text-align:center}
+.u-cc{margin-top:6px;color:var(--anatomy-text);font-size:14px;line-height:1.55;text-align:center}
+.u-stage[data-voice] .u-cc{display:none}
+:is(.u-say,.u-cc)>.u-at{max-width:62ch;justify-self:center}
+:is(.u-say,.u-cc) b{color:var(--anatomy-strong);font-weight:500}
+:is(.u-say,.u-cc) [data-hue]{color:var(--hue)}
+.u-steps{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin-top:14px}
+.u-steps button{display:inline-flex;align-items:center;gap:6px;padding:5px 10px 5px 6px;border:0;border-radius:999px;background:transparent;color:var(--anatomy-muted);font:11px/1 var(--anatomy-mono);letter-spacing:.04em;cursor:pointer;box-shadow:0 0 0 1px var(--anatomy-faint);transition:color .2s,box-shadow .2s}
+.u-steps button span{display:inline-grid;place-items:center;width:16px;height:16px;border-radius:50%;background:var(--anatomy-faint);color:var(--anatomy-text);font-size:10px}
+.u-steps button:hover{color:var(--anatomy-text)}
+.u-steps button[aria-current]{color:var(--anatomy-strong);box-shadow:0 0 0 1px var(--anatomy-mid)}
+.u-steps button[aria-current] span{background:var(--anatomy-strong);color:var(--anatomy-card)}
+.u-steps :is(.u-play,.u-voice){margin-right:6px}.u-steps :is(.u-play,.u-voice)[aria-pressed="true"]{color:var(--anatomy-strong);box-shadow:0 0 0 1px var(--anatomy-mid)}
+.u-move{transition:transform .9s var(--anatomy-ease),opacity var(--u-fade) var(--anatomy-ease) var(--u-fade-at)}
+.u-grid text,.u-chip text,.u-bars text,.u-arrow text{dominant-baseline:central;text-anchor:middle}
+.u-cell{transform:translate(var(--x),var(--y));transition:transform .9s var(--anatomy-ease) calc(var(--i) * 18ms),opacity .35s}
+.u-cell-bg{fill:var(--hue);fill-opacity:var(--a);stroke:none;transition:fill-opacity .35s,stroke-width .3s}
+.u-cell[data-neg]>.u-cell-bg,.u-cell-bg[data-neg]{fill-opacity:calc(var(--a) * .18);stroke:var(--hue);stroke-opacity:var(--a);stroke-width:1.2}
+.u-cell[data-masked]>.u-cell-bg,.u-cell-bg[data-masked]{fill:none;stroke:var(--anatomy-faint);stroke-width:.8;stroke-dasharray:2 2}
+.u-num{font:500 10px var(--anatomy-mono);font-variant-numeric:tabular-nums;fill:var(--anatomy-strong)}
+.u-cell[data-hot] .u-num{fill:var(--unfold-on-hot)}
+.u-cell[data-masked] .u-num{fill:var(--anatomy-lo)}
+.u-name{font:italic 600 17px var(--unfold-serif);fill:var(--hue);dominant-baseline:auto!important;text-anchor:start!important}
+.u-dims{font:400 10px var(--anatomy-mono);font-style:normal;fill:var(--anatomy-muted)}
+.u-T,.u-dims-T{display:none}
+.u-mark{fill:none;stroke:var(--anatomy-strong);stroke-width:1.2;opacity:0;transition:opacity .3s}
+.u-mark[data-on]{opacity:.9}
+.u-chip rect{fill:var(--anatomy-card);stroke:var(--anatomy-mid);stroke-width:.8;transition:stroke .25s,fill .25s}
+.u-chip text{font:500 11px var(--anatomy-mono);fill:var(--anatomy-text);transition:fill .25s}
+.u-chip[data-hue] rect{stroke:var(--hue)}
+.u-chip[data-hue] text{fill:var(--hue)}
+.u-cell[data-later],.u-mark[data-later]{opacity:0!important;transition:opacity .3s}
+.u-plot-axis{stroke:var(--anatomy-mid);stroke-width:.9;fill:none}
+.u-plot-grid{stroke:var(--anatomy-faint);stroke-width:.6;fill:none}
+.u-tick-label{font:10px var(--anatomy-mono);fill:var(--anatomy-muted)}
+.u-plot-name{font:italic 600 15px var(--unfold-serif);fill:var(--hue,var(--anatomy-text))}
+.u-curve{fill:none;stroke:var(--hue,var(--anatomy-hi));stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.u-chip[data-on] rect{fill:var(--anatomy-strong);stroke:var(--anatomy-strong)}
+.u-chip[data-on] text{fill:var(--anatomy-card)}
+.u-chip[data-i]{cursor:pointer}
+.u-arrow{--w:1.1;color:var(--anatomy-mid)}
+.u-arrow[data-hue]{color:var(--hue)}
+.u-arrow-line{fill:none;stroke:currentColor;stroke-width:var(--w);stroke-linecap:round;transition:stroke-width .4s,opacity .4s}
+.u-arrow-head{fill:currentColor}
+.u-bar-fill{fill:var(--hue);transform-box:fill-box;transform-origin:50% 100%;transform:scaleY(var(--v));transition:transform .6s var(--anatomy-ease)}
+.u-bar-value{font:500 10px var(--anatomy-mono);fill:var(--anatomy-strong);transition:y .6s var(--anatomy-ease)}
+.u-bar-label{font:11px var(--anatomy-mono);fill:var(--anatomy-muted)}
+.u-axis{stroke:var(--anatomy-mid);stroke-width:.8;fill:none}
+.u-link{fill:none;stroke:var(--hue,var(--anatomy-mid));stroke-width:1.1;stroke-linecap:round;transition:d .9s var(--anatomy-ease),opacity .5s var(--anatomy-ease),stroke .3s}
+.u-link[data-off]{opacity:0}
+.u-eq>.u-at{text-align:center}
+.u-eq .u-rule{font:500 14px/1.5 var(--anatomy-mono);color:var(--anatomy-strong);letter-spacing:.01em}
+.u-lane-bg{fill:var(--anatomy-faint);fill-opacity:.18;stroke:var(--anatomy-faint);stroke-width:.6}
+.u-lane-name{font:11px var(--anatomy-mono);fill:var(--hue,var(--anatomy-muted));text-anchor:end;dominant-baseline:central}
+.u-tick{stroke:var(--anatomy-faint);stroke-width:.6}
+.u-lanes .u-tick-label{text-anchor:middle;dominant-baseline:central}
+.u-now{stroke:var(--anatomy-strong);stroke-width:1.2;transition:transform .5s var(--anatomy-ease)}
+.u-span-bar{fill:var(--hue,var(--anatomy-mid));fill-opacity:.9;transform-box:fill-box;transform-origin:0 50%;transform:scaleX(var(--v,1));transition:transform .5s var(--anatomy-ease)}
+.u-span-label{opacity:0;transition:opacity .3s}
+.u-span[data-labeled] .u-span-label{opacity:1}
+.u-span-label text{font:500 10px var(--anatomy-mono);fill:var(--unfold-on-hot);dominant-baseline:central}
+.u-face .u-cell-bg{stroke-width:.5}
+.u-cell-bg{transform-box:fill-box;transform-origin:50% 50%}
+.u-cell[data-hl]>.u-cell-bg{stroke:var(--anatomy-strong);stroke-opacity:1;stroke-width:1.6;animation:u-ping .5s var(--anatomy-ease)}
+.u-pulse{fill:var(--hue,var(--anatomy-strong));filter:drop-shadow(0 0 3px var(--hue,var(--anatomy-strong)))}
+.u-rise{transform-box:fill-box}
+@keyframes u-pop{from{opacity:0;transform:scale(.4)}}
+@keyframes u-fade{from{opacity:0}}
+@keyframes u-rise{from{opacity:0;transform:translateY(-14px)}}
+@keyframes u-grow{from{transform:scaleY(0)}}
+@keyframes u-draw{from{stroke-dasharray:1;stroke-dashoffset:1}to{stroke-dasharray:1;stroke-dashoffset:0}}
+@keyframes u-ping{from{stroke-width:4;stroke-opacity:0}}
+.u-floor-text{font-family:var(--unfold-serif);font-style:italic;font-weight:600;fill:var(--hue,var(--anatomy-text))}
+.u-floor-label{font-family:var(--anatomy-mono);fill:var(--anatomy-muted)}
+.u-guide{fill:none;stroke:var(--anatomy-lo);stroke-width:.8;stroke-dasharray:2 3}
+.u-controls{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px 18px;margin-top:10px}
+.u-controls button{border:0;border-radius:999px;background:transparent;color:var(--anatomy-muted);font:11px/1 var(--anatomy-mono);letter-spacing:.04em;padding:6px 10px;cursor:pointer;box-shadow:0 0 0 1px var(--anatomy-faint);transition:color .2s,box-shadow .2s}
+.u-controls button:hover{color:var(--anatomy-text)}
+.u-controls button[aria-pressed="true"]{color:var(--anatomy-strong);box-shadow:0 0 0 1px var(--anatomy-mid)}
+.u-time{display:flex;align-items:center;gap:8px;flex:1 1 260px;max-width:440px;transition:opacity .4s}
+.u-time button{width:28px;height:28px;padding:0;font-size:15px}
+.u-time input{flex:1;min-width:80px;accent-color:var(--anatomy-hi)}
+.u-ctl{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px 12px;transition:opacity .4s}
+.u-controls [data-scenes]{transition:opacity .4s}.u-controls [data-idle]{opacity:.4}
+.u-sub{font-size:72%}
+.u-line rect{fill:var(--hue,var(--anatomy-hi));fill-opacity:0;transition:fill-opacity .25s}
+.u-line[data-on] rect{fill-opacity:.18}
+.u-line-num{font:10px var(--anatomy-mono);fill:var(--anatomy-lo);text-anchor:end;dominant-baseline:central}
+.u-line-text{font:11.5px var(--anatomy-mono);fill:var(--anatomy-text);dominant-baseline:central;white-space:pre}
+.u-line[data-on] .u-line-text{fill:var(--anatomy-strong)}
+.u-controls label{display:inline-flex;align-items:center;gap:6px;color:var(--anatomy-muted);font:11px var(--anatomy-mono)}
+.u-controls :is(input[type=number],input[type=text]){width:calc(5ch + 28px);padding:4px 6px;border:0;border-radius:6px;background:transparent;color:var(--anatomy-text);font:12px var(--anatomy-mono);font-variant-numeric:tabular-nums;box-shadow:0 0 0 1px var(--anatomy-faint)}
+.u-controls input[type=range]{accent-color:var(--anatomy-hi)}
+.u-controls select{max-width:100%;padding:4px 22px 4px 8px;border:0;border-radius:6px;background:var(--anatomy-card);color:var(--anatomy-text);font:11px var(--anatomy-mono);box-shadow:0 0 0 1px var(--anatomy-faint);cursor:pointer}
+.iso-plate-corner[data-corner="readout"]{max-width:62%;white-space:normal;text-align:right;line-height:1.4}
+.u-time output{font:11px var(--anatomy-mono);color:var(--anatomy-muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.u-more{margin-top:48px}
+.u-more>summary{cursor:pointer;color:var(--anatomy-muted);font:500 12px var(--anatomy-mono);letter-spacing:.04em}
+.u-more>summary:hover,.u-more[open]>summary{color:var(--anatomy-strong)}
+.u-notes{color:var(--anatomy-text);font-size:14px;line-height:1.65}
+.u-notes h2{margin:36px 0 10px;font:500 13px var(--anatomy-mono);letter-spacing:.04em;color:var(--anatomy-strong)}
+.u-notes p,.u-notes ul{margin:0 0 12px;max-width:72ch}
+.u-notes li{margin-bottom:6px}
+.u-notes b{color:var(--anatomy-strong);font-weight:500}
+.u-notes code{font:12.5px var(--anatomy-mono);color:var(--anatomy-strong)}
+.u-notes table{width:100%;border-collapse:collapse;font-size:13px;line-height:1.5}
+.u-notes th,.u-notes td{padding:7px 10px 7px 0;border-bottom:1px solid var(--anatomy-faint);text-align:left;vertical-align:top}
+.u-notes th{color:var(--anatomy-muted);font:500 11.5px var(--anatomy-mono);letter-spacing:.03em}
+.u-notes svg{display:block;width:100%;max-width:640px;height:auto;margin:6px 0 14px;overflow:visible}
+.u-notes td:first-child{color:var(--anatomy-strong);white-space:nowrap}
+@media (max-width:560px){.u-notes thead{display:none}.u-notes tr{display:block;padding:8px 0;border-bottom:1px solid var(--anatomy-faint)}.u-notes td{display:block;padding:2px 0;border:0}.u-notes td[data-th]:not(:first-child)::before{content:attr(data-th) ": ";color:var(--anatomy-muted)}}
+@container (max-width:520px){:not([data-keep])>.u-cell .u-num,:not([data-keep])>.u-bar .u-bar-value{display:none}.u-eq math{font-size:14px}.u-steps button{font-size:0;gap:0;padding:4px}.u-controls{gap:8px;flex-direction:column;align-items:stretch}.u-ctl{gap:6px 8px}.u-time{flex:none;max-width:none}.u-controls label{gap:4px}}
+@media (max-width:560px){.iso-plate-corner[data-corner="readout"]{left:0;max-width:none;white-space:normal;text-align:right;line-height:1.4}.iso-plate-corner[data-corner="hint"]{display:none}}
+@media (prefers-reduced-motion:reduce){.u-stage *{transition:none!important;animation:none!important}.u-pulse{display:none}}
+</style><figure class="iso-figure"><div class="iso-plate"><div class="iso-plate-corners" aria-hidden="true"><span class="iso-plate-corner" data-corner="fig">Fig 4</span><span class="iso-plate-corner" data-corner="title">How a function call works</span><span class="iso-plate-corner" data-corner="hint">← → scene · ↑ ↓ language · , . step</span><span class="iso-plate-corner" data-corner="readout" data-readout>Python · runs as shown and prints 25</span></div><style>.u-stage[data-scene="0"] .u-at[data-at="0"]{opacity:1;visibility:visible;transition:opacity .4s var(--anatomy-ease) .2s,visibility 0s .2s}
+.u-stage[data-scene="0"] .u-grid[data-t~="0"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="0"] .u-grid[data-t~="0"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="0"] .u-grid[data-t~="0"] .u-dims:not(.u-dims-T),.u-stage[data-scene="0"] .u-grid[data-t~="0"] .u-mark{display:none}
+.u-stage[data-scene="1"] .u-at[data-at="1"]{opacity:1;visibility:visible;transition:opacity .4s var(--anatomy-ease) .2s,visibility 0s .2s}
+.u-stage[data-scene="1"] .u-grid[data-t~="1"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="1"] .u-grid[data-t~="1"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="1"] .u-grid[data-t~="1"] .u-dims:not(.u-dims-T),.u-stage[data-scene="1"] .u-grid[data-t~="1"] .u-mark{display:none}
+.u-stage[data-scene="2"] .u-at[data-at="2"]{opacity:1;visibility:visible;transition:opacity .4s var(--anatomy-ease) .2s,visibility 0s .2s}
+.u-stage[data-scene="2"] .u-grid[data-t~="2"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="2"] .u-grid[data-t~="2"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="2"] .u-grid[data-t~="2"] .u-dims:not(.u-dims-T),.u-stage[data-scene="2"] .u-grid[data-t~="2"] .u-mark{display:none}
+.u-stage[data-scene="3"] .u-at[data-at="3"]{opacity:1;visibility:visible;transition:opacity .4s var(--anatomy-ease) .2s,visibility 0s .2s}
+.u-stage[data-scene="3"] .u-grid[data-t~="3"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="3"] .u-grid[data-t~="3"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="3"] .u-grid[data-t~="3"] .u-dims:not(.u-dims-T),.u-stage[data-scene="3"] .u-grid[data-t~="3"] .u-mark{display:none}
+.u-stage[data-scene="4"] .u-at[data-at="4"]{opacity:1;visibility:visible;transition:opacity .4s var(--anatomy-ease) .2s,visibility 0s .2s}
+.u-stage[data-scene="4"] .u-grid[data-t~="4"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="4"] .u-grid[data-t~="4"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="4"] .u-grid[data-t~="4"] .u-dims:not(.u-dims-T),.u-stage[data-scene="4"] .u-grid[data-t~="4"] .u-mark{display:none}
+.u-stage[data-scene="5"] .u-at[data-at="5"]{opacity:1;visibility:visible;transition:opacity .4s var(--anatomy-ease) .2s,visibility 0s .2s}
+.u-stage[data-scene="5"] .u-grid[data-t~="5"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="5"] .u-grid[data-t~="5"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="5"] .u-grid[data-t~="5"] .u-dims:not(.u-dims-T),.u-stage[data-scene="5"] .u-grid[data-t~="5"] .u-mark{display:none}
+.u-stage[data-scene="6"] .u-at[data-at="6"]{opacity:1;visibility:visible;transition:opacity .4s var(--anatomy-ease) .2s,visibility 0s .2s}
+.u-stage[data-scene="6"] .u-grid[data-t~="6"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="6"] .u-grid[data-t~="6"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="6"] .u-grid[data-t~="6"] .u-dims:not(.u-dims-T),.u-stage[data-scene="6"] .u-grid[data-t~="6"] .u-mark{display:none}.u-stage:not(:is([data-scene="1"],[data-scene="2"],[data-scene="3"],[data-scene="4"])) .u-time{opacity:.4}.el-place{fill:var(--anatomy-faint);fill-opacity:.12;stroke:var(--anatomy-lo);stroke-width:.8}
+.el-label{font:10.5px var(--anatomy-mono);fill:var(--anatomy-muted);letter-spacing:.06em;text-transform:uppercase}
+.el-small{font:10px var(--anatomy-mono);fill:var(--anatomy-muted);dominant-baseline:central}
+.el-muted{fill:var(--anatomy-muted)}
+.el-num{font:9.5px var(--anatomy-mono);fill:var(--anatomy-lo);dominant-baseline:central}
+.el-code{font:10px var(--anatomy-mono);fill:var(--anatomy-text);dominant-baseline:central;white-space:pre}
+.el-code tspan[data-hue],.el-frame-row tspan[data-hue]{fill:var(--hue)}
+.el-panel{cursor:pointer;transform-box:view-box;transition:transform .9s var(--anatomy-ease),opacity var(--u-fade) var(--anatomy-ease) var(--u-fade-at)}
+#panel-0{transform:translate(0px,4px) scale(1)}
+#panel-1{transform:translate(290px,4px) scale(1)}
+#panel-2{transform:translate(580px,4px) scale(1)}
+#panel-3{transform:translate(0px,140px) scale(1)}
+#panel-4{transform:translate(290px,140px) scale(1)}
+#panel-5{transform:translate(580px,140px) scale(1)}
+.u-stage[data-narrow] #panel-0{transform:translate(0px,0px) scale(0.7)}
+.u-stage[data-narrow] #panel-1{transform:translate(204px,0px) scale(0.7)}
+.u-stage[data-narrow] #panel-2{transform:translate(0px,96.8px) scale(0.7)}
+.u-stage[data-narrow] #panel-3{transform:translate(204px,96.8px) scale(0.7)}
+.u-stage[data-narrow] #panel-4{transform:translate(0px,223px) scale(0.7)}
+.u-stage[data-narrow] #panel-5{transform:translate(204px,223px) scale(0.7)}
+.u-stage:not([data-scene="0"]) .el-panel{opacity:0;pointer-events:none;--u-fade:.22s;--u-fade-at:0s}
+.u-stage[data-lang="0"]:is([data-scene="1"],[data-scene="2"],[data-scene="3"],[data-scene="4"],[data-scene="5"]) #panel-0{transform:translate(0px,8px) scale(1.4);opacity:1;pointer-events:auto;--u-fade:.5s;--u-fade-at:.22s}
+.u-stage[data-lang="1"]:is([data-scene="1"],[data-scene="2"],[data-scene="3"],[data-scene="4"],[data-scene="5"]) #panel-1{transform:translate(0px,8px) scale(1.4);opacity:1;pointer-events:auto;--u-fade:.5s;--u-fade-at:.22s}
+.u-stage[data-lang="2"]:is([data-scene="1"],[data-scene="2"],[data-scene="3"],[data-scene="4"],[data-scene="5"]) #panel-2{transform:translate(0px,8px) scale(1.4);opacity:1;pointer-events:auto;--u-fade:.5s;--u-fade-at:.22s}
+.u-stage[data-lang="3"]:is([data-scene="1"],[data-scene="2"],[data-scene="3"],[data-scene="4"],[data-scene="5"]) #panel-3{transform:translate(0px,8px) scale(1.4);opacity:1;pointer-events:auto;--u-fade:.5s;--u-fade-at:.22s}
+.u-stage[data-lang="4"]:is([data-scene="1"],[data-scene="2"],[data-scene="3"],[data-scene="4"],[data-scene="5"]) #panel-4{transform:translate(0px,8px) scale(1.4);opacity:1;pointer-events:auto;--u-fade:.5s;--u-fade-at:.22s}
+.u-stage[data-lang="5"]:is([data-scene="1"],[data-scene="2"],[data-scene="3"],[data-scene="4"],[data-scene="5"]) #panel-5{transform:translate(0px,8px) scale(1.4);opacity:1;pointer-events:auto;--u-fade:.5s;--u-fade-at:.22s}
+.el-panel-bg{fill:var(--anatomy-card);stroke:var(--anatomy-lo);stroke-width:.8;transition:stroke .3s}
+.u-stage[data-lang="0"][data-scene="0"] #panel-0 .el-panel-bg{stroke:var(--anatomy-strong);stroke-width:1.2}
+.u-stage[data-lang="1"][data-scene="0"] #panel-1 .el-panel-bg{stroke:var(--anatomy-strong);stroke-width:1.2}
+.u-stage[data-lang="2"][data-scene="0"] #panel-2 .el-panel-bg{stroke:var(--anatomy-strong);stroke-width:1.2}
+.u-stage[data-lang="3"][data-scene="0"] #panel-3 .el-panel-bg{stroke:var(--anatomy-strong);stroke-width:1.2}
+.u-stage[data-lang="4"][data-scene="0"] #panel-4 .el-panel-bg{stroke:var(--anatomy-strong);stroke-width:1.2}
+.u-stage[data-lang="5"][data-scene="0"] #panel-5 .el-panel-bg{stroke:var(--anatomy-strong);stroke-width:1.2}
+.el-cursor{fill:var(--hue,var(--anatomy-hi));fill-opacity:.16;stroke:var(--hue,var(--anatomy-hi));stroke-width:.8;transition:transform .45s var(--anatomy-ease),opacity .3s,fill .3s,stroke .3s}
+.el-out,.el-info,.el-stackbox,.el-live,.el-listing,.el-chart{transition:opacity var(--u-fade) var(--anatomy-ease) var(--u-fade-at)}
+.u-stage:not(:is([data-scene="1"],[data-scene="2"],[data-scene="3"],[data-scene="4"])) :is(.el-out,.el-stackbox,.el-live){opacity:0;--u-fade:.22s;--u-fade-at:0s}
+.u-stage[data-narrow][data-scene="0"] :is(.el-stackbox,.el-live){opacity:1;--u-fade:.5s;--u-fade-at:.22s}
+.el-listing{opacity:0;--u-fade:.22s;--u-fade-at:0s}
+.u-stage[data-lang="0"][data-scene="5"] #code-0{opacity:1;--u-fade:.5s;--u-fade-at:.22s}
+.u-stage[data-lang="1"][data-scene="5"] #code-1{opacity:1;--u-fade:.5s;--u-fade-at:.22s}
+.u-stage[data-lang="2"][data-scene="5"] #code-2{opacity:1;--u-fade:.5s;--u-fade-at:.22s}
+.u-stage[data-lang="3"][data-scene="5"] #code-3{opacity:1;--u-fade:.5s;--u-fade-at:.22s}
+.u-stage[data-lang="4"][data-scene="5"] #code-4{opacity:1;--u-fade:.5s;--u-fade-at:.22s}
+.u-stage[data-lang="5"][data-scene="5"] #code-5{opacity:1;--u-fade:.5s;--u-fade-at:.22s}
+.u-stage:not([data-scene="6"]) :is(.el-info,.el-chart){opacity:0;--u-fade:.22s;--u-fade-at:0s}
+.el-right{transform:translate(460px,0px)}
+.u-stage[data-narrow] .el-right{transform:translate(0px,360px)}
+.el-frame,.el-chip{transition:transform .6s var(--anatomy-ease),opacity .4s var(--anatomy-ease)}
+.el-chip[data-landed]{opacity:0!important;transition:transform .6s var(--anatomy-ease),opacity .35s var(--anatomy-ease) .25s}
+.el-frame-bg{fill:color-mix(in srgb,var(--hue) 10%,var(--anatomy-card));stroke:var(--hue);stroke-width:1}
+.el-frame-name{font:600 12px var(--anatomy-mono);fill:var(--hue);dominant-baseline:central}
+.el-frame-row{font:12px var(--anatomy-mono);fill:var(--anatomy-text);dominant-baseline:central;white-space:pre}
+.el-chip .u-chip rect{fill:color-mix(in srgb,var(--hue) 22%,var(--anatomy-card));stroke-width:1.2}
+.el-chip .u-chip text{font-weight:600}
+.el-asm{font:11px var(--anatomy-mono);fill:var(--anatomy-text);dominant-baseline:central;white-space:pre}
+.el-asm[data-hue]{fill:var(--hue)}
+.el-gap{font:italic 10.5px var(--anatomy-mono);fill:var(--anatomy-muted);dominant-baseline:central}
+.el-note{font:10.5px var(--anatomy-mono);fill:var(--anatomy-muted);dominant-baseline:central}
+.el-row-name{font:12px var(--anatomy-mono);fill:var(--anatomy-text);dominant-baseline:central}
+.el-row-value{font:11px var(--anatomy-mono);fill:var(--anatomy-muted);dominant-baseline:central}
+.el-bar{fill:var(--anatomy-mid);transform-box:fill-box;transform-origin:0 50%;transition:transform .9s var(--anatomy-ease) calc(var(--row) * 90ms),fill .3s}
+.u-stage:not([data-scene="6"]) .el-bar{transform:scaleX(0)}
+.el-row{cursor:pointer}
+.u-stage[data-lang="0"] .el-row[data-i="0"] :is(.el-row-name,.el-row-value){fill:var(--anatomy-strong)}.u-stage[data-lang="0"] .el-row[data-i="0"] .el-bar{fill:var(--anatomy-hi)}
+.u-stage[data-lang="1"] .el-row[data-i="1"] :is(.el-row-name,.el-row-value){fill:var(--anatomy-strong)}.u-stage[data-lang="1"] .el-row[data-i="1"] .el-bar{fill:var(--anatomy-hi)}
+.u-stage[data-lang="2"] .el-row[data-i="2"] :is(.el-row-name,.el-row-value){fill:var(--anatomy-strong)}.u-stage[data-lang="2"] .el-row[data-i="2"] .el-bar{fill:var(--anatomy-hi)}
+.u-stage[data-lang="3"] .el-row[data-i="3"] :is(.el-row-name,.el-row-value){fill:var(--anatomy-strong)}.u-stage[data-lang="3"] .el-row[data-i="3"] .el-bar{fill:var(--anatomy-hi)}
+.u-stage[data-lang="4"] .el-row[data-i="4"] :is(.el-row-name,.el-row-value){fill:var(--anatomy-strong)}.u-stage[data-lang="4"] .el-row[data-i="4"] .el-bar{fill:var(--anatomy-hi)}
+.u-stage[data-lang="5"] .el-row[data-i="5"] :is(.el-row-name,.el-row-value){fill:var(--anatomy-strong)}.u-stage[data-lang="5"] .el-row[data-i="5"] .el-bar{fill:var(--anatomy-hi)}
+.el-tick{stroke:var(--anatomy-faint);stroke-width:.6}
+.el-tick-label{font:10px var(--anatomy-mono);fill:var(--anatomy-muted);text-anchor:middle;dominant-baseline:central}
+.el-info-label{font:10.5px var(--anatomy-mono);fill:var(--anatomy-muted);dominant-baseline:central}
+.el-info-value{font:500 17px var(--anatomy-mono);fill:var(--anatomy-strong);dominant-baseline:central}
+#info-end{font-size:13px}
+.el-langs{display:flex;flex-wrap:wrap;justify-content:center;gap:6px}</style><div class="u-stage" data-lang="0" tabindex="0" role="group" aria-roledescription="explainer" aria-label="Function call explainer. Left and right arrows change the scene. Up and down arrows change the language. Comma and period step through the run." data-scene="0" data-count="7" data-dwell="9000" data-narrow-box="0 0 400 700"><div class="u-eq" aria-live="polite"><div class="u-at" data-at="0"><code class="u-rule">define <span data-hue="blue">name</span>(<span data-hue="green">parameters</span>) · call <span data-hue="blue">name</span>(<span data-hue="gold">arguments</span>) · get back the <span data-hue="red">return</span> value</code></div><div class="u-at" data-at="1"><code class="u-rule"><span data-hue="blue" data-fn="sum_sq">sum_sq</span>(<span data-hue="gold">3, 4</span>) → new frame: <span data-hue="green">a</span> = <span data-hue="gold">3</span>, <span data-hue="green">b</span> = <span data-hue="gold">4</span></code></div><div class="u-at" data-at="2"><code class="u-rule"><span data-hue="purple" data-fn="square">square</span>(<span data-hue="green">a</span>) → <span data-hue="green">a</span> is <span data-hue="gold">3</span> → new frame on top: <span data-hue="green">x</span> = <span data-hue="gold">3</span></code></div><div class="u-at" data-at="3"><code class="u-rule"><span data-hue="red">return</span> <span data-hue="green">x</span> * <span data-hue="green">x</span> → frame removed → <span data-hue="red">9</span> replaces <span data-hue="purple" data-fn="square">square</span>(<span data-hue="green">a</span>)</code></div><div class="u-at" data-at="4"><code class="u-rule"><span data-hue="red">return</span> <span data-hue="red">9</span> + <span data-hue="red">16</span> → <span data-hue="red">25</span> → the top-level frame prints it, then ends</code></div><div class="u-at" data-at="5"><code class="u-rule">put the <span data-hue="gold">arguments</span> in place → <span data-hue="purple">call</span> → the <span data-hue="red">result</span> comes back</code></div><div class="u-at" data-at="6"><code class="u-rule">deepest call ≈ stack size ÷ bytes per frame</code></div></div><svg xmlns="http://www.w3.org/2000/svg" class="iso-svg" viewBox="0 0 860 340" role="img" aria-label="One function program in six languages and the call stack it builds: a frame per call, arguments bound to parameters, return values going back to the caller. Then what each compiler or virtual machine makes of the call, and how deep each stack can go."><g class="el-out"><rect class="el-place" x="0" y="284" width="392" height="40" rx="6"/><text class="el-label" x="0" y="278">output</text></g><g class="el-info"><text class="el-label" x="0" y="10">one recursive function · <tspan id="info-lang">Python</tspan></text><text class="el-info-label" x="0" y="44">stack size</text><text class="el-info-value" id="info-stack" x="0" y="68"></text><text class="el-note" id="info-stack-note" x="190" y="68"></text><text class="el-info-label" x="0" y="100">deepest call reached</text><text class="el-info-value" id="info-depth" x="0" y="124"></text><text class="el-note" id="info-depth-note" x="190" y="124"></text><text class="el-info-label" x="0" y="156">bytes per frame</text><text class="el-info-value" id="info-bytes" x="0" y="180"></text><text class="el-note" id="info-bytes-note" x="190" y="180"></text><text class="el-info-label" x="0" y="212">with twice the stack</text><text class="el-info-value" id="info-twice" x="0" y="236"></text><text class="el-note" id="info-twice-note" x="190" y="236"></text><text class="el-info-label" x="0" y="268">at the limit</text><text class="el-info-value" id="info-end" x="0" y="292"></text></g><g class="el-right"><g class="el-stackbox"><rect class="el-place" x="0" y="16" width="400" height="316" rx="6"/><text class="el-label" x="0" y="10">call stack · top runs</text></g><g class="el-listing" id="code-0"><text class="el-label" x="0" y="10">CPython 3.13 bytecode · python3 -m dis</text><rect class="el-place" x="0" y="20" width="400" height="199" rx="6"/><text class="el-asm" x="12" y="44">RESUME       0</text><text class="el-asm" x="12" y="63">LOAD_GLOBAL  1 (square + NULL)</text><text class="el-note" x="226" y="63">find square</text><text class="el-asm" x="12" y="82" data-hue="gold">LOAD_FAST    0 (a)</text><text class="el-note" x="226" y="82">push a</text><text class="el-asm" x="12" y="101" data-hue="purple">CALL         1</text><text class="el-note" x="226" y="101">call, 1 argument</text><text class="el-asm" x="12" y="120">LOAD_GLOBAL  1 (square + NULL)</text><text class="el-asm" x="12" y="139" data-hue="gold">LOAD_FAST    1 (b)</text><text class="el-note" x="226" y="139">push b</text><text class="el-asm" x="12" y="158" data-hue="purple">CALL         1</text><text class="el-asm" x="12" y="177">BINARY_OP    0 (+)</text><text class="el-note" x="226" y="177">9 + 16</text><text class="el-asm" x="12" y="196" data-hue="red">RETURN_VALUE</text><text class="el-note" x="226" y="196">back to the caller</text></g><g class="el-listing" id="code-1"><text class="el-label" x="0" y="10">V8 Ignition bytecode (Node 24) · node --print-bytecode</text><rect class="el-place" x="0" y="20" width="400" height="199" rx="6"/><text class="el-asm" x="12" y="44">LdaImmutableCurrentContextSlot [2]</text><text class="el-note" x="252.39999999999998" y="44">find square</text><text class="el-asm" x="12" y="63">Star0</text><text class="el-asm" x="12" y="82" data-hue="purple">CallUndefinedReceiver1 r0, a0, [1]</text><text class="el-note" x="252.39999999999998" y="82">call with a0 = a</text><text class="el-asm" x="12" y="101" data-hue="red">Star0</text><text class="el-note" x="252.39999999999998" y="101">keep the result</text><text class="el-asm" x="12" y="120">LdaImmutableCurrentContextSlot [2]</text><text class="el-asm" x="12" y="139">Star1</text><text class="el-asm" x="12" y="158" data-hue="purple">CallUndefinedReceiver1 r1, a1, [3]</text><text class="el-note" x="252.39999999999998" y="158">call with a1 = b</text><text class="el-asm" x="12" y="177">Add r0, [0]</text><text class="el-note" x="252.39999999999998" y="177">9 + 16</text><text class="el-asm" x="12" y="196" data-hue="red">Return</text><text class="el-note" x="252.39999999999998" y="196">back to the caller</text></g><g class="el-listing" id="code-2"><text class="el-label" x="0" y="10">YARV instructions (Ruby 3.2) · ruby --dump=insns</text><rect class="el-place" x="0" y="20" width="400" height="180" rx="6"/><text class="el-asm" x="12" y="44">putself</text><text class="el-note" x="245.79999999999998" y="44">the receiver</text><text class="el-asm" x="12" y="63" data-hue="gold">getlocal_WC_0 a@0</text><text class="el-note" x="245.79999999999998" y="63">push a</text><text class="el-asm" x="12" y="82" data-hue="purple">opt_send_without_block mid:square</text><text class="el-note" x="245.79999999999998" y="82">call, argc:1</text><text class="el-asm" x="12" y="101">putself</text><text class="el-asm" x="12" y="120" data-hue="gold">getlocal_WC_0 b@1</text><text class="el-note" x="245.79999999999998" y="120">push b</text><text class="el-asm" x="12" y="139" data-hue="purple">opt_send_without_block mid:square</text><text class="el-asm" x="12" y="158">opt_plus</text><text class="el-note" x="245.79999999999998" y="158">9 + 16</text><text class="el-asm" x="12" y="177" data-hue="red">leave</text><text class="el-note" x="245.79999999999998" y="177">back to the caller</text></g><g class="el-listing" id="code-3"><text class="el-label" x="0" y="10">x86-64 machine code (gcc 13, -O0) · gcc -S -O0</text><rect class="el-place" x="0" y="20" width="400" height="294" rx="6"/><text class="el-gap" x="12" y="44">⋯ 5 lines: endbr64, then push rbp and rbx</text><text class="el-asm" x="12" y="63">movl  %edi, -12(%rbp)</text><text class="el-note" x="166.6" y="63">save a in the frame</text><text class="el-asm" x="12" y="82">movl  %esi, -16(%rbp)</text><text class="el-note" x="166.6" y="82">save b in the frame</text><text class="el-asm" x="12" y="101">movl  -12(%rbp), %eax</text><text class="el-asm" x="12" y="120" data-hue="gold">movl  %eax, %edi</text><text class="el-note" x="166.6" y="120">1st argument: edi</text><text class="el-asm" x="12" y="139" data-hue="purple">call  square</text><text class="el-note" x="166.6" y="139">push return address</text><text class="el-asm" x="12" y="158" data-hue="red">movl  %eax, %ebx</text><text class="el-note" x="166.6" y="158">result came in eax</text><text class="el-asm" x="12" y="177">movl  -16(%rbp), %eax</text><text class="el-asm" x="12" y="196" data-hue="gold">movl  %eax, %edi</text><text class="el-note" x="166.6" y="196">b goes in edi</text><text class="el-asm" x="12" y="215" data-hue="purple">call  square</text><text class="el-asm" x="12" y="234">addl  %ebx, %eax</text><text class="el-note" x="166.6" y="234">9 + 16 in eax</text><text class="el-asm" x="12" y="253">movq  -8(%rbp), %rbx</text><text class="el-note" x="166.6" y="253">restore rbx</text><text class="el-asm" x="12" y="272">leave</text><text class="el-note" x="166.6" y="272">drop the frame</text><text class="el-asm" x="12" y="291" data-hue="red">ret</text><text class="el-note" x="166.6" y="291">pop address, jump</text></g><g class="el-listing" id="code-4"><text class="el-label" x="0" y="10">JVM bytecode (javac 21) · javap -c</text><rect class="el-place" x="0" y="20" width="400" height="142" rx="6"/><text class="el-asm" x="12" y="44" data-hue="gold">iload_0</text><text class="el-note" x="133.6" y="44">push a</text><text class="el-asm" x="12" y="63" data-hue="purple">invokestatic  #7</text><text class="el-note" x="133.6" y="63">Method square:(I)I</text><text class="el-asm" x="12" y="82" data-hue="gold">iload_1</text><text class="el-note" x="133.6" y="82">push b</text><text class="el-asm" x="12" y="101" data-hue="purple">invokestatic  #7</text><text class="el-asm" x="12" y="120">iadd</text><text class="el-note" x="133.6" y="120">9 + 16</text><text class="el-asm" x="12" y="139" data-hue="red">ireturn</text><text class="el-note" x="133.6" y="139">back to the caller</text></g><g class="el-listing" id="code-5"><text class="el-label" x="0" y="10">x86-64 machine code (rustc 1.95, debug) · rustc --emit asm</text><rect class="el-place" x="0" y="20" width="400" height="313" rx="6"/><text class="el-asm" x="12" y="44">subq  $24, %rsp</text><text class="el-note" x="160" y="44">make the frame</text><text class="el-asm" x="12" y="63">movl  %esi, 12(%rsp)</text><text class="el-note" x="160" y="63">save b; a is in edi</text><text class="el-asm" x="12" y="82" data-hue="purple">callq main::square</text><text class="el-note" x="160" y="82">push return address</text><text class="el-asm" x="12" y="101" data-hue="gold">movl  12(%rsp), %edi</text><text class="el-note" x="160" y="101">b goes in edi</text><text class="el-asm" x="12" y="120" data-hue="red">movl  %eax, 16(%rsp)</text><text class="el-note" x="160" y="120">result came in eax</text><text class="el-asm" x="12" y="139" data-hue="purple">callq main::square</text><text class="el-asm" x="12" y="158" data-hue="red">movl  %eax, %ecx</text><text class="el-asm" x="12" y="177">movl  16(%rsp), %eax</text><text class="el-asm" x="12" y="196">addl  %ecx, %eax</text><text class="el-note" x="160" y="196">9 + 16</text><text class="el-asm" x="12" y="215">movl  %eax, 20(%rsp)</text><text class="el-asm" x="12" y="234">seto  %al</text><text class="el-asm" x="12" y="253">jo    .LBB10_2</text><text class="el-note" x="160" y="253">overflow? panic</text><text class="el-asm" x="12" y="272" data-hue="red">movl  20(%rsp), %eax</text><text class="el-note" x="160" y="272">result in eax</text><text class="el-asm" x="12" y="291">addq  $24, %rsp</text><text class="el-note" x="160" y="291">drop the frame</text><text class="el-asm" x="12" y="310" data-hue="red">retq</text><text class="el-note" x="160" y="310">pop address, jump</text></g><g class="el-chart"><text class="el-label" x="0" y="10">deepest call reached · log scale</text><g class="el-row" data-i="0" style="--row:0"><text class="el-row-name" x="0" y="40">Python</text><rect class="el-bar" x="84" y="31" width="75.0" height="18" rx="2"/><text class="el-row-value" x="165.0" y="40">999</text></g><g class="el-row" data-i="1" style="--row:1"><text class="el-row-name" x="0" y="84">JavaScript</text><rect class="el-bar" x="84" y="75" width="151.4" height="18" rx="2"/><text class="el-row-value" x="241.4" y="84">10,455</text></g><g class="el-row" data-i="2" style="--row:2"><text class="el-row-name" x="0" y="128">Ruby</text><rect class="el-bar" x="84" y="119" width="150.3" height="18" rx="2"/><text class="el-row-value" x="240.3" y="128">10,080</text></g><g class="el-row" data-i="3" style="--row:3"><text class="el-row-name" x="0" y="172">C</text><rect class="el-bar" x="84" y="163" width="256.2" height="18" rx="2"/><text class="el-row-value" x="346.2" y="172">261,000</text></g><g class="el-row" data-i="4" style="--row:4"><text class="el-row-name" x="0" y="216">Java</text><rect class="el-bar" x="84" y="207" width="175.4" height="18" rx="2"/><text class="el-row-value" x="265.4" y="216">21,800</text></g><g class="el-row" data-i="5" style="--row:5"><text class="el-row-name" x="0" y="260">Rust</text><rect class="el-bar" x="84" y="251" width="233.5" height="18" rx="2"/><text class="el-row-value" x="323.5" y="260">130,000</text></g><path class="el-tick" d="M84 24V286"/><text class="el-tick-label" x="84" y="298">100</text><path class="el-tick" d="M159 24V286"/><text class="el-tick-label" x="159" y="298">1k</text><path class="el-tick" d="M234 24V286"/><text class="el-tick-label" x="234" y="298">10k</text><path class="el-tick" d="M309 24V286"/><text class="el-tick-label" x="309" y="298">100k</text><path class="el-tick" d="M384 24V286"/><text class="el-tick-label" x="384" y="298">1M</text></g></g><g class="el-panel" id="panel-0" data-i="0"><rect class="el-panel-bg" width="280" height="124" rx="6"/><rect class="el-cursor" x="4" y="19" width="272" height="14" rx="3"/><text class="el-label" x="8" y="12">Python</text><text class="el-num" x="8" y="26">1</text><text class="el-code" x="26" y="26">def <tspan data-hue="purple">square</tspan>(<tspan data-hue="green">x</tspan>):</text><text class="el-num" x="8" y="40">2</text><text class="el-code" x="26" y="40">    <tspan data-hue="red">return</tspan> <tspan data-hue="green">x</tspan> * <tspan data-hue="green">x</tspan></text><text class="el-num" x="8" y="54">3</text><text class="el-code" x="26" y="54"></text><text class="el-num" x="8" y="68">4</text><text class="el-code" x="26" y="68">def <tspan data-hue="blue">sum_sq</tspan>(<tspan data-hue="green">a</tspan>, <tspan data-hue="green">b</tspan>):</text><text class="el-num" x="8" y="82">5</text><text class="el-code" x="26" y="82">    <tspan data-hue="red">return</tspan> <tspan data-hue="purple">square</tspan>(<tspan data-hue="green">a</tspan>) + <tspan data-hue="purple">square</tspan>(<tspan data-hue="green">b</tspan>)</text><text class="el-num" x="8" y="96">6</text><text class="el-code" x="26" y="96"></text><text class="el-num" x="8" y="110">7</text><text class="el-code" x="26" y="110">print(<tspan data-hue="blue">sum_sq</tspan>(<tspan data-hue="gold">3</tspan>, <tspan data-hue="gold">4</tspan>))</text></g><g class="el-panel" id="panel-1" data-i="1"><rect class="el-panel-bg" width="280" height="124" rx="6"/><rect class="el-cursor" x="4" y="19" width="272" height="14" rx="3"/><text class="el-label" x="8" y="12">JavaScript</text><text class="el-num" x="8" y="26">1</text><text class="el-code" x="26" y="26">function <tspan data-hue="purple">square</tspan>(<tspan data-hue="green">x</tspan>) {</text><text class="el-num" x="8" y="40">2</text><text class="el-code" x="26" y="40">  <tspan data-hue="red">return</tspan> <tspan data-hue="green">x</tspan> * <tspan data-hue="green">x</tspan>;</text><text class="el-num" x="8" y="54">3</text><text class="el-code" x="26" y="54">}</text><text class="el-num" x="8" y="68">4</text><text class="el-code" x="26" y="68">function <tspan data-hue="blue">sumSq</tspan>(<tspan data-hue="green">a</tspan>, <tspan data-hue="green">b</tspan>) {</text><text class="el-num" x="8" y="82">5</text><text class="el-code" x="26" y="82">  <tspan data-hue="red">return</tspan> <tspan data-hue="purple">square</tspan>(<tspan data-hue="green">a</tspan>) + <tspan data-hue="purple">square</tspan>(<tspan data-hue="green">b</tspan>);</text><text class="el-num" x="8" y="96">6</text><text class="el-code" x="26" y="96">}</text><text class="el-num" x="8" y="110">7</text><text class="el-code" x="26" y="110">console.log(<tspan data-hue="blue">sumSq</tspan>(<tspan data-hue="gold">3</tspan>, <tspan data-hue="gold">4</tspan>));</text></g><g class="el-panel" id="panel-2" data-i="2"><rect class="el-panel-bg" width="280" height="124" rx="6"/><rect class="el-cursor" x="4" y="19" width="272" height="14" rx="3"/><text class="el-label" x="8" y="12">Ruby</text><text class="el-num" x="8" y="26">1</text><text class="el-code" x="26" y="26">def <tspan data-hue="purple">square</tspan>(<tspan data-hue="green">x</tspan>)</text><text class="el-num" x="8" y="40">2</text><text class="el-code" x="26" y="40">  <tspan data-hue="red">return</tspan> <tspan data-hue="green">x</tspan> * <tspan data-hue="green">x</tspan></text><text class="el-num" x="8" y="54">3</text><text class="el-code" x="26" y="54">end</text><text class="el-num" x="8" y="68">4</text><text class="el-code" x="26" y="68">def <tspan data-hue="blue">sum_sq</tspan>(<tspan data-hue="green">a</tspan>, <tspan data-hue="green">b</tspan>)</text><text class="el-num" x="8" y="82">5</text><text class="el-code" x="26" y="82">  <tspan data-hue="red">return</tspan> <tspan data-hue="purple">square</tspan>(<tspan data-hue="green">a</tspan>) + <tspan data-hue="purple">square</tspan>(<tspan data-hue="green">b</tspan>)</text><text class="el-num" x="8" y="96">6</text><text class="el-code" x="26" y="96">end</text><text class="el-num" x="8" y="110">7</text><text class="el-code" x="26" y="110">puts <tspan data-hue="blue">sum_sq</tspan>(<tspan data-hue="gold">3</tspan>, <tspan data-hue="gold">4</tspan>)</text></g><g class="el-panel" id="panel-3" data-i="3"><rect class="el-panel-bg" width="280" height="166" rx="6"/><rect class="el-cursor" x="4" y="19" width="272" height="14" rx="3"/><text class="el-label" x="8" y="12">C</text><text class="el-num" x="8" y="26">1</text><text class="el-code" x="26" y="26">#include &lt;stdio.h&gt;</text><text class="el-num" x="8" y="40">2</text><text class="el-code" x="26" y="40">int <tspan data-hue="purple">square</tspan>(int <tspan data-hue="green">x</tspan>) {</text><text class="el-num" x="8" y="54">3</text><text class="el-code" x="26" y="54">  <tspan data-hue="red">return</tspan> <tspan data-hue="green">x</tspan> * <tspan data-hue="green">x</tspan>;</text><text class="el-num" x="8" y="68">4</text><text class="el-code" x="26" y="68">}</text><text class="el-num" x="8" y="82">5</text><text class="el-code" x="26" y="82">int <tspan data-hue="blue">sum_sq</tspan>(int <tspan data-hue="green">a</tspan>, int <tspan data-hue="green">b</tspan>) {</text><text class="el-num" x="8" y="96">6</text><text class="el-code" x="26" y="96">  <tspan data-hue="red">return</tspan> <tspan data-hue="purple">square</tspan>(<tspan data-hue="green">a</tspan>) + <tspan data-hue="purple">square</tspan>(<tspan data-hue="green">b</tspan>);</text><text class="el-num" x="8" y="110">7</text><text class="el-code" x="26" y="110">}</text><text class="el-num" x="8" y="124">8</text><text class="el-code" x="26" y="124">int main(void) {</text><text class="el-num" x="8" y="138">9</text><text class="el-code" x="26" y="138">  printf("%d\n", <tspan data-hue="blue">sum_sq</tspan>(<tspan data-hue="gold">3</tspan>, <tspan data-hue="gold">4</tspan>));</text><text class="el-num" x="8" y="152">10</text><text class="el-code" x="26" y="152">}</text></g><g class="el-panel" id="panel-4" data-i="4"><rect class="el-panel-bg" width="280" height="180" rx="6"/><rect class="el-cursor" x="4" y="19" width="272" height="14" rx="3"/><text class="el-label" x="8" y="12">Java</text><text class="el-num" x="8" y="26">1</text><text class="el-code" x="26" y="26">class Main {</text><text class="el-num" x="8" y="40">2</text><text class="el-code" x="26" y="40">  static int <tspan data-hue="purple">square</tspan>(int <tspan data-hue="green">x</tspan>) {</text><text class="el-num" x="8" y="54">3</text><text class="el-code" x="26" y="54">    <tspan data-hue="red">return</tspan> <tspan data-hue="green">x</tspan> * <tspan data-hue="green">x</tspan>;</text><text class="el-num" x="8" y="68">4</text><text class="el-code" x="26" y="68">  }</text><text class="el-num" x="8" y="82">5</text><text class="el-code" x="26" y="82">  static int <tspan data-hue="blue">sumSq</tspan>(int <tspan data-hue="green">a</tspan>, int <tspan data-hue="green">b</tspan>) {</text><text class="el-num" x="8" y="96">6</text><text class="el-code" x="26" y="96">    <tspan data-hue="red">return</tspan> <tspan data-hue="purple">square</tspan>(<tspan data-hue="green">a</tspan>) + <tspan data-hue="purple">square</tspan>(<tspan data-hue="green">b</tspan>);</text><text class="el-num" x="8" y="110">7</text><text class="el-code" x="26" y="110">  }</text><text class="el-num" x="8" y="124">8</text><text class="el-code" x="26" y="124">  public static void main(String[] args) {</text><text class="el-num" x="8" y="138">9</text><text class="el-code" x="26" y="138">    System.out.println(<tspan data-hue="blue">sumSq</tspan>(<tspan data-hue="gold">3</tspan>, <tspan data-hue="gold">4</tspan>));</text><text class="el-num" x="8" y="152">10</text><text class="el-code" x="26" y="152">  }</text><text class="el-num" x="8" y="166">11</text><text class="el-code" x="26" y="166">}</text></g><g class="el-panel" id="panel-5" data-i="5"><rect class="el-panel-bg" width="280" height="152" rx="6"/><rect class="el-cursor" x="4" y="19" width="272" height="14" rx="3"/><text class="el-label" x="8" y="12">Rust</text><text class="el-num" x="8" y="26">1</text><text class="el-code" x="26" y="26">fn <tspan data-hue="purple">square</tspan>(<tspan data-hue="green">x</tspan>: i32) -&gt; i32 {</text><text class="el-num" x="8" y="40">2</text><text class="el-code" x="26" y="40">    <tspan data-hue="red">return</tspan> <tspan data-hue="green">x</tspan> * <tspan data-hue="green">x</tspan>;</text><text class="el-num" x="8" y="54">3</text><text class="el-code" x="26" y="54">}</text><text class="el-num" x="8" y="68">4</text><text class="el-code" x="26" y="68">fn <tspan data-hue="blue">sum_sq</tspan>(<tspan data-hue="green">a</tspan>: i32, <tspan data-hue="green">b</tspan>: i32) -&gt; i32 {</text><text class="el-num" x="8" y="82">5</text><text class="el-code" x="26" y="82">    <tspan data-hue="red">return</tspan> <tspan data-hue="purple">square</tspan>(<tspan data-hue="green">a</tspan>) + <tspan data-hue="purple">square</tspan>(<tspan data-hue="green">b</tspan>);</text><text class="el-num" x="8" y="96">6</text><text class="el-code" x="26" y="96">}</text><text class="el-num" x="8" y="110">7</text><text class="el-code" x="26" y="110">fn main() {</text><text class="el-num" x="8" y="124">8</text><text class="el-code" x="26" y="124">    println!("{}", <tspan data-hue="blue">sum_sq</tspan>(<tspan data-hue="gold">3</tspan>, <tspan data-hue="gold">4</tspan>));</text><text class="el-num" x="8" y="138">9</text><text class="el-code" x="26" y="138">}</text></g><g class="el-live"><g class="el-frame" id="fr-main" data-hue="ink" style="transform:translate(476px,232px);opacity:0"><rect class="el-frame-bg" width="368" height="70" rx="5"/><text class="el-frame-name" x="14" y="20" data-fn="main">main</text><text class="el-frame-row" x="14" y="52"><tspan class="el-muted">no parameters</tspan></text><text class="el-small el-where" x="100" y="20"></text><text class="el-frame-row el-expr" x="150" y="52"></text></g><g class="el-frame" id="fr-sum_sq1" data-hue="blue" style="transform:translate(476px,150px);opacity:0"><rect class="el-frame-bg" width="368" height="70" rx="5"/><text class="el-frame-name" x="14" y="20" data-fn="sum_sq">sum_sq</text><text class="el-frame-row" x="14" y="52"><tspan x="14" data-hue="green">a</tspan><tspan> = </tspan><tspan data-hue="gold">3</tspan><tspan x="84" data-hue="green">b</tspan><tspan> = </tspan><tspan data-hue="gold">4</tspan></text><text class="el-small el-where" x="100" y="20"></text><text class="el-frame-row el-expr" x="150" y="52"></text></g><g class="el-frame" id="fr-square1" data-hue="purple" style="transform:translate(476px,68px);opacity:0"><rect class="el-frame-bg" width="368" height="70" rx="5"/><text class="el-frame-name" x="14" y="20" data-fn="square">square</text><text class="el-frame-row" x="14" y="52"><tspan x="14" data-hue="green">x</tspan><tspan> = </tspan><tspan data-hue="gold">3</tspan></text><text class="el-small el-where" x="100" y="20"></text><text class="el-frame-row el-expr" x="150" y="52"></text></g><g class="el-frame" id="fr-square2" data-hue="purple" style="transform:translate(476px,68px);opacity:0"><rect class="el-frame-bg" width="368" height="70" rx="5"/><text class="el-frame-name" x="14" y="20" data-fn="square">square</text><text class="el-frame-row" x="14" y="52"><tspan x="14" data-hue="green">x</tspan><tspan> = </tspan><tspan data-hue="gold">4</tspan></text><text class="el-small el-where" x="100" y="20"></text><text class="el-frame-row el-expr" x="150" y="52"></text></g><g class="el-chip" id="ch-arg-sum_sq1-0" style="transform:translate(682px,277px);opacity:0"><g class="u-chip " data-hue="gold" transform="translate(0 0)"><rect width="15" height="16" rx="4"/><text x="7.5" y="8">3</text></g></g><g class="el-chip" id="ch-arg-sum_sq1-1" style="transform:translate(682px,277px);opacity:0"><g class="u-chip " data-hue="gold" transform="translate(0 0)"><rect width="15" height="16" rx="4"/><text x="7.5" y="8">4</text></g></g><g class="el-chip" id="ch-arg-square1-0" style="transform:translate(682px,195px);opacity:0"><g class="u-chip " data-hue="gold" transform="translate(0 0)"><rect width="15" height="16" rx="4"/><text x="7.5" y="8">3</text></g></g><g class="el-chip" id="ch-ret-square1" style="transform:translate(817px,97px);opacity:0"><g class="u-chip " data-hue="red" transform="translate(0 0)"><rect width="15" height="16" rx="4"/><text x="7.5" y="8">9</text></g></g><g class="el-chip" id="ch-arg-square2-0" style="transform:translate(682px,195px);opacity:0"><g class="u-chip " data-hue="gold" transform="translate(0 0)"><rect width="15" height="16" rx="4"/><text x="7.5" y="8">4</text></g></g><g class="el-chip" id="ch-ret-square2" style="transform:translate(810px,97px);opacity:0"><g class="u-chip " data-hue="red" transform="translate(0 0)"><rect width="22" height="16" rx="4"/><text x="11" y="8">16</text></g></g><g class="el-chip" id="ch-ret-sum_sq1" style="transform:translate(810px,179px);opacity:0"><g class="u-chip " data-hue="red" transform="translate(0 0)"><rect width="22" height="16" rx="4"/><text x="11" y="8">25</text></g></g></g></svg><div class="u-controls"><div class="u-ctl"><div class="el-langs" role="group" aria-label="Language"><button type="button" data-lang="0" aria-pressed="true">Python</button><button type="button" data-lang="1" aria-pressed="false">JavaScript</button><button type="button" data-lang="2" aria-pressed="false">Ruby</button><button type="button" data-lang="3" aria-pressed="false">C</button><button type="button" data-lang="4" aria-pressed="false">Java</button><button type="button" data-lang="5" aria-pressed="false">Rust</button></div></div><div class="u-time" data-label="step"><button type="button" data-step="-1" aria-label="Previous step">‹</button><input type="range" min="0" max="13" value="0" aria-label="step"><button type="button" data-step="1" aria-label="Next step">›</button><output>step 0 / 13</output></div></div><div class="u-cc"><p class="u-at" data-at="0">Six languages run one program, and each prints 25. The parts are the same: a <b data-hue="blue">name</b>, <b data-hue="green">parameters</b>, a body that <b data-hue="red">returns</b> a value, and a call with <b data-hue="gold">arguments</b>.</p><p class="u-at" data-at="1">The call makes a new frame on top of the call stack. Each <b data-hue="green">parameter</b> in the frame gets one argument: <b data-hue="gold">3</b> and <b data-hue="gold">4</b>.</p><p class="u-at" data-at="2"><b data-hue="blue" data-fn="sum_sq">sum_sq</b> calls <b data-hue="purple" data-fn="square">square</b>, which gets its own frame with its own <b data-hue="green">x</b>. The frame below waits at the line of the call.</p><p class="u-at" data-at="3"><b data-hue="purple" data-fn="square">square</b> returns <b data-hue="red">9</b>, its frame is removed, and 9 replaces the call. The second call gets a new frame with <b data-hue="green">x</b> = 4 and returns <b data-hue="red">16</b>.</p><p class="u-at" data-at="4"><b data-hue="blue" data-fn="sum_sq">sum_sq</b> returns <b data-hue="red">25</b>, its frame is removed, and 25 replaces the call. The top-level frame prints 25, and then it ends too.</p><p class="u-at" data-at="5">C and Rust compile to machine code: the <b data-hue="gold">argument</b> goes in a register, and <b data-hue="purple">call</b> pushes the return address. The others compile to bytecode for a virtual machine.</p><p class="u-at" data-at="6">Each frame takes stack space until its call returns, so the depth has a limit. Most languages run out of bytes, but Python stops at a count: 1000 frames.</p></div><nav class="u-steps" aria-label="Scenes"><button type="button" class="u-play" aria-pressed="false"><span>▶</span>Play</button><button type="button" class="u-voice" aria-pressed="true" hidden><span>♪</span>Voice</button><button type="button" data-go="0" aria-current="step"><span>1</span>Same parts</button><button type="button" data-go="1"><span>2</span>Call</button><button type="button" data-go="2"><span>3</span>Nested call</button><button type="button" data-go="3"><span>4</span>Return</button><button type="button" data-go="4"><span>5</span>Final return</button><button type="button" data-go="5"><span>6</span>Below source</button><button type="button" data-go="6"><span>7</span>Stack limit</button></nav><div class="u-key"><span data-hue="blue"><i></i><span data-fn="sum_sq">sum_sq</span>and its frame</span><span data-hue="purple"><i></i>square: its frames and calls</span><span data-hue="green"><i></i>parameter</span><span data-hue="gold"><i></i>argument value</span><span data-hue="red"><i></i>return value</span></div></div></div><figcaption class="iso-legend"><span class="iso-caption">Every program is shown whole and was run with its real tool (python3 3.13, node 24, ruby 3.2, gcc 13, java 21, rustc 1.95). Each prints 25. Frames and values come from a small evaluator of the same program. The listings in scene 6 are real output of dis, node --print-bytecode, ruby --dump=insns, gcc -S, javap -c and rustc --emit asm. Ruby's call data and Rust's mangled name are shortened. The depths in scene 7 were measured on Linux x86-64 with default settings.</span></figcaption></figure><details class="u-more"><summary>Reference: what differs, what is left out, terms</summary><section class="u-notes"><h2>What differs between languages</h2><p>Below the source, languages differ in four ways: how the code runs, what a parameter receives, tail calls, and stack depth. Rows marked <b>checked</b> were run with the real compiler or interpreter on Linux x86-64. The other rows come from each language's documentation.</p><table><thead><tr><th>Language</th><th>Runs as</th><th>A parameter receives</th><th>Tail calls</th><th>Stack limit</th></tr></thead><tbody><tr><td data-th="Language">C · checked</td><td data-th="Runs as">machine code</td><td data-th="A parameter receives">a copy of the value; pass a pointer to let the callee change the caller's variable</td><td data-th="Tail calls">not required; <code>gcc -O2</code> turned a tail call into a jump (100 million calls, no overflow)</td><td data-th="Stack limit">the thread's stack: 8 MiB here (<code>ulimit -s</code>), 261,000 small frames</td></tr><tr><td data-th="Language">C++</td><td data-th="Runs as">machine code</td><td data-th="A parameter receives">a copy, or a reference when the parameter is declared with <code>&amp;</code></td><td data-th="Tail calls">not required; optimizers may do it</td><td data-th="Stack limit">as C</td></tr><tr><td data-th="Language">Rust · checked</td><td data-th="Runs as">machine code</td><td data-th="A parameter receives">the value, moved or copied; <code>&amp;</code> and <code>&amp;mut</code> borrow instead</td><td data-th="Tail calls">not guaranteed</td><td data-th="Stack limit">8 MiB on the main thread (130,000 debug frames); 2 MiB on spawned threads</td></tr><tr><td data-th="Language">Go</td><td data-th="Runs as">machine code; on amd64 arguments go in registers since Go 1.17</td><td data-th="A parameter receives">a copy; pointers are explicit</td><td data-th="Tail calls">not done</td><td data-th="Stack limit">a goroutine stack starts at a few KiB and grows by copying, up to 1 GB on 64-bit systems</td></tr><tr><td data-th="Language">Java · checked</td><td data-th="Runs as">JVM bytecode, interpreted, then JIT-compiled when hot</td><td data-th="A parameter receives">a copy of a primitive (int); for an object, a copy of the reference</td><td data-th="Tail calls">not done</td><td data-th="Stack limit">1 MiB per thread (<code>-Xss</code>), about 22,000 frames</td></tr><tr><td data-th="Language">Kotlin</td><td data-th="Runs as">JVM bytecode</td><td data-th="A parameter receives">as Java</td><td data-th="Tail calls"><code>tailrec</code> turns a self tail call into a loop</td><td data-th="Stack limit">as Java</td></tr><tr><td data-th="Language">Python · checked</td><td data-th="Runs as">CPython bytecode in a virtual machine</td><td data-th="A parameter receives">a reference to the same object, also for numbers (call by sharing)</td><td data-th="Tail calls">not done</td><td data-th="Stack limit">1000 frames (<code>sys.getrecursionlimit()</code>): a count, not bytes</td></tr><tr><td data-th="Language">JavaScript · checked</td><td data-th="Runs as">V8 bytecode, JIT-compiled when hot</td><td data-th="A parameter receives">a copy of a primitive (number, string); for an object, a reference to the same object (call by sharing)</td><td data-th="Tail calls">in the spec since ES2015 (strict mode); only Safari's engine does it</td><td data-th="Stack limit">984 KiB in V8 (<code>--stack-size</code>), about 10,500 frames</td></tr><tr><td data-th="Language">Ruby · checked</td><td data-th="Runs as">YARV bytecode</td><td data-th="A parameter receives">a reference to the same object (call by sharing)</td><td data-th="Tail calls">off by default; a compile option turns it on</td><td data-th="Stack limit">1 MiB VM stack, about 10,100 frames</td></tr><tr><td data-th="Language">Perl</td><td data-th="Runs as">an op tree, interpreted</td><td data-th="A parameter receives"><code>@_</code> holds aliases: changing <code>$_[0]</code> changes the caller's variable</td><td data-th="Tail calls">not done; <code>goto &amp;sub</code> replaces the current call by hand</td><td data-th="Stack limit">no fixed limit; with warnings on it warns at 100 levels</td></tr><tr><td data-th="Language">Haskell (GHC)</td><td data-th="Runs as">machine code, lazy evaluation</td><td data-th="A parameter receives">an unevaluated expression (a thunk), computed the first time it is used</td><td data-th="Tail calls">yes: tail calls compile to jumps</td><td data-th="Stack limit">the stack grows on the heap; the default limit is 80% of physical memory</td></tr><tr><td data-th="Language">Scheme</td><td data-th="Runs as">interpreted or compiled, by implementation</td><td data-th="A parameter receives">the value; objects are shared</td><td data-th="Tail calls">required by the standard (R7RS)</td><td data-th="Stack limit">set by the implementation</td></tr><tr><td data-th="Language">Lua</td><td data-th="Runs as">bytecode in a register-based VM</td><td data-th="A parameter receives">the value; tables are shared</td><td data-th="Tail calls">yes: the manual calls them "proper tail calls"</td><td data-th="Stack limit"><code>LUAI_MAXSTACK</code>: 1,000,000 stack slots</td></tr></tbody></table><h2>What the figure leaves out</h2><table><thead><tr><th>Left out</th><th>What really happens</th></tr></thead><tbody><tr><td data-th="Left out">Optimized builds</td><td data-th="What really happens">With <code>gcc -O2</code>, main holds the constant 25 and never calls <code>sum_sq</code> (checked). JIT compilers in the JVM and V8 also inline small hot functions.</td></tr><tr><td data-th="Left out">The return address</td><td data-th="What really happens"><code>call</code> pushes the address of the next instruction. <code>ret</code> pops it and jumps there. A virtual machine keeps it in the frame. The figure shows it as "waits at line N".</td></tr><tr><td data-th="Left out">Methods</td><td data-th="What really happens"><code>obj.f(x)</code> first finds which <code>f</code> to run: a vtable in C++ and Java, an inline cache in V8, CPython and YARV. Then it is a normal call, with the object as a hidden first argument (<code>this</code> or <code>self</code>).</td></tr><tr><td data-th="Left out">Closures</td><td data-th="What really happens">A variable that an inner function uses stays alive after the outer frame is removed, so the runtime keeps it outside the stack. V8's <code>LdaImmutableCurrentContextSlot</code> in scene 6 reads <code>square</code> from such a context.</td></tr><tr><td data-th="Left out">Exceptions</td><td data-th="What really happens">A throw removes frames from the top until a frame has a handler. The scene 7 programs catch <code>RecursionError</code>, <code>RangeError</code>, <code>SystemStackError</code> and <code>StackOverflowError</code> this way. In C and Rust a stack overflow is a signal (SIGSEGV), not an exception. C can handle it on a separate stack (<code>sigaltstack</code>) but cannot continue the call. Rust prints a message and aborts.</td></tr><tr><td data-th="Left out">async functions and generators</td><td data-th="What really happens">Their frame can pause, live on the heap, and continue later. It is not removed when the function first gives control back.</td></tr></tbody></table><h2>Words used here</h2><table><thead><tr><th>Term</th><th>Meaning</th></tr></thead><tbody><tr><td data-th="Term">Parameter</td><td data-th="Meaning">the name in the definition (<code>x</code>, <code>a</code>, <code>b</code>)</td></tr><tr><td data-th="Term">Argument</td><td data-th="Meaning">the value passed in the call (<code>3</code>, <code>4</code>)</td></tr><tr><td data-th="Term">Frame (activation record)</td><td data-th="Meaning">one call's parameters, local variables, and where to continue in the caller</td></tr><tr><td data-th="Term">Call stack</td><td data-th="Meaning">the frames of calls that have not returned. Only the top one runs.</td></tr><tr><td data-th="Term">Calling convention (ABI)</td><td data-th="Meaning">where arguments and results go (registers or stack), so code from different compilers can call each other</td></tr><tr><td data-th="Term">Stack overflow</td><td data-th="Meaning">no room for the next frame. Scene 7 shows where each language stops.</td></tr></tbody></table></section></details></main><script type="module">function runtime() {
+  const stage = document.querySelector(".u-stage");
+  const count = Number(stage.dataset.count);
+  const dwell = Number(stage.dataset.dwell);
+  const still = matchMedia("(prefers-reduced-motion: reduce)");
+  let scene = 0;
+  let visible = false;
+  let playing = false;
+  let held = false;
+  let next = 0;
+  const beats = [];
+  const total = (b) => (typeof b.count === "function" ? b.count() : b.count);
+  // Voice: a scene's narration plays when the scene opens, from its recorded clip (data-audio) or else the browser's
+  // own voice, which reads the current text, live numbers included. Voice off shows the narration as text.
+  // The tour waits until the narration ends. A replay of the same scene (go(scene())) does not restart it.
+  const cc = stage.querySelector(".u-cc");
+  const voiceBtn = stage.querySelector(".u-voice");
+  const synth = window.speechSynthesis;
+  const clips = !!cc?.querySelector("[data-audio]");
+  let voiceOn = !!cc && (clips || !!synth);
+  let speaking = false;
+  let spoken = -1;
+  let talk = 0;
+  let clip = null;
+  let audio = null;
+  const recorded = [...(cc?.children ?? [])].map((p) => p.textContent.trim());
+  // ponytail: name heuristic. Neural and online voices (Edge "Natural", Chrome "Google", Apple "Premium") sound human.
+  const bestVoice = () => {
+    const en = synth.getVoices().filter((v) => v.lang.startsWith("en"));
+    return en.find((v) => /natural|neural|online/i.test(v.name)) ?? en.find((v) => /google|premium|enhanced|siri/i.test(v.name)) ?? en.find((v) => v.default) ?? en[0] ?? null;
+  };
+  // Beats: while the voice says line k of the script, the stage has data-speaking and data-cue="<cue of line k>".
+  // The build's CSS lights what that line talks about. When the narration ends, both go and the full scene shows.
+  let timers = [];
+  const quiet = () => {
+    timers.forEach(clearTimeout);
+    timers = [];
+    stage.removeAttribute("data-speaking");
+    delete stage.dataset.cue;
+  };
+  const followBeats = (p, total) => {
+    const cues = p.dataset.cues?.split("|");
+    if (!cues) return;
+    let times = p.dataset.beats?.split(" ").map(Number);
+    if (!times) {
+      // No times from the build (the browser's voice): spread the beats by text length.
+      const chars = p.dataset.chars.split(" ").map(Number);
+      const sum = chars.reduce((a, b) => a + b, 0);
+      times = chars.map((_, k) => (total * chars.slice(0, k).reduce((a, b) => a + b, 0)) / sum);
+    }
+    stage.toggleAttribute("data-speaking", true);
+    times.forEach((t, k) => timers.push(setTimeout(() => (stage.dataset.cue = cues[k]), t * 1000)));
+  };
+  const hush = () => {
+    talk++;
+    speaking = false;
+    spoken = -1;
+    clip?.stop();
+    clip = null;
+    synth?.cancel();
+    quiet();
+  };
+  const speak = () => {
+    if (!voiceOn || spoken === scene) return;
+    // Browsers play no sound before the reader's first click. Wait for it: Play and the scene buttons start the voice.
+    if (navigator.userActivation && !navigator.userActivation.hasBeenActive) return;
+    hush();
+    spoken = scene;
+    const p = cc.querySelector(`[data-at="${scene}"]`);
+    const text = p?.textContent.trim();
+    if (!text) return;
+    const token = talk;
+    const end = () => {
+      if (token !== talk || !speaking) return;
+      speaking = false;
+      quiet();
+      next = performance.now() + 900;
+    };
+    speaking = true;
+    // The clip was recorded from the build's text. After an input changes a live number, the browser reads the new text.
+    // Web Audio decodes the clip from the page itself, so a sandbox that blocks data: media URLs (a file preview,
+    // an Artifact) still plays it.
+    if (p.dataset.audio && text === recorded[scene] && window.AudioContext) {
+      audio ??= new AudioContext();
+      audio.resume();
+      const bytes = Uint8Array.from(atob(p.dataset.audio.split(",")[1]), (c) => c.charCodeAt(0));
+      audio.decodeAudioData(bytes.buffer).then((buffer) => {
+        if (token !== talk) return;
+        clip = audio.createBufferSource();
+        clip.buffer = buffer;
+        clip.connect(audio.destination);
+        clip.onended = end;
+        clip.start();
+        followBeats(p, buffer.duration);
+      }, end);
+    } else if (synth) {
+      const u = new SpeechSynthesisUtterance(text);
+      u.voice = bestVoice();
+      u.rate = 0.95;
+      u.onend = u.onerror = end;
+      synth.speak(u);
+      // ponytail: a browser voice may never report its end, so the tour stops waiting after 0.6 s a word.
+      setTimeout(end, 3000 + text.split(/\s+/).length * 600);
+      followBeats(p, text.length / 14);
+    } else end();
+  };
+  const setVoice = (on) => {
+    voiceOn = on;
+    stage.toggleAttribute("data-voice", on);
+    voiceBtn?.setAttribute("aria-pressed", String(on));
+    on ? speak() : hush();
+  };
+  if (voiceBtn && voiceOn) voiceBtn.hidden = false;
+  stage.toggleAttribute("data-voice", voiceOn);
+  voiceBtn?.addEventListener("click", () => setVoice(!voiceOn));
+  const go = (i, by = "user") => {
+    scene = Math.max(0, Math.min(count - 1, i));
+    stage.dataset.scene = String(scene);
+    stage.querySelectorAll("[data-go]").forEach((b) => (Number(b.dataset.go) === scene ? b.setAttribute("aria-current", "step") : b.removeAttribute("aria-current")));
+    stage.querySelectorAll("[data-ds]").forEach((el) => {
+      const d = JSON.parse(el.dataset.ds)[scene];
+      el.toggleAttribute("data-off", !d);
+      if (!d) return;
+      if (CSS.supports("d", 'path("M0 0")')) el.style.d = `path("${d}")`;
+      else el.setAttribute("d", d);
+    });
+    scope();
+    fit();
+    stage.dispatchEvent(new CustomEvent("unfold:scene", { detail: { scene, by } }));
+    if (by === "user") setPlaying(false);
+    held = false;
+    next = performance.now() + dwell;
+    if (scene !== spoken) speak();
+    for (const b of beats) {
+      b.n = 0;
+      b.at = performance.now() + b.wait - b.ms;
+      if (still.matches && b.scene === scene) b.fn(-1);
+    }
+    setBusy();
+  };
+  // data-busy is on the stage while a counted sweep of this scene still runs. The tour and shoot.mjs wait for it.
+  // A sweep is done one `ms` after its last call, so the last step has time to move. The tour then holds that
+  // last step for `hold` ms before the next scene, so the reader sees the result.
+  const hold = 1800;
+  const setBusy = (now = performance.now()) => {
+    const busy = !held && !still.matches && beats.some((b) => b.scene === scene && total(b) && (b.n < total(b) || now - b.at < b.ms));
+    if (busy === stage.hasAttribute("data-busy")) return;
+    stage.toggleAttribute("data-busy", busy);
+    if (!busy) next = Math.max(next, now + hold);
+  };
+  // The tour runs only after the reader presses Play, and stops at the last scene or at any input.
+  const playBtn = stage.querySelector(".u-play");
+  const setPlaying = (on) => {
+    playing = on;
+    playBtn.setAttribute("aria-pressed", String(on));
+    playBtn.firstChild.textContent = on ? "❚❚" : "▶";
+    playBtn.lastChild.textContent = on ? "Pause" : "Play";
+  };
+  playBtn.addEventListener("click", () => {
+    if (playing) {
+      hush();
+      return setPlaying(false);
+    }
+    if (scene === count - 1) go(0, "tour");
+    next = performance.now() + dwell;
+    setPlaying(true);
+    // A clip that the browser blocked before this click plays now.
+    if (!speaking) (spoken = -1), speak();
+  });
+  const tour = (now) => {
+    if (playing && visible && now > next && !speaking && !stage.hasAttribute("data-busy")) scene === count - 1 ? setPlaying(false) : go(scene + 1, "tour");
+    for (const b of beats) {
+      if (b.scene === scene && visible && !held && !still.matches && now - b.at >= b.ms && !(total(b) && b.n >= total(b))) {
+        b.at = now;
+        b.fn(b.n++);
+      }
+    }
+    setBusy(now);
+    requestAnimationFrame(tour);
+  };
+  stage.querySelector(".u-steps").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-go]");
+    if (b) go(Number(b.dataset.go));
+  });
+  stage.addEventListener("keydown", (e) => {
+    const to = { ArrowRight: scene + 1, ArrowLeft: scene - 1, Home: 0, End: count - 1 }[e.key];
+    if (to === undefined) return;
+    e.preventDefault();
+    go(to);
+  });
+  // Time by hand: the step control and the "," and "." keys call the page's onTime(t). Its keys stay inside it.
+  const timer = stage.querySelector(".u-time");
+  let onTime = () => {};
+  const range = timer?.querySelector("input");
+  // onTime first: it may call go(), which releases the sweeps. pause() after it holds them again.
+  const byHand = (t) => {
+    onTime(Math.max(0, Math.min(Number(range.max), t)));
+    pause();
+  };
+  if (timer) {
+    range.addEventListener("input", () => byHand(Number(range.value)));
+    timer.addEventListener("click", (e) => {
+      const b = e.target.closest("[data-step]");
+      if (b) byHand(Number(range.value) + Number(b.dataset.step));
+    });
+    stage.addEventListener("keydown", (e) => {
+      const by = { ",": -1, ".": 1 }[e.key];
+      if (by === undefined) return;
+      e.preventDefault();
+      byHand(Number(range.value) + by);
+    });
+  }
+  // Keys typed in a control (a scrubber, a number field) stay in it: no scene or focus change.
+  stage.querySelectorAll(".u-controls :is(input,select,textarea)").forEach((el) => el.addEventListener("keydown", (e) => e.stopPropagation()));
+  // A scene-scoped control (stageHtml controlScenes, or any element in the controls with data-scenes) is dimmed
+  // in the other scenes, and an input there moves to the first scene that uses it.
+  const ownersOf = (el) => el.dataset.scenes.trim().split(/\s+/).map(Number);
+  function scope() {
+    stage.querySelectorAll(".u-controls [data-scenes]").forEach((el) => el.toggleAttribute("data-idle", !ownersOf(el).includes(scene)));
+  }
+  const toOwner = (e) => {
+    const el = e.target.closest(".u-controls [data-scenes]");
+    if (el && !ownersOf(el).includes(scene)) go(ownersOf(el)[0]);
+  };
+  // Capture phase: the move runs before the page's own handler, so a preset applied on scene entry
+  // does not overwrite what the reader just set.
+  const panel = stage.querySelector(".u-controls");
+  panel?.addEventListener("input", toOwner, true);
+  panel?.addEventListener("click", (e) => e.target.closest("button") && toOwner(e), true);
+  // timeAt(t, steps): show step t. Pass steps when the run's length changed (a live input made a longer trace).
+  const timeAt = (t, steps) => {
+    if (!timer) return;
+    if (steps) range.max = String(steps - 1);
+    range.value = String(t);
+    timer.querySelector("output").textContent = `${timer.dataset.label} ${t} / ${range.max}`;
+  };
+  // Narrow layout: below 560 px the drawing takes its second viewBox and the stage gets data-narrow.
+  // With one narrow height per scene (data-narrow-h), the viewBox follows the scene.
+  const svg = stage.querySelector("svg");
+  const wide = svg?.getAttribute("viewBox");
+  const heights = stage.dataset.narrowH?.split(" ");
+  function fit() {
+    if (!stage.dataset.narrowBox) return;
+    const box = stage.dataset.narrowBox.split(" ");
+    if (heights) box[3] = heights[scene] ?? box[3];
+    svg.setAttribute("viewBox", stage.hasAttribute("data-narrow") ? box.join(" ") : wide);
+  }
+  if (stage.dataset.narrowBox)
+    new ResizeObserver(([entry]) => {
+      const on = entry.contentRect.width < 560;
+      if (on === stage.hasAttribute("data-narrow")) return;
+      stage.toggleAttribute("data-narrow", on);
+      fit();
+      stage.dispatchEvent(new CustomEvent("unfold:layout", { detail: { narrow: on } }));
+    }).observe(stage);
+  scope();
+  new IntersectionObserver((entries) => (visible = entries[entries.length - 1].isIntersecting), { rootMargin: "120px 0px" }).observe(stage);
+  next = performance.now() + dwell;
+  requestAnimationFrame(tour);
+  // beat(scene, ms, fn, wait, count): call fn(0), fn(1), … every ms while that scene shows, starting `wait` ms after it opens.
+  // With count, it stops after fn(count - 1) and the stage loses data-busy. Without it, the sweep never ends (a loop).
+  // count may be a function, read on every frame, for a run whose length a live input changes.
+  // Under reduced motion fn(-1) is called once instead: show the resting state.
+  const beat = (sceneIndex, ms, fn, wait = 1000, count = 0) => {
+    // No setBusy() here: the next frame runs it, so a count function may read data the page sets up after this call.
+    beats.push({ scene: sceneIndex, ms, fn, wait, count, n: 0, at: performance.now() + wait - ms });
+    // The scene open at load had no go() after this beat existed: show its resting state too, after the page script ran.
+    requestAnimationFrame(() => still.matches && scene === sceneIndex && fn(-1));
+  };
+  // pause(): the user took control. The tour stops, and the sweeps hold until the scene changes.
+  const pause = () => {
+    setPlaying(false);
+    held = true;
+    setBusy();
+  };
+  return { stage, go, beat, pause, scene: () => scene, onTime: (fn) => (onTime = fn), timeAt, narrow: () => stage.hasAttribute("data-narrow") };
+}
+const UNFOLD = runtime();
+
+const LANGS = [{"name":"Python","at":{"1":1,"2":2,"4":4,"5":5,"7":7},"names":{"sum_sq":"sum_sq","square":"square","main":"<module>"},"how":"CALL runs square in a new frame and pushes its result","info":{"info-stack":"1000 frames","info-stack-note":"sys.getrecursionlimit()","info-depth":"999 frames","info-depth-note":"measured","info-bytes":"—","info-bytes-note":"a count, not bytes","info-twice":"1,995 frames","info-twice-note":"limit set to 2000","info-end":"RecursionError, which the program can catch"},"limit":"stops at 999 frames: the limit is a count (1000)"},{"name":"JavaScript","at":{"1":1,"2":2,"4":4,"5":5,"7":7},"names":{"sum_sq":"sumSq","square":"square","main":"<anonymous>"},"how":"a0, a1 are the arguments; the result lands in the accumulator","info":{"info-stack":"984 KiB","info-stack-note":"node --stack-size","info-depth":"10,455 frames","info-depth-note":"measured","info-bytes":"≈ 96 bytes","info-bytes-note":"984 KiB ÷ 10,455","info-twice":"20,951 frames","info-twice-note":"2.0 × deeper","info-end":"RangeError, which the program can catch"},"limit":"10,455 frames in 984 KiB ≈ 96 bytes each"},{"name":"Ruby","at":{"1":1,"2":2,"4":4,"5":5,"7":7},"names":{"sum_sq":"sum_sq","square":"square","main":"<main>"},"how":"send takes self and a off the stack, then pushes the result","info":{"info-stack":"1 MiB","info-stack-note":"RUBY_THREAD_VM_STACK_SIZE","info-depth":"10,080 frames","info-depth-note":"measured","info-bytes":"≈ 104 bytes","info-bytes-note":"1 MiB ÷ 10,080","info-twice":"20,162 frames","info-twice-note":"2.0 × deeper","info-end":"SystemStackError, which the program can catch"},"limit":"10,080 frames in 1 MiB ≈ 104 bytes each"},{"name":"C","at":{"1":2,"2":3,"4":5,"5":6,"7":9},"names":{"sum_sq":"sum_sq","square":"square","main":"main"},"how":"System V ABI: 1st int argument in edi, the result in eax","info":{"info-stack":"8 MiB","info-stack-note":"ulimit -s","info-depth":"261,000 frames","info-depth-note":"measured","info-bytes":"≈ 32 bytes","info-bytes-note":"8 MiB ÷ 261,000","info-twice":"523,000 frames","info-twice-note":"2.0 × deeper","info-end":"SIGSEGV: the OS kills the process"},"limit":"261,000 frames in 8 MiB ≈ 32 bytes each"},{"name":"Java","at":{"1":2,"2":3,"4":5,"5":6,"7":9},"names":{"sum_sq":"sumSq","square":"square","main":"main"},"how":"invokestatic moves a into local 0 of the new frame","info":{"info-stack":"1 MiB","info-stack-note":"java -Xss","info-depth":"21,800 frames","info-depth-note":"measured","info-bytes":"≈ 48 bytes","info-bytes-note":"1 MiB ÷ 21,800","info-twice":"46,500 frames","info-twice-note":"2.1 × deeper","info-end":"StackOverflowError, which the program can catch"},"limit":"21,800 frames in 1 MiB ≈ 48 bytes each"},{"name":"Rust","at":{"1":1,"2":2,"4":4,"5":5,"7":8},"names":{"sum_sq":"sum_sq","square":"square","main":"main"},"how":"here a goes in edi and the result in eax; + and * check overflow","info":{"info-stack":"8 MiB","info-stack-note":"ulimit -s","info-depth":"130,000 frames","info-depth-note":"measured","info-bytes":"≈ 65 bytes","info-bytes-note":"8 MiB ÷ 130,000","info-twice":"261,000 frames","info-twice-note":"2.0 × deeper","info-end":"the runtime prints \"has overflowed its stack\" and aborts"},"limit":"130,000 frames in 8 MiB ≈ 65 bytes each"}];
+const FRAMES = {"main":[[16,250,1],[16,250,1],[16,250,1],[16,250,1],[16,250,1],[16,250,1],[16,250,1],[16,250,1],[16,250,1],[16,250,1],[16,250,1],[16,250,1],[16,250,1],[16,232,0]],"sum_sq1":[[16,150,0],[16,168,1],[16,168,1],[16,168,1],[16,168,1],[16,168,1],[16,168,1],[16,168,1],[16,168,1],[16,168,1],[16,168,1],[16,150,0],[16,150,0],[16,150,0]],"square1":[[16,68,0],[16,68,0],[16,68,0],[16,86,1],[16,86,1],[16,68,0],[16,68,0],[16,68,0],[16,68,0],[16,68,0],[16,68,0],[16,68,0],[16,68,0],[16,68,0]],"square2":[[16,68,0],[16,68,0],[16,68,0],[16,68,0],[16,68,0],[16,68,0],[16,68,0],[16,86,1],[16,86,1],[16,68,0],[16,68,0],[16,68,0],[16,68,0],[16,68,0]]};
+const CHIPS = {"arg-sum_sq1-0":{"text":"3","w":15,"at":[{"frame":"main","xy":[222,277],"land":true},{"xy":[54.9,195],"land":true},null,null,null,null,null,null,null,null,null,null,null,null]},"arg-sum_sq1-1":{"text":"4","w":15,"at":[{"frame":"main","xy":[222,277],"land":true},{"xy":[124.9,195],"land":true},null,null,null,null,null,null,null,null,null,null,null,null]},"arg-square1-0":{"text":"3","w":15,"at":[null,null,{"frame":"sum_sq1","xy":[222,195],"land":true},{"xy":[54.9,113],"land":true},null,null,null,null,null,null,null,null,null,null]},"ret-square1":{"text":"9","w":15,"at":[null,null,null,null,{"xy":[357,97]},{"frame":"sum_sq1","xy":[222,195],"land":true},null,null,null,null,null,null,null,null]},"arg-square2-0":{"text":"4","w":15,"at":[null,null,null,null,null,null,{"frame":"sum_sq1","xy":[222,195],"land":true},{"xy":[54.9,113],"land":true},null,null,null,null,null,null]},"ret-square2":{"text":"16","w":22,"at":[null,null,null,null,null,null,null,null,{"xy":[350,97]},{"frame":"sum_sq1","xy":[222,195],"land":true},null,null,null,null]},"ret-sum_sq1":{"text":"25","w":22,"at":[null,null,null,null,null,null,null,null,null,null,{"xy":[350,179]},{"frame":"main","xy":[222,277],"land":true},{"xy":[14,295],"left":true},{"xy":[14,295],"left":true}]}};
+const STEPS = [{"line":7,"hue":"ink","expr":{"main":[{"fn":"sum_sq"},{"t":"("},{"t":"3","hue":"gold"},{"t":", "},{"t":"4","hue":"gold"},{"t":")"}]},"where":{"main":["running line ",7]},"say":"{sum_sq}(3, 4): the arguments are 3 and 4"},{"line":4,"hue":"blue","expr":{"main":[{"fn":"sum_sq"},{"t":"("},{"t":"3","hue":"gold"},{"t":", "},{"t":"4","hue":"gold"},{"t":")"}],"sum_sq1":[{"fn":"square"},{"t":"("},{"t":"a","hue":"green"},{"t":")"},{"t":" + "},{"fn":"square"},{"t":"("},{"t":"b","hue":"green"},{"t":")"}]},"where":{"main":["waits at line ",7],"sum_sq1":["running line ",4]},"say":"new frame for {sum_sq}: a = 3, b = 4"},{"line":5,"hue":"blue","expr":{"main":[{"fn":"sum_sq"},{"t":"("},{"t":"3","hue":"gold"},{"t":", "},{"t":"4","hue":"gold"},{"t":")"}],"sum_sq1":[{"fn":"square"},{"t":"("},{"t":"3","hue":"gold"},{"t":")"},{"t":" + "},{"fn":"square"},{"t":"("},{"t":"b","hue":"green"},{"t":")"}]},"where":{"main":["waits at line ",7],"sum_sq1":["running line ",5]},"say":"a is 3, so {square}(3): the argument is 3"},{"line":1,"hue":"purple","expr":{"main":[{"fn":"sum_sq"},{"t":"("},{"t":"3","hue":"gold"},{"t":", "},{"t":"4","hue":"gold"},{"t":")"}],"sum_sq1":[{"fn":"square"},{"t":"("},{"t":"3","hue":"gold"},{"t":")"},{"t":" + "},{"fn":"square"},{"t":"("},{"t":"b","hue":"green"},{"t":")"}],"square1":[{"t":"x","hue":"green"},{"t":" * "},{"t":"x","hue":"green"}]},"where":{"main":["waits at line ",7],"sum_sq1":["waits at line ",5],"square1":["running line ",1]},"say":"new frame for {square}: x = 3"},{"line":2,"hue":"purple","expr":{"main":[{"fn":"sum_sq"},{"t":"("},{"t":"3","hue":"gold"},{"t":", "},{"t":"4","hue":"gold"},{"t":")"}],"sum_sq1":[{"fn":"square"},{"t":"("},{"t":"3","hue":"gold"},{"t":")"},{"t":" + "},{"fn":"square"},{"t":"("},{"t":"b","hue":"green"},{"t":")"}],"square1":[{"t":"3","hue":"gold"},{"t":" * "},{"t":"3","hue":"gold"}]},"where":{"main":["waits at line ",7],"sum_sq1":["waits at line ",5],"square1":["running line ",2]},"say":"{square} computes 3 * 3 = 9 and returns 9"},{"line":5,"hue":"blue","expr":{"main":[{"fn":"sum_sq"},{"t":"("},{"t":"3","hue":"gold"},{"t":", "},{"t":"4","hue":"gold"},{"t":")"}],"sum_sq1":[{"t":"9","hue":"red"},{"t":" + "},{"fn":"square"},{"t":"("},{"t":"b","hue":"green"},{"t":")"}]},"where":{"main":["waits at line ",7],"sum_sq1":["running line ",5]},"say":"frame of {square} removed: 9 replaces the call"},{"line":5,"hue":"blue","expr":{"main":[{"fn":"sum_sq"},{"t":"("},{"t":"3","hue":"gold"},{"t":", "},{"t":"4","hue":"gold"},{"t":")"}],"sum_sq1":[{"t":"9","hue":"red"},{"t":" + "},{"fn":"square"},{"t":"("},{"t":"4","hue":"gold"},{"t":")"}]},"where":{"main":["waits at line ",7],"sum_sq1":["running line ",5]},"say":"b is 4, so {square}(4): the argument is 4"},{"line":1,"hue":"purple","expr":{"main":[{"fn":"sum_sq"},{"t":"("},{"t":"3","hue":"gold"},{"t":", "},{"t":"4","hue":"gold"},{"t":")"}],"sum_sq1":[{"t":"9","hue":"red"},{"t":" + "},{"fn":"square"},{"t":"("},{"t":"4","hue":"gold"},{"t":")"}],"square2":[{"t":"x","hue":"green"},{"t":" * "},{"t":"x","hue":"green"}]},"where":{"main":["waits at line ",7],"sum_sq1":["waits at line ",5],"square2":["running line ",1]},"say":"new frame for {square}: x = 4"},{"line":2,"hue":"purple","expr":{"main":[{"fn":"sum_sq"},{"t":"("},{"t":"3","hue":"gold"},{"t":", "},{"t":"4","hue":"gold"},{"t":")"}],"sum_sq1":[{"t":"9","hue":"red"},{"t":" + "},{"fn":"square"},{"t":"("},{"t":"4","hue":"gold"},{"t":")"}],"square2":[{"t":"4","hue":"gold"},{"t":" * "},{"t":"4","hue":"gold"}]},"where":{"main":["waits at line ",7],"sum_sq1":["waits at line ",5],"square2":["running line ",2]},"say":"{square} computes 4 * 4 = 16 and returns 16"},{"line":5,"hue":"blue","expr":{"main":[{"fn":"sum_sq"},{"t":"("},{"t":"3","hue":"gold"},{"t":", "},{"t":"4","hue":"gold"},{"t":")"}],"sum_sq1":[{"t":"9","hue":"red"},{"t":" + "},{"t":"16","hue":"red"}]},"where":{"main":["waits at line ",7],"sum_sq1":["running line ",5]},"say":"frame of {square} removed: 16 replaces the call"},{"line":5,"hue":"blue","expr":{"main":[{"fn":"sum_sq"},{"t":"("},{"t":"3","hue":"gold"},{"t":", "},{"t":"4","hue":"gold"},{"t":")"}],"sum_sq1":[{"t":"9","hue":"red"},{"t":" + "},{"t":"16","hue":"red"}]},"where":{"main":["waits at line ",7],"sum_sq1":["running line ",5]},"say":"{sum_sq} computes 9 + 16 = 25 and returns 25"},{"line":7,"hue":"ink","expr":{"main":[{"t":"25","hue":"red"}]},"where":{"main":["running line ",7]},"say":"frame of {sum_sq} removed: 25 replaces the call"},{"line":7,"hue":"ink","expr":{"main":[{"t":"25","hue":"red"}]},"where":{"main":["running line ",7]},"say":"{main} prints 25; its frame is still on the stack"},{"line":0,"hue":"","expr":{},"where":{},"say":"{main} ends and its frame is removed; the stack is empty"}];
+const RANGES = [[0,13],[0,1],[2,3],[4,9],[10,13],null,null];
+const RIGHT = {"x":460,"y":0};
+const NRIGHT = {"x":0,"y":360};
+const LH = 14;
+const LAST = 13;
+const root = UNFOLD.stage;
+const readout = document.querySelector("[data-readout]");
+const still = matchMedia("(prefers-reduced-motion: reduce)");
+let lang = 0;
+let step = 0;
+let crossing = false;
+const names = () => LANGS[lang].names;
+const segs = (list) => list.map((s) => s.fn ? '<tspan data-hue="' + ({ sum_sq: "blue", square: "purple" })[s.fn] + '">' + names()[s.fn] + "</tspan>" : s.hue ? '<tspan data-hue="' + s.hue + '" data-v="' + s.t + '">' + s.t + "</tspan>" : s.t).join("");
+const off = () => (UNFOLD.narrow() ? NRIGHT : RIGHT);
+const move = (el, x, y) => (el.style.transform = "translate(" + x + "px," + y + "px)");
+const lands = {};
+function show(t) {
+  step = Math.max(0, Math.min(LAST, t));
+  const s = STEPS[step];
+  const o = off();
+  for (const [id, at] of Object.entries(FRAMES)) {
+    const el = root.querySelector("#fr-" + id);
+    move(el, at[step][0] + o.x, at[step][1] + o.y);
+    el.style.opacity = at[step][2];
+    if (s.expr[id]) el.querySelector(".el-expr").innerHTML = (id === "main" ? "" : '<tspan data-hue="red">return</tspan> ') + segs(s.expr[id]);
+    if (s.where[id]) el.querySelector(".el-where").textContent = s.where[id][0] + LANGS[lang].at[s.where[id][1]];
+  }
+  // A chip bound for an expression lands on the value it becomes there (measured, since names differ per language).
+  const claimed = new Set();
+  for (const [id, c] of Object.entries(CHIPS)) {
+    const el = root.querySelector("#ch-" + id);
+    const p = c.at[step];
+    clearTimeout(lands[id]);
+    el.removeAttribute("data-landed");
+    if (!p) { el.style.opacity = 0; continue; }
+    let [x, y] = p.xy;
+    if (p.frame) {
+      const v = [...root.querySelectorAll("#fr-" + p.frame + " .el-expr [data-v]")].find((n) => n.dataset.v === c.text && !claimed.has(n));
+      if (v) {
+        claimed.add(v);
+        x = FRAMES[p.frame][step][0] + v.getStartPositionOfChar(0).x + v.getComputedTextLength() / 2 - c.w / 2;
+      }
+    }
+    move(el, x + (p.left ? 0 : o.x), y + (p.left ? 0 : o.y));
+    el.style.opacity = 1;
+    if (p.land) lands[id] = setTimeout(() => el.setAttribute("data-landed", ""), still.matches ? 0 : 650);
+  }
+  root.querySelectorAll(".el-panel").forEach((panel, i) => {
+    const c = panel.querySelector(".el-cursor");
+    const line = UNFOLD.scene() === 5 ? LANGS[i].at[5] : s.line && LANGS[i].at[s.line];
+    c.style.opacity = line ? 1 : 0;
+    if (line) c.style.transform = "translateY(" + (line - 1) * LH + "px)";
+    const h = UNFOLD.scene() === 5 ? "blue" : s.hue;
+    if (h) c.setAttribute("data-hue", h); else c.removeAttribute("data-hue");
+  });
+  UNFOLD.timeAt(step);
+  say();
+}
+function say() {
+  const sc = UNFOLD.scene();
+  const L = LANGS[lang];
+  const text = L.name + " · " + (sc === 0 ? "runs as shown and prints 25" : sc === 5 ? L.how : sc === 6 ? L.limit : "step " + step + " · " + STEPS[step].say.replace(/\{(\w+)\}/g, (_, n) => names()[n]));
+  if (readout.textContent !== text) readout.textContent = text;
+}
+function pick(i) {
+  lang = (i + LANGS.length) % LANGS.length;
+  root.dataset.lang = String(lang);
+  root.querySelectorAll("[data-fn]").forEach((el) => (el.textContent = names()[el.dataset.fn]));
+  root.querySelectorAll(".el-langs [data-lang]").forEach((b) => b.setAttribute("aria-pressed", String(Number(b.dataset.lang) === lang)));
+  for (const [id, text] of Object.entries(LANGS[lang].info)) root.querySelector("#" + id).textContent = text;
+  root.querySelector("#info-lang").textContent = LANGS[lang].name;
+  show(step);
+}
+// The overview starts at step 0 (every panel marks its call line); on a phone it previews the stack at its deepest.
+const start = (scene) => (scene === 0 ? (UNFOLD.narrow() ? 4 : 0) : RANGES[scene] ? RANGES[scene][0] : step);
+root.addEventListener("unfold:scene", (e) => { if (!crossing) show(start(e.detail.scene)); });
+root.addEventListener("unfold:layout", () => show(UNFOLD.scene() === 0 ? start(0) : step));
+[1, 2, 3, 4].forEach((s) => UNFOLD.beat(s, 1400, (n) => show(n < 0 ? RANGES[s][1] : RANGES[s][0] + n), 800, RANGES[s][1] - RANGES[s][0] + 1));
+// Stepping by hand moves to the scene that owns the step.
+UNFOLD.onTime((t) => {
+  const owner = RANGES.findIndex((r, i) => i > 0 && r && t >= r[0] && t <= r[1]);
+  if (owner !== UNFOLD.scene()) { crossing = true; UNFOLD.go(owner); crossing = false; }
+  show(t);
+});
+root.addEventListener("keydown", (e) => {
+  const to = { ArrowUp: lang - 1, ArrowDown: lang + 1 }[e.key];
+  if (to === undefined) return;
+  e.preventDefault();
+  UNFOLD.pause();
+  pick(to);
+});
+root.addEventListener("click", (e) => {
+  const target = e.target.closest(".el-panel, .el-row, .el-langs [data-lang]");
+  if (!target) return;
+  UNFOLD.pause();
+  pick(Number(target.dataset.i ?? target.dataset.lang));
+});
+pick(lang);
+</script></body></html>

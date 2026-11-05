@@ -1,0 +1,87 @@
+[
+ {
+  "from": "client",
+  "flags": [
+   "SYN"
+  ],
+  "seq": 2538203948,
+  "ack": null,
+  "len": 0
+ },
+ {
+  "from": "server",
+  "flags": [
+   "SYN",
+   "ACK"
+  ],
+  "seq": 2839225171,
+  "ack": 2538203949,
+  "len": 0
+ },
+ {
+  "from": "client",
+  "flags": [
+   "ACK"
+  ],
+  "seq": 2538203949,
+  "ack": 2839225172,
+  "len": 0
+ },
+ {
+  "from": "client",
+  "flags": [
+   "PSH",
+   "ACK"
+  ],
+  "seq": 2538203949,
+  "ack": 2839225172,
+  "len": 5
+ },
+ {
+  "from": "server",
+  "flags": [
+   "ACK"
+  ],
+  "seq": 2839225172,
+  "ack": 2538203954,
+  "len": 0
+ },
+ {
+  "from": "client",
+  "flags": [
+   "FIN",
+   "ACK"
+  ],
+  "seq": 2538203954,
+  "ack": 2839225172,
+  "len": 0
+ },
+ {
+  "from": "server",
+  "flags": [
+   "ACK"
+  ],
+  "seq": 2839225172,
+  "ack": 2538203955,
+  "len": 0
+ },
+ {
+  "from": "server",
+  "flags": [
+   "FIN",
+   "ACK"
+  ],
+  "seq": 2839225172,
+  "ack": 2538203955,
+  "len": 0
+ },
+ {
+  "from": "client",
+  "flags": [
+   "ACK"
+  ],
+  "seq": 2538203955,
+  "ack": 2839225173,
+  "len": 0
+ }
+]

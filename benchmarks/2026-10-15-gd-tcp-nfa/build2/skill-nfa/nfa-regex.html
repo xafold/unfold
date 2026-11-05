@@ -1,0 +1,510 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>NFA regex matching</title><style>
+.iso{
+  --anatomy-page:#0b0b0b;--anatomy-card:#131313;--anatomy-text:#a3a3a3;--anatomy-strong:#e6e6e6;--anatomy-muted:#6e6e6e;
+  --anatomy-paper:#131313;--anatomy-face:#1b1b1b;--anatomy-top:#1c1c1c;
+  --anatomy-shade-0:#0f0f0f;--anatomy-shade-1:#121212;--anatomy-shade-2:#151515;--anatomy-shade-3:#181818;
+  --anatomy-lit-top:#262626;--anatomy-lit-shade:#1d1d1d;
+  --anatomy-hi:#d4d4d4;--anatomy-mid:#6a6a6a;--anatomy-lo:#3e3e3e;--anatomy-faint:#2a2a2a;--anatomy-lit:#ffffff;
+  --anatomy-halo:#050505;--anatomy-halo-opacity:.9;--anatomy-dot:#e6e6e6;
+  --anatomy-red:#ff6b6b;--anatomy-green:#6be0a0;--anatomy-blue:#6b9bff;
+  --anatomy-weight:.6px;--anatomy-ease:cubic-bezier(.32,.72,0,1);
+  --anatomy-mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --anatomy-lift:inset 0 1px 0 0 #ffffff0a,inset 0 0 0 1px #ffffff06,0 0 0 1px #00000026,0 1px 1px -.5px #00000014,0 3px 3px -1.5px #00000014,0 6px 6px -3px #00000014,0 12px 12px -6px #00000014;
+}
+.iso[data-theme="light"]{
+  --anatomy-page:#f2f2ef;--anatomy-card:#fbfbfa;--anatomy-text:#57575a;--anatomy-strong:#18181a;--anatomy-muted:#8c8c90;
+  --anatomy-paper:#fbfbfa;--anatomy-face:#ffffff;--anatomy-top:#ffffff;
+  --anatomy-shade-0:#dcdcd9;--anatomy-shade-1:#e5e5e2;--anatomy-shade-2:#ededea;--anatomy-shade-3:#f4f4f1;
+  --anatomy-lit-top:#ffffff;--anatomy-lit-shade:#eeeeeb;
+  --anatomy-hi:#26262a;--anatomy-mid:#8a8a8f;--anatomy-lo:#b4b4b8;--anatomy-faint:#d4d4d6;--anatomy-lit:#000000;
+  --anatomy-halo:#8a8a80;--anatomy-halo-opacity:.32;--anatomy-dot:#3a3a3e;
+  --anatomy-red:#e5484d;--anatomy-green:#30a46c;--anatomy-blue:#3e63dd;
+  --anatomy-lift:inset 0 1px 0 0 #ffffff,0 0 0 1px #0000000f,0 1px 1px -.5px #0000000a,0 3px 3px -1.5px #0000000a,0 6px 6px -3px #0000000a,0 12px 12px -6px #0000000a;
+}
+.iso-svg{display:block;width:100%;height:auto;overflow:visible}
+.iso-svg path,.iso-svg circle{vector-effect:non-scaling-stroke}
+.iso-fill{fill:var(--anatomy-paper);stroke:none}
+.iso-solid[data-lit]>.iso-fill{fill:var(--anatomy-face)}
+.iso-shade,.iso-top{stroke:none}
+.iso-shade[data-shade="0"]{fill:var(--anatomy-shade-0)}
+.iso-shade[data-shade="1"]{fill:var(--anatomy-shade-1)}
+.iso-shade[data-shade="2"]{fill:var(--anatomy-shade-2)}
+.iso-shade[data-shade="3"]{fill:var(--anatomy-shade-3)}
+.iso-top{fill:var(--anatomy-top)}
+.iso-solid[data-lit]>.iso-top{fill:var(--anatomy-lit-top)}
+.iso-solid[data-lit]>.iso-shade{fill:var(--anatomy-lit-shade)}
+.iso-solid[data-seamless]>.iso-shade,.iso-solid[data-seamless]>.iso-top{stroke-width:.4;stroke-linejoin:round}
+.iso-solid[data-seamless]>.iso-shade[data-shade="0"]{stroke:var(--anatomy-shade-0)}
+.iso-solid[data-seamless]>.iso-shade[data-shade="1"]{stroke:var(--anatomy-shade-1)}
+.iso-solid[data-seamless]>.iso-shade[data-shade="2"]{stroke:var(--anatomy-shade-2)}
+.iso-solid[data-seamless]>.iso-shade[data-shade="3"]{stroke:var(--anatomy-shade-3)}
+.iso-solid[data-seamless]>.iso-top{stroke:var(--anatomy-top)}
+.iso-solid[data-seamless][data-lit]>.iso-top{stroke:var(--anatomy-lit-top)}
+.iso-solid[data-seamless][data-lit]>.iso-shade{stroke:var(--anatomy-lit-shade)}
+.iso-solid[data-lit]>.iso-edge{stroke:var(--anatomy-lit)}
+.iso-halo{fill:var(--anatomy-halo);stroke:none;filter:blur(9px);opacity:var(--anatomy-halo-opacity);transform:translateY(3px)}
+.iso-line{fill:none;stroke:var(--anatomy-lo);stroke-width:var(--anatomy-weight);stroke-linecap:round;stroke-linejoin:round}
+.iso-line[data-tone="hi"]{stroke:var(--anatomy-hi)}
+.iso-line[data-tone="mid"]{stroke:var(--anatomy-mid)}
+.iso-line[data-tone="lo"]{stroke:var(--anatomy-lo)}
+.iso-line[data-tone="faint"]{stroke:var(--anatomy-faint)}
+.iso-line[data-tone="lit"]{stroke:var(--anatomy-lit)}
+.iso-line[data-tone="red"]{stroke:var(--anatomy-red)}
+.iso-line[data-tone="green"]{stroke:var(--anatomy-green)}
+.iso-line[data-tone="blue"]{stroke:var(--anatomy-blue)}
+.iso-line[data-dotted]{stroke-dasharray:.01 3.5;stroke-width:1}
+.iso-line[data-dashed]{stroke-dasharray:3 3}
+.iso-line[data-flow]{stroke-dasharray:2 6}
+.iso-wire-end{fill:var(--anatomy-paper);stroke:var(--anatomy-lo);stroke-width:var(--anatomy-weight)}
+.iso-wire[data-tone="hi"] .iso-wire-end{stroke:var(--anatomy-hi)}
+.iso-wire[data-tone="mid"] .iso-wire-end{stroke:var(--anatomy-mid)}
+.iso-wire[data-tone="faint"] .iso-wire-end{stroke:var(--anatomy-faint)}
+.iso-wire[data-tone="lit"] .iso-wire-end{stroke:var(--anatomy-lit)}
+.iso-dots circle{fill:var(--anatomy-dot);stroke:none;opacity:.32}
+.iso-dots[data-tone="hi"] circle{opacity:.85}
+.iso-dots[data-tone="mid"] circle{opacity:.45}
+.iso-dots[data-tone="lo"] circle{opacity:.22}
+.iso-dots[data-tone="faint"] circle{opacity:.12}
+.iso-face-text{fill:var(--anatomy-mid);font-family:var(--anatomy-mono);letter-spacing:.04em}
+.iso-face-text[data-tone="hi"]{fill:var(--anatomy-hi)}
+.iso-face-text[data-tone="lo"]{fill:var(--anatomy-lo)}
+.iso-face-text[data-tone="faint"]{fill:var(--anatomy-faint)}
+.tb-body{fill:var(--anatomy-shade-2);stroke:none}
+.tb-shine{fill:var(--anatomy-top);stroke:none}
+.tb-shade{fill:var(--anatomy-shade-0);stroke:none}
+.tb-ring{fill:none;stroke:var(--anatomy-lo);stroke-width:.45;stroke-linecap:butt;stroke-linejoin:round}
+.tb-ring[data-tone="mid"]{stroke:var(--anatomy-mid)}
+.tb-ring[data-tone="faint"]{stroke:var(--anatomy-faint)}
+.tb-ring[data-tone="hi"]{stroke:var(--anatomy-hi)}
+@keyframes iso-flow{to{stroke-dashoffset:-32}}
+@keyframes iso-pulse{0%,100%{opacity:.18}12%{opacity:1}40%{opacity:.18}}
+.iso-line[data-flow]{animation:iso-flow 1600ms linear infinite}
+.iso-dots circle[data-pulse]{animation:iso-pulse 1600ms steps(1,end) infinite;animation-delay:var(--pulse-at,0ms)}
+.iso-figure{margin:32px 0 36px}
+.iso-plate{position:relative;padding:52px 24px;border-radius:0;background:var(--anatomy-card);box-shadow:0 0 0 1px var(--anatomy-mid);--anatomy-paper:var(--anatomy-card)}
+.iso-plate-corners{position:absolute;inset:18px 20px;pointer-events:none}
+.iso-plate-corner{position:absolute;color:var(--anatomy-muted);font-family:var(--anatomy-mono);font-size:10.5px;line-height:1;letter-spacing:.04em;white-space:nowrap}
+.iso-plate-corner[data-corner="fig"]{top:0;left:0;color:var(--anatomy-text)}
+.iso-plate-corner[data-corner="title"]{top:0;right:0;text-transform:uppercase;letter-spacing:.1em}
+.iso-plate-corner[data-corner="hint"]{bottom:0;left:0;text-transform:uppercase;letter-spacing:.1em}
+.iso-plate-corner[data-corner="readout"]{right:0;bottom:0;color:var(--anatomy-text);font-variant-numeric:tabular-nums}
+.iso-plate .iso-svg{margin:0 auto}
+.iso-legend{display:grid;gap:8px;margin-top:12px;color:var(--anatomy-muted);font-size:13px;line-height:1.55}
+.iso-keys{display:flex;flex-wrap:wrap;gap:6px 18px}
+.iso-key{display:inline-flex;align-items:center;gap:7px}
+.iso-swatch{width:16px;height:10px;flex:none;overflow:visible}
+.iso-swatch path{fill:none;stroke:var(--anatomy-hi);stroke-width:1;vector-effect:non-scaling-stroke;stroke-linejoin:round;stroke-linecap:round}
+.iso-swatch[data-mark="raised"] path,.iso-swatch[data-mark="flat"] path{stroke:var(--anatomy-mid)}
+.iso-swatch[data-mark="lit"] path{stroke:var(--anatomy-lit)}
+.iso-swatch[data-mark="dim"] path{stroke:var(--anatomy-lo)}
+.iso-swatch[data-mark="dotted"] path{stroke-dasharray:.01 3;stroke-width:1.4}
+.iso-swatch[data-mark="dashed"] path{stroke-dasharray:3 2.5}
+.iso-swatch[data-mark="red"] path{stroke:var(--anatomy-red)}
+.iso-swatch[data-mark="green"] path{stroke:var(--anatomy-green)}
+.iso-swatch[data-mark="blue"] path{stroke:var(--anatomy-blue)}
+.iso-swatch-crease{stroke:var(--anatomy-lo)!important}
+@media (max-width:560px){.iso-plate{padding:48px 12px 70px}.iso-plate-corner[data-corner="hint"]{bottom:18px}}
+@media (prefers-reduced-motion:reduce){.iso-line[data-flow],.iso-dots circle[data-pulse]{animation:none}}
+
+*{box-sizing:border-box}
+html{color-scheme:dark}
+body[data-theme="light"]{color-scheme:light}
+body{margin:0;background:var(--anatomy-page);color:var(--anatomy-text);font:14px/1.6 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+.iso-page{width:min(900px,100% - 32px);margin:64px auto 96px}
+</style></head><body class="iso" data-theme="dark"><main class="iso-page"><style>
+.iso{--unfold-blue:#58c4dd;--unfold-yellow:#f4d345;--unfold-red:#fc6255;--unfold-green:#83c167;--unfold-teal:#5cd0b3;--unfold-purple:#b48ad1;--unfold-gold:#f0ac5f;--unfold-on-hot:#0b0b0b;--unfold-serif:"Latin Modern Math","STIX Two Math","Cambria Math",math,serif}
+.iso[data-theme="light"]{--unfold-blue:#1f78a4;--unfold-yellow:#a67c00;--unfold-red:#cf3b2e;--unfold-green:#3e8a2a;--unfold-teal:#16866b;--unfold-purple:#7a4fa3;--unfold-gold:#b8661a;--unfold-on-hot:#ffffff}
+[data-hue="blue"]{--hue:var(--unfold-blue)}[data-hue="yellow"]{--hue:var(--unfold-yellow)}[data-hue="red"]{--hue:var(--unfold-red)}[data-hue="green"]{--hue:var(--unfold-green)}[data-hue="teal"]{--hue:var(--unfold-teal)}[data-hue="purple"]{--hue:var(--unfold-purple)}[data-hue="gold"]{--hue:var(--unfold-gold)}[data-hue="ink"]{--hue:var(--anatomy-hi)}
+.u-key{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 16px;margin-top:10px;color:var(--anatomy-muted);font-size:12px}
+.u-key>span{display:inline-flex;align-items:center;gap:6px}
+.u-key i{width:10px;height:10px;border-radius:2px;background:var(--hue)}
+.u-key i.u-hollow{background:none;box-shadow:inset 0 0 0 1.2px var(--anatomy-mid)}
+.u-key i.u-solid{background:var(--anatomy-mid)}
+.u-stage{position:relative;outline:none;container-type:inline-size}
+.u-stage:focus-visible{outline:1px solid var(--anatomy-faint);outline-offset:8px}
+.u-stage .iso-svg{overflow:visible}
+.u-eq,.u-say{display:grid;align-items:center}
+.u-eq>.u-at,.u-say>.u-at{grid-area:1/1;opacity:0;visibility:hidden;transition:opacity .45s var(--anatomy-ease),visibility 0s .45s;margin:0}
+.u-eq{min-height:44px;margin-bottom:8px;overflow-x:auto;overflow-y:hidden}
+.u-eq math{font-family:var(--unfold-serif);font-size:20px;color:var(--anatomy-strong)}
+.u-eq [data-hue]{color:var(--hue)}
+.u-say{min-height:48px;margin-top:6px;color:var(--anatomy-text);font-size:14px;line-height:1.55;text-align:center}
+.u-say>.u-at{max-width:62ch;justify-self:center}
+.u-say b{color:var(--anatomy-strong);font-weight:500}
+.u-say [data-hue]{color:var(--hue)}
+.u-steps{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin-top:14px}
+.u-steps button{display:inline-flex;align-items:center;gap:6px;padding:5px 10px 5px 6px;border:0;border-radius:999px;background:transparent;color:var(--anatomy-muted);font:11px/1 var(--anatomy-mono);letter-spacing:.04em;cursor:pointer;box-shadow:0 0 0 1px var(--anatomy-faint);transition:color .2s,box-shadow .2s}
+.u-steps button span{display:inline-grid;place-items:center;width:16px;height:16px;border-radius:50%;background:var(--anatomy-faint);color:var(--anatomy-text);font-size:10px}
+.u-steps button:hover{color:var(--anatomy-text)}
+.u-steps button[aria-current]{color:var(--anatomy-strong);box-shadow:0 0 0 1px var(--anatomy-mid)}
+.u-steps button[aria-current] span{background:var(--anatomy-strong);color:var(--anatomy-card)}
+.u-move{transition:transform .9s var(--anatomy-ease),opacity .6s var(--anatomy-ease)}
+.u-grid text,.u-chip text,.u-bars text,.u-arrow text{dominant-baseline:central;text-anchor:middle}
+.u-cell{transform:translate(var(--x),var(--y));transition:transform .9s var(--anatomy-ease) calc(var(--i) * 18ms)}
+.u-cell-bg{fill:var(--hue);fill-opacity:var(--a);stroke:none;transition:fill-opacity .35s}
+.u-cell[data-neg]>.u-cell-bg,.u-cell-bg[data-neg]{fill-opacity:calc(var(--a) * .18);stroke:var(--hue);stroke-opacity:var(--a);stroke-width:1.2}
+.u-cell[data-masked]>.u-cell-bg,.u-cell-bg[data-masked]{fill:none;stroke:var(--anatomy-faint);stroke-width:.8;stroke-dasharray:2 2}
+.u-num{font:500 10px var(--anatomy-mono);font-variant-numeric:tabular-nums;fill:var(--anatomy-strong)}
+.u-cell[data-hot] .u-num{fill:var(--unfold-on-hot)}
+.u-cell[data-masked] .u-num{fill:var(--anatomy-lo)}
+.u-name{font:italic 600 17px var(--unfold-serif);fill:var(--hue);dominant-baseline:auto!important;text-anchor:start!important}
+.u-dims{font:400 10px var(--anatomy-mono);font-style:normal;fill:var(--anatomy-muted)}
+.u-T,.u-dims-T{display:none}
+.u-mark{fill:none;stroke:var(--anatomy-strong);stroke-width:1.2;opacity:0;transition:opacity .3s}
+.u-mark[data-on]{opacity:.9}
+.u-chip rect{fill:var(--anatomy-card);stroke:var(--anatomy-mid);stroke-width:.8;transition:stroke .25s,fill .25s}
+.u-chip text{font:500 11px var(--anatomy-mono);fill:var(--anatomy-text);transition:fill .25s}
+.u-chip[data-hue] rect{stroke:var(--hue)}
+.u-chip[data-hue] text{fill:var(--hue)}
+.u-cell[data-later],.u-mark[data-later]{opacity:0!important;transition:opacity .3s}
+.u-plot-axis{stroke:var(--anatomy-mid);stroke-width:.9;fill:none}
+.u-plot-grid{stroke:var(--anatomy-faint);stroke-width:.6;fill:none}
+.u-tick-label{font:10px var(--anatomy-mono);fill:var(--anatomy-muted)}
+.u-plot-name{font:italic 600 15px var(--unfold-serif);fill:var(--hue,var(--anatomy-text))}
+.u-curve{fill:none;stroke:var(--hue,var(--anatomy-hi));stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.u-chip[data-on] rect{fill:var(--anatomy-strong);stroke:var(--anatomy-strong)}
+.u-chip[data-on] text{fill:var(--anatomy-card)}
+.u-chip[data-i]{cursor:pointer}
+.u-arrow{--w:1.1;color:var(--anatomy-mid)}
+.u-arrow[data-hue]{color:var(--hue)}
+.u-arrow-line{fill:none;stroke:currentColor;stroke-width:var(--w);stroke-linecap:round;transition:stroke-width .4s,opacity .4s}
+.u-arrow-head{fill:currentColor}
+.u-bar-fill{fill:var(--hue);transform-box:fill-box;transform-origin:50% 100%;transform:scaleY(var(--v));transition:transform .6s var(--anatomy-ease)}
+.u-bar-value{font:500 10px var(--anatomy-mono);fill:var(--anatomy-strong);transition:y .6s var(--anatomy-ease)}
+.u-bar-label{font:11px var(--anatomy-mono);fill:var(--anatomy-muted)}
+.u-axis{stroke:var(--anatomy-mid);stroke-width:.8;fill:none}
+.u-link{fill:none;stroke:var(--hue,var(--anatomy-mid));stroke-width:1.1;stroke-linecap:round;transition:d .9s var(--anatomy-ease),opacity .5s var(--anatomy-ease),stroke .3s}
+.u-link[data-off]{opacity:0}
+.u-eq>.u-at{text-align:center}
+.u-eq .u-rule{font:500 14px/1.5 var(--anatomy-mono);color:var(--anatomy-strong);letter-spacing:.01em}
+.u-lane-bg{fill:var(--anatomy-faint);fill-opacity:.18;stroke:var(--anatomy-faint);stroke-width:.6}
+.u-lane-name{font:11px var(--anatomy-mono);fill:var(--hue,var(--anatomy-muted));text-anchor:end;dominant-baseline:central}
+.u-tick{stroke:var(--anatomy-faint);stroke-width:.6}
+.u-tick-label{font:9px var(--anatomy-mono);fill:var(--anatomy-muted);text-anchor:middle;dominant-baseline:central}
+.u-now{stroke:var(--anatomy-strong);stroke-width:1.2;transition:transform .5s var(--anatomy-ease)}
+.u-span-bar{fill:var(--hue,var(--anatomy-mid));fill-opacity:.9;transform-box:fill-box;transform-origin:0 50%;transform:scaleX(var(--v,1));transition:transform .5s var(--anatomy-ease)}
+.u-span-label{opacity:0;transition:opacity .3s}
+.u-span[data-labeled] .u-span-label{opacity:1}
+.u-span-label text{font:500 10px var(--anatomy-mono);fill:var(--unfold-on-hot);dominant-baseline:central}
+.u-face .u-cell-bg{stroke-width:.5}
+.u-cell-bg{transform-box:fill-box;transform-origin:50% 50%}
+.u-cell[data-hl]>.u-cell-bg{stroke:var(--anatomy-strong);stroke-opacity:1;stroke-width:1.6;animation:u-ping .5s var(--anatomy-ease)}
+.u-pulse{fill:var(--hue,var(--anatomy-strong));filter:drop-shadow(0 0 3px var(--hue,var(--anatomy-strong)))}
+.u-rise{transform-box:fill-box}
+@keyframes u-pop{from{opacity:0;transform:scale(.4)}}
+@keyframes u-fade{from{opacity:0}}
+@keyframes u-rise{from{opacity:0;transform:translateY(-14px)}}
+@keyframes u-grow{from{transform:scaleY(0)}}
+@keyframes u-draw{from{stroke-dasharray:1;stroke-dashoffset:1}to{stroke-dasharray:1;stroke-dashoffset:0}}
+@keyframes u-ping{from{stroke-width:4;stroke-opacity:0}}
+.u-floor-text{font-family:var(--unfold-serif);font-style:italic;font-weight:600;fill:var(--hue,var(--anatomy-text))}
+.u-floor-label{font-family:var(--anatomy-mono);fill:var(--anatomy-muted)}
+.u-guide{fill:none;stroke:var(--anatomy-lo);stroke-width:.8;stroke-dasharray:2 3}
+.u-controls{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px 18px;margin-top:10px}
+.u-controls button{border:0;border-radius:999px;background:transparent;color:var(--anatomy-muted);font:11px/1 var(--anatomy-mono);letter-spacing:.04em;padding:6px 10px;cursor:pointer;box-shadow:0 0 0 1px var(--anatomy-faint);transition:color .2s,box-shadow .2s}
+.u-controls button:hover{color:var(--anatomy-text)}
+.u-controls button[aria-pressed="true"]{color:var(--anatomy-strong);box-shadow:0 0 0 1px var(--anatomy-mid)}
+.u-time{display:flex;align-items:center;gap:8px;flex:1 1 260px;max-width:440px;transition:opacity .4s}
+.u-time button{width:28px;height:28px;padding:0;font-size:15px}
+.u-time input{flex:1;min-width:80px;accent-color:var(--anatomy-hi)}
+.u-time output{font:11px var(--anatomy-mono);color:var(--anatomy-muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.u-notes{margin-top:56px;color:var(--anatomy-text);font-size:14px;line-height:1.65}
+.u-notes h2{margin:36px 0 10px;font:500 13px var(--anatomy-mono);letter-spacing:.04em;color:var(--anatomy-strong)}
+.u-notes p,.u-notes ul{margin:0 0 12px;max-width:72ch}
+.u-notes li{margin-bottom:6px}
+.u-notes b{color:var(--anatomy-strong);font-weight:500}
+.u-notes code{font:12.5px var(--anatomy-mono);color:var(--anatomy-strong)}
+.u-notes table{width:100%;border-collapse:collapse;font-size:13px;line-height:1.5}
+.u-notes th,.u-notes td{padding:7px 10px 7px 0;border-bottom:1px solid var(--anatomy-faint);text-align:left;vertical-align:top}
+.u-notes th{color:var(--anatomy-muted);font:500 11.5px var(--anatomy-mono);letter-spacing:.03em}
+.u-notes svg{display:block;width:100%;max-width:640px;height:auto;margin:6px 0 14px;overflow:visible}
+.u-notes td:first-child{color:var(--anatomy-strong);white-space:nowrap}
+@media (max-width:560px){.u-notes thead{display:none}.u-notes tr{display:block;padding:8px 0;border-bottom:1px solid var(--anatomy-faint)}.u-notes td{display:block;padding:2px 0;border:0}.u-notes td[data-th]:not(:first-child)::before{content:attr(data-th) ": ";color:var(--anatomy-muted)}}
+@container (max-width:520px){.u-num,.u-bar-value{display:none}.u-eq math{font-size:14px}.u-steps button{font-size:0;gap:0;padding:4px}}
+@media (max-width:560px){.iso-plate-corner[data-corner="readout"]{left:0;white-space:normal;text-align:right;line-height:1.4}.iso-plate-corner[data-corner="hint"]{display:none}}
+@media (prefers-reduced-motion:reduce){.u-stage *{transition:none!important;animation:none!important}.u-pulse{display:none}}
+</style><figure class="iso-figure"><div class="iso-plate"><div class="iso-plate-corners" aria-hidden="true"><span class="iso-plate-corner" data-corner="fig">Fig 1</span><span class="iso-plate-corner" data-corner="title">Regex matching with an NFA</span><span class="iso-plate-corner" data-corner="hint">← → scene · ↑ ↓ step</span><span class="iso-plate-corner" data-corner="readout" data-readout>step 10 · ε-closure({7}) = {7} · adds nothing · input ends, 7 ∈ S: match</span></div><style>.u-stage[data-scene="0"] .u-at[data-at="0"]{opacity:1;visibility:visible;transition-delay:.15s}
+.u-stage[data-scene="0"] .u-grid[data-t~="0"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="0"] .u-grid[data-t~="0"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="0"] .u-grid[data-t~="0"] .u-dims:not(.u-dims-T),.u-stage[data-scene="0"] .u-grid[data-t~="0"] .u-mark{display:none}
+.u-stage[data-scene="1"] .u-at[data-at="1"]{opacity:1;visibility:visible;transition-delay:.15s}
+.u-stage[data-scene="1"] .u-grid[data-t~="1"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="1"] .u-grid[data-t~="1"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="1"] .u-grid[data-t~="1"] .u-dims:not(.u-dims-T),.u-stage[data-scene="1"] .u-grid[data-t~="1"] .u-mark{display:none}
+.u-stage[data-scene="2"] .u-at[data-at="2"]{opacity:1;visibility:visible;transition-delay:.15s}
+.u-stage[data-scene="2"] .u-grid[data-t~="2"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="2"] .u-grid[data-t~="2"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="2"] .u-grid[data-t~="2"] .u-dims:not(.u-dims-T),.u-stage[data-scene="2"] .u-grid[data-t~="2"] .u-mark{display:none}
+.u-stage[data-scene="3"] .u-at[data-at="3"]{opacity:1;visibility:visible;transition-delay:.15s}
+.u-stage[data-scene="3"] .u-grid[data-t~="3"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="3"] .u-grid[data-t~="3"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="3"] .u-grid[data-t~="3"] .u-dims:not(.u-dims-T),.u-stage[data-scene="3"] .u-grid[data-t~="3"] .u-mark{display:none}
+.u-stage[data-scene="4"] .u-at[data-at="4"]{opacity:1;visibility:visible;transition-delay:.15s}
+.u-stage[data-scene="4"] .u-grid[data-t~="4"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="4"] .u-grid[data-t~="4"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="4"] .u-grid[data-t~="4"] .u-dims:not(.u-dims-T),.u-stage[data-scene="4"] .u-grid[data-t~="4"] .u-mark{display:none}
+.u-stage[data-scene="5"] .u-at[data-at="5"]{opacity:1;visibility:visible;transition-delay:.15s}
+.u-stage[data-scene="5"] .u-grid[data-t~="5"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="5"] .u-grid[data-t~="5"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="5"] .u-grid[data-t~="5"] .u-dims:not(.u-dims-T),.u-stage[data-scene="5"] .u-grid[data-t~="5"] .u-mark{display:none}.el-narrow{display:none}.u-stage[data-narrow] .el-narrow{display:inline}.u-stage[data-narrow] .el-wide{display:none}
+.el-ring{fill:var(--anatomy-card);stroke:var(--anatomy-mid);stroke-width:1.2;transition:fill .35s,stroke .35s,stroke-width .35s}
+.el-state[data-on] .el-ring{fill:color-mix(in srgb,var(--unfold-blue) 30%,var(--anatomy-card));stroke:var(--unfold-blue);stroke-width:2.2}
+.el-state[data-died] .el-ring{fill:color-mix(in srgb,var(--unfold-red) 14%,var(--anatomy-card));stroke:var(--unfold-red);stroke-dasharray:3 3;stroke-width:1.6}
+.el-accept{fill:none;stroke:var(--unfold-green);stroke-width:1.4}
+.el-num{font:600 14px var(--anatomy-mono);fill:var(--anatomy-strong);text-anchor:middle;dominant-baseline:central}
+.el-edge{--c:var(--anatomy-mid)}.el-edge[data-eps]{--c:var(--unfold-purple)}
+.el-line{fill:none;stroke:var(--c);stroke-width:1.2;opacity:.75;transition:stroke-width .3s,opacity .3s,stroke .3s}
+.el-head{fill:var(--c);opacity:.75;transition:opacity .3s,fill .3s}
+.el-edge[data-eps] :is(.el-line,.el-head){opacity:.5}
+.el-edge[data-fire]:not([data-eps]){--c:var(--unfold-yellow)}
+.el-edge[data-fire] .el-line{stroke-width:2.6;opacity:1}.el-edge[data-fire] .el-head{opacity:1}
+.el-elabel{font:600 14px var(--anatomy-mono);fill:var(--anatomy-text);text-anchor:middle;dominant-baseline:central}
+.el-edge[data-eps] .el-elabel{font:italic 600 16px var(--unfold-serif);fill:var(--unfold-purple)}
+.el-edge[data-fire]:not([data-eps]) .el-elabel{fill:var(--unfold-yellow)}
+.el-note{font:11px var(--anatomy-mono);fill:var(--anatomy-muted);dominant-baseline:central}
+.el-tok{fill:var(--c);filter:drop-shadow(0 0 3px var(--c))}
+.el-br{fill:none;stroke:var(--anatomy-lo);stroke-width:1;transition:stroke .4s}
+.el-brt{font:12px var(--anatomy-mono);fill:var(--anatomy-muted);text-anchor:middle;dominant-baseline:central}
+.el-br,.el-brt{opacity:.45;transition:opacity .4s}.u-stage[data-scene="1"] :is(.el-br,.el-brt){opacity:1}
+.u-stage[data-scene="1"] .el-brt{fill:var(--anatomy-strong)}
+.el-title,.el-axis{font:10.5px var(--anatomy-mono);fill:var(--anatomy-muted);letter-spacing:.06em}
+.el-ch{transition:opacity .35s}.el-ch rect{fill:var(--anatomy-card);stroke:var(--anatomy-mid);stroke-width:1;transition:fill .3s,stroke .3s}
+.el-ch text{font:600 16px var(--anatomy-mono);fill:var(--anatomy-strong);text-anchor:middle;dominant-baseline:central}
+.el-ch[data-done]{opacity:.35}
+.el-ch[data-cur] rect{stroke:var(--unfold-yellow);stroke-width:2;fill:color-mix(in srgb,var(--unfold-yellow) 18%,var(--anatomy-card))}
+.el-sname{font:italic 600 22px var(--unfold-serif);fill:var(--unfold-blue)}
+.el-set{font:500 17px var(--anatomy-mono);fill:var(--unfold-blue)}
+.el-verdict{opacity:0;transition:opacity .4s}.el-verdict[data-on]{opacity:1}
+.el-verdict text{font:500 13px var(--anatomy-mono);fill:var(--unfold-green)}
+.el-drop text{font:500 13px var(--anatomy-mono);fill:var(--unfold-red)}
+.el-gh{font:600 12px var(--anatomy-mono);fill:var(--unfold-yellow);text-anchor:middle;dominant-baseline:central}
+.el-gh[data-k="closure"]{font:italic 600 14px var(--unfold-serif);fill:var(--unfold-purple)}
+.el-rl,.el-gf{font:10.5px var(--anatomy-mono);fill:var(--anatomy-muted);text-anchor:middle;dominant-baseline:central}
+.el-cell{fill:var(--anatomy-faint);fill-opacity:.35;transition:opacity .3s}
+.el-cell[data-in]{fill:var(--unfold-blue);fill-opacity:.85}
+.el-cell[data-later]{opacity:0}
+.el-col{fill:none;stroke:var(--anatomy-strong);stroke-width:1;opacity:.7;transition:transform .45s var(--anatomy-ease)}</style><div class="u-stage" tabindex="0" role="group" aria-roledescription="explainer" aria-label="NFA explainer. Left and right arrows change the scene. Up and down arrows, or comma and period, step through the input." data-scene="0" data-count="6" data-dwell="10000" data-narrow-box="0 0 430 930"><div class="u-eq" aria-live="polite"><div class="u-at" data-at="0"><math display="block"><msub><mi data-hue="blue">S</mi><mi>t+1</mi></msub><mo>=</mo><mi data-hue="purple">ε</mi><mtext data-hue="purple">-closure</mtext><mo>(</mo><mi data-hue="yellow">δ</mi><mo>(</mo><msub><mi data-hue="blue">S</mi><mi>t</mi></msub><mo>,</mo><msub><mi data-hue="yellow">x</mi><mi>t</mi></msub><mo>)</mo><mo>)</mo></math></div><div class="u-at" data-at="1"><code class="u-rule">a ( b | c )* d  →  8 states · <span data-hue="yellow">4 symbol edges</span> · <span data-hue="purple">5 ε edges</span></code></div><div class="u-at" data-at="2"><math display="block"><mi data-hue="yellow">δ</mi><mo>(</mo><mo>{</mo><mn data-hue="blue">0</mn><mo>}</mo><mo>,</mo><mi data-hue="yellow" mathvariant="normal">a</mi><mo>)</mo><mo>=</mo><mo>{</mo><mn data-hue="blue">1</mn><mo>}</mo></math></div><div class="u-at" data-at="3"><math display="block"><mi data-hue="purple">ε</mi><mtext data-hue="purple">-closure</mtext><mo>(</mo><mo>{</mo><mn data-hue="blue">1</mn><mo>}</mo><mo>)</mo><mo>=</mo><mo>{</mo><mn data-hue="blue">1</mn><mo>,</mo><mn data-hue="blue">2</mn><mo>,</mo><mn data-hue="blue">3</mn><mo>,</mo><mn data-hue="blue">4</mn><mo>,</mo><mn data-hue="blue">6</mn><mo>}</mo></math></div><div class="u-at" data-at="4"><math display="block"><mi data-hue="yellow">δ</mi><mo>(</mo><mi data-hue="blue">S</mi><mo>,</mo><mi data-hue="yellow">x</mi><mo>)</mo><mo>=</mo><mo>{</mo><mn data-hue="blue">5</mn><mo>}</mo><mspace width="1em"/><mtext>for</mtext><mspace width="0.4em"/><mi data-hue="yellow">x</mi><mo>=</mo><mi data-hue="yellow" mathvariant="normal">b</mi><mo>,</mo><mi data-hue="yellow" mathvariant="normal">c</mi><mo>,</mo><mi data-hue="yellow" mathvariant="normal">b</mi></math></div><div class="u-at" data-at="5"><math display="block"><mi data-hue="purple">ε</mi><mtext data-hue="purple">-closure</mtext><mo>(</mo><mi data-hue="yellow">δ</mi><mo>(</mo><mi data-hue="blue">S</mi><mo>,</mo><mi data-hue="yellow" mathvariant="normal">d</mi><mo>)</mo><mo>)</mo><mo>=</mo><mo>{</mo><mn data-hue="blue">7</mn><mo>}</mo><mo>∋</mo><mn data-hue="green">7</mn></math></div></div><svg xmlns="http://www.w3.org/2000/svg" class="iso-svg" viewBox="0 0 820 540" role="img" aria-label="An NFA for the regex a(b|c)*d with 8 states, reading the input abcbd. Active states are lit, the symbol read is marked on the input, and a trace grid shows the set of states at each step."><g class="el-wide"><path class="el-br" d="M22 331V336H128V331"/><text class="el-brt" x="75" y="351">a</text><path class="el-br" d="M140 331V336H520V331"/><text class="el-brt" x="330" y="351">(b|c)*</text><path class="el-br" d="M622 331V336H790V331"/><text class="el-brt" x="706" y="351">d</text><g class="el-edge" data-e="e01"><path class="el-line" d="M58 170Q97.5 170 129 170"/><path class="el-head" d="M136 170L129 166L129 174Z"/><text class="el-elabel" x="97" y="158">a</text><circle class="el-tok" r="4.5" opacity="0"><animateMotion dur="0.75s" begin="indefinite" fill="freeze" path="M58 170Q97.5 170 136 170"/><animate attributeName="opacity" values="1;1;0" keyTimes="0;0.8;1" dur="0.75s" begin="indefinite" fill="freeze"/></circle></g><g class="el-edge" data-e="e12" data-eps><path class="el-line" d="M173 170Q212.5 170 244 170"/><path class="el-head" d="M251 170L244 166L244 174Z"/><text class="el-elabel" x="212" y="158">ε</text><circle class="el-tok" r="4.5" opacity="0"><animateMotion dur="0.75s" begin="indefinite" fill="freeze" path="M173 170Q212.5 170 251 170"/><animate attributeName="opacity" values="1;1;0" keyTimes="0;0.8;1" dur="0.75s" begin="indefinite" fill="freeze"/></circle></g><g class="el-edge" data-e="e16" data-eps><path class="el-line" d="M167.3 183.2Q397.5 430 622.3 189"/><path class="el-head" d="M627 183.9L619.3 186.3L625.2 191.7Z"/><text class="el-elabel" x="397.3" y="322.8" text-anchor="middle">ε</text><text class="el-note" x="409.3" y="322.8" text-anchor="start">leave loop</text><circle class="el-tok" r="4.5" opacity="0"><animateMotion dur="0.75s" begin="indefinite" fill="freeze" path="M167.3 183.2Q397.5 430 627 183.9"/><animate attributeName="opacity" values="1;1;0" keyTimes="0;0.8;1" dur="0.75s" begin="indefinite" fill="freeze"/></circle></g><g class="el-edge" data-e="e23" data-eps><path class="el-line" d="M285.7 161.1Q327.5 137.5 362.4 117.8"/><path class="el-head" d="M368.5 114.3L360.4 114.3L364.3 121.3Z"/><text class="el-elabel" x="316" y="126">ε</text><circle class="el-tok" r="4.5" opacity="0"><animateMotion dur="0.75s" begin="indefinite" fill="freeze" path="M285.7 161.1Q327.5 137.5 368.5 114.3"/><animate attributeName="opacity" values="1;1;0" keyTimes="0;0.8;1" dur="0.75s" begin="indefinite" fill="freeze"/></circle></g><g class="el-edge" data-e="e24" data-eps><path class="el-line" d="M285.7 178.9Q327.5 202.5 362.4 222.2"/><path class="el-head" d="M368.5 225.7L364.3 218.7L360.4 225.7Z"/><text class="el-elabel" x="316" y="216">ε</text><circle class="el-tok" r="4.5" opacity="0"><animateMotion dur="0.75s" begin="indefinite" fill="freeze" path="M285.7 178.9Q327.5 202.5 368.5 225.7"/><animate attributeName="opacity" values="1;1;0" keyTimes="0;0.8;1" dur="0.75s" begin="indefinite" fill="freeze"/></circle></g><g class="el-edge" data-e="e35"><path class="el-line" d="M400.7 113.9Q442.5 137.5 477.4 157.2"/><path class="el-head" d="M483.5 160.7L479.3 153.7L475.4 160.7Z"/><text class="el-elabel" x="454" y="126">b</text><circle class="el-tok" r="4.5" opacity="0"><animateMotion dur="0.75s" begin="indefinite" fill="freeze" path="M400.7 113.9Q442.5 137.5 483.5 160.7"/><animate attributeName="opacity" values="1;1;0" keyTimes="0;0.8;1" dur="0.75s" begin="indefinite" fill="freeze"/></circle></g><g class="el-edge" data-e="e45"><path class="el-line" d="M400.7 226.1Q442.5 202.5 477.4 182.8"/><path class="el-head" d="M483.5 179.3L475.4 179.3L479.3 186.3Z"/><text class="el-elabel" x="454" y="216">c</text><circle class="el-tok" r="4.5" opacity="0"><animateMotion dur="0.75s" begin="indefinite" fill="freeze" path="M400.7 226.1Q442.5 202.5 483.5 179.3"/><animate attributeName="opacity" values="1;1;0" keyTimes="0;0.8;1" dur="0.75s" begin="indefinite" fill="freeze"/></circle></g><g class="el-edge" data-e="e51" data-eps><path class="el-line" d="M490 155Q327.5 -90 169.4 148.3"/><path class="el-head" d="M165.5 154.2L172.7 150.5L166 146.1Z"/><text class="el-elabel" x="327.6" y="22.3" text-anchor="middle">ε</text><text class="el-note" x="339.6" y="22.3" text-anchor="start">loop back</text><circle class="el-tok" r="4.5" opacity="0"><animateMotion dur="0.75s" begin="indefinite" fill="freeze" path="M490 155Q327.5 -90 165.5 154.2"/><animate attributeName="opacity" values="1;1;0" keyTimes="0;0.8;1" dur="0.75s" begin="indefinite" fill="freeze"/></circle></g><g class="el-edge" data-e="e67"><path class="el-line" d="M658 170Q705 170 744 170"/><path class="el-head" d="M751 170L744 166L744 174Z"/><text class="el-elabel" x="705" y="158">d</text><circle class="el-tok" r="4.5" opacity="0"><animateMotion dur="0.75s" begin="indefinite" fill="freeze" path="M658 170Q705 170 751 170"/><animate attributeName="opacity" values="1;1;0" keyTimes="0;0.8;1" dur="0.75s" begin="indefinite" fill="freeze"/></circle></g><g class="el-state" data-s="0" transform="translate(40 170)"><circle class="el-ring" r="18"/><text class="el-num">0</text></g><g class="el-state" data-s="1" transform="translate(155 170)"><circle class="el-ring" r="18"/><text class="el-num">1</text></g><g class="el-state" data-s="2" transform="translate(270 170)"><circle class="el-ring" r="18"/><text class="el-num">2</text></g><g class="el-state" data-s="3" transform="translate(385 105)"><circle class="el-ring" r="18"/><text class="el-num">3</text></g><g class="el-state" data-s="4" transform="translate(385 235)"><circle class="el-ring" r="18"/><text class="el-num">4</text></g><g class="el-state" data-s="5" transform="translate(500 170)"><circle class="el-ring" r="18"/><text class="el-num">5</text></g><g class="el-state" data-s="6" transform="translate(640 170)"><circle class="el-ring" r="18"/><text class="el-num">6</text></g><g class="el-state" data-s="7" transform="translate(770 170)"><circle class="el-accept" r="22.5"/><circle class="el-ring" r="18"/><text class="el-num">7</text></g><text class="el-title" x="0" y="378">input</text><g class="el-ch" data-p="0" transform="translate(0 390)"><rect width="36" height="36" rx="5"/><text x="18" y="18">a</text></g><g class="el-ch" data-p="1" transform="translate(44 390)"><rect width="36" height="36" rx="5"/><text x="18" y="18">b</text></g><g class="el-ch" data-p="2" transform="translate(88 390)"><rect width="36" height="36" rx="5"/><text x="18" y="18">c</text></g><g class="el-ch" data-p="3" transform="translate(132 390)"><rect width="36" height="36" rx="5"/><text x="18" y="18">b</text></g><g class="el-ch" data-p="4" transform="translate(176 390)"><rect width="36" height="36" rx="5"/><text x="18" y="18">d</text></g><text class="el-title" x="0" y="454">states the NFA is in</text><text class="el-sname" x="0" y="480">S</text><text class="el-set" x="18" y="480">= {0}</text><g class="el-verdict"><text x="0" y="508">7 ∈ S at the end: match</text></g><g class="el-drop"><text x="0" y="508"></text></g><text class="el-title" x="452" y="366">trace: S at each step</text><text class="el-axis" x="468" y="518" text-anchor="end" dominant-baseline="central">step</text><rect class="el-col" x="470" y="374" width="30" height="150" rx="4" style="transform:translateX(300px)"/><text class="el-gh" data-k="start" x="485" y="384"></text><text class="el-gh" data-k="move" x="515" y="384">a</text><text class="el-gh" data-k="closure" x="545" y="384">ε</text><text class="el-gh" data-k="move" x="575" y="384">b</text><text class="el-gh" data-k="closure" x="605" y="384">ε</text><text class="el-gh" data-k="move" x="635" y="384">c</text><text class="el-gh" data-k="closure" x="665" y="384">ε</text><text class="el-gh" data-k="move" x="695" y="384">b</text><text class="el-gh" data-k="closure" x="725" y="384">ε</text><text class="el-gh" data-k="move" x="755" y="384">d</text><text class="el-gh" data-k="closure" x="785" y="384">ε</text><text class="el-rl" x="460" y="402">0</text><text class="el-rl" x="460" y="416">1</text><text class="el-rl" x="460" y="430">2</text><text class="el-rl" x="460" y="444">3</text><text class="el-rl" x="460" y="458">4</text><text class="el-rl" x="460" y="472">5</text><text class="el-rl" x="460" y="486">6</text><text class="el-rl" x="460" y="500">7</text><rect class="el-cell" data-c="0" data-in x="472" y="397" width="26" height="11" rx="2"/><rect class="el-cell" data-c="0" x="472" y="411" width="26" height="11" rx="2"/><rect class="el-cell" data-c="0" x="472" y="425" width="26" height="11" rx="2"/><rect class="el-cell" data-c="0" x="472" y="439" width="26" height="11" rx="2"/><rect class="el-cell" data-c="0" x="472" y="453" width="26" height="11" rx="2"/><rect class="el-cell" data-c="0" x="472" y="467" width="26" height="11" rx="2"/><rect class="el-cell" data-c="0" x="472" y="481" width="26" height="11" rx="2"/><rect class="el-cell" data-c="0" x="472" y="495" width="26" height="11" rx="2"/><rect class="el-cell" data-c="1" x="502" y="397" width="26" height="11" rx="2"/><rect class="el-cell" data-c="1" data-in x="502" y="411" width="26" height="11" rx="2"/><rect class="el-cell" data-c="1" x="502" y="425" width="26" height="11" rx="2"/><rect class="el-cell" data-c="1" x="502" y="439" width="26" height="11" rx="2"/><rect class="el-cell" data-c="1" x="502" y="453" width="26" height="11" rx="2"/><rect class="el-cell" data-c="1" x="502" y="467" width="26" height="11" rx="2"/><rect class="el-cell" data-c="1" x="502" y="481" width="26" height="11" rx="2"/><rect class="el-cell" data-c="1" x="502" y="495" width="26" height="11" rx="2"/><rect class="el-cell" data-c="2" x="532" y="397" width="26" height="11" rx="2"/><rect class="el-cell" data-c="2" data-in x="532" y="411" width="26" height="11" rx="2"/><rect class="el-cell" data-c="2" data-in x="532" y="425" width="26" height="11" rx="2"/><rect class="el-cell" data-c="2" data-in x="532" y="439" width="26" height="11" rx="2"/><rect class="el-cell" data-c="2" data-in x="532" y="453" width="26" height="11" rx="2"/><rect class="el-cell" data-c="2" x="532" y="467" width="26" height="11" rx="2"/><rect class="el-cell" data-c="2" data-in x="532" y="481" width="26" height="11" rx="2"/><rect class="el-cell" data-c="2" x="532" y="495" width="26" height="11" rx="2"/><rect class="el-cell" data-c="3" x="562" y="397" width="26" height="11" rx="2"/><rect class="el-cell" data-c="3" x="562" y="411" width="26" height="11" rx="2"/><rect class="el-cell" data-c="3" x="562" y="425" width="26" height="11" rx="2"/><rect class="el-cell" data-c="3" x="562" y="439" width="26" height="11" rx="2"/><rect class="el-cell" data-c="3" x="562" y="453" width="26" height="11" rx="2"/><rect class="el-cell" data-c="3" data-in x="562" y="467" width="26" height="11" rx="2"/><rect class="el-cell" data-c="3" x="562" y="481" width="26" height="11" rx="2"/><rect class="el-cell" data-c="3" x="562" y="495" width="26" height="11" rx="2"/><rect class="el-cell" data-c="4" x="592" y="397" width="26" height="11" rx="2"/><rect class="el-cell" data-c="4" data-in x="592" y="411" width="26" height="11" rx="2"/><rect class="el-cell" data-c="4" data-in x="592" y="425" width="26" height="11" rx="2"/><rect class="el-cell" data-c="4" data-in x="592" y="439" width="26" height="11" rx="2"/><rect class="el-cell" data-c="4" data-in x="592" y="453" width="26" height="11" rx="2"/><rect class="el-cell" data-c="4" data-in x="592" y="467" width="26" height="11" rx="2"/><rect class="el-cell" data-c="4" data-in x="592" y="481" width="26" height="11" rx="2"/><rect class="el-cell" data-c="4" x="592" y="495" width="26" height="11" rx="2"/><rect class="el-cell" data-c="5" x="622" y="397" width="26" height="11" rx="2"/><rect class="el-cell" data-c="5" x="622" y="411" width="26" height="11" rx="2"/><rect class="el-cell" data-c="5" x="622" y="425" width="26" height="11" rx="2"/><rect class="el-cell" data-c="5" x="622" y="439" width="26" height="11" rx="2"/><rect class="el-cell" data-c="5" x="622" y="453" width="26" height="11" rx="2"/><rect class="el-cell" data-c="5" data-in x="622" y="467" width="26" height="11" rx="2"/><rect class="el-cell" data-c="5" x="622" y="481" width="26" height="11" rx="2"/><rect class="el-cell" data-c="5" x="622" y="495" width="26" height="11" rx="2"/><rect class="el-cell" data-c="6" x="652" y="397" width="26" height="11" rx="2"/><rect class="el-cell" data-c="6" data-in x="652" y="411" width="26" height="11" rx="2"/><rect class="el-cell" data-c="6" data-in x="652" y="425" width="26" height="11" rx="2"/><rect class="el-cell" data-c="6" data-in x="652" y="439" width="26" height="11" rx="2"/><rect class="el-cell" data-c="6" data-in x="652" y="453" width="26" height="11" rx="2"/><rect class="el-cell" data-c="6" data-in x="652" y="467" width="26" height="11" rx="2"/><rect class="el-cell" data-c="6" data-in x="652" y="481" width="26" height="11" rx="2"/><rect class="el-cell" data-c="6" x="652" y="495" width="26" height="11" rx="2"/><rect class="el-cell" data-c="7" x="682" y="397" width="26" height="11" rx="2"/><rect class="el-cell" data-c="7" x="682" y="411" width="26" height="11" rx="2"/><rect class="el-cell" data-c="7" x="682" y="425" width="26" height="11" rx="2"/><rect class="el-cell" data-c="7" x="682" y="439" width="26" height="11" rx="2"/><rect class="el-cell" data-c="7" x="682" y="453" width="26" height="11" rx="2"/><rect class="el-cell" data-c="7" data-in x="682" y="467" width="26" height="11" rx="2"/><rect class="el-cell" data-c="7" x="682" y="481" width="26" height="11" rx="2"/><rect class="el-cell" data-c="7" x="682" y="495" width="26" height="11" rx="2"/><rect class="el-cell" data-c="8" x="712" y="397" width="26" height="11" rx="2"/><rect class="el-cell" data-c="8" data-in x="712" y="411" width="26" height="11" rx="2"/><rect class="el-cell" data-c="8" data-in x="712" y="425" width="26" height="11" rx="2"/><rect class="el-cell" data-c="8" data-in x="712" y="439" width="26" height="11" rx="2"/><rect class="el-cell" data-c="8" data-in x="712" y="453" width="26" height="11" rx="2"/><rect class="el-cell" data-c="8" data-in x="712" y="467" width="26" height="11" rx="2"/><rect class="el-cell" data-c="8" data-in x="712" y="481" width="26" height="11" rx="2"/><rect class="el-cell" data-c="8" x="712" y="495" width="26" height="11" rx="2"/><rect class="el-cell" data-c="9" x="742" y="397" width="26" height="11" rx="2"/><rect class="el-cell" data-c="9" x="742" y="411" width="26" height="11" rx="2"/><rect class="el-cell" data-c="9" x="742" y="425" width="26" height="11" rx="2"/><rect class="el-cell" data-c="9" x="742" y="439" width="26" height="11" rx="2"/><rect class="el-cell" data-c="9" x="742" y="453" width="26" height="11" rx="2"/><rect class="el-cell" data-c="9" x="742" y="467" width="26" height="11" rx="2"/><rect class="el-cell" data-c="9" x="742" y="481" width="26" height="11" rx="2"/><rect class="el-cell" data-c="9" data-in x="742" y="495" width="26" height="11" rx="2"/><rect class="el-cell" data-c="10" x="772" y="397" width="26" height="11" rx="2"/><rect class="el-cell" data-c="10" x="772" y="411" width="26" height="11" rx="2"/><rect class="el-cell" data-c="10" x="772" y="425" width="26" height="11" rx="2"/><rect class="el-cell" data-c="10" x="772" y="439" width="26" height="11" rx="2"/><rect class="el-cell" data-c="10" x="772" y="453" width="26" height="11" rx="2"/><rect class="el-cell" data-c="10" x="772" y="467" width="26" height="11" rx="2"/><rect class="el-cell" data-c="10" x="772" y="481" width="26" height="11" rx="2"/><rect class="el-cell" data-c="10" data-in x="772" y="495" width="26" height="11" rx="2"/><text class="el-gf" x="485" y="518">0</text><text class="el-gf" x="515" y="518">1</text><text class="el-gf" x="545" y="518">2</text><text class="el-gf" x="575" y="518">3</text><text class="el-gf" x="605" y="518">4</text><text class="el-gf" x="635" y="518">5</text><text class="el-gf" x="665" y="518">6</text><text class="el-gf" x="695" y="518">7</text><text class="el-gf" x="725" y="518">8</text><text class="el-gf" x="755" y="518">9</text><text class="el-gf" x="785" y="518">10</text></g><g class="el-narrow"><g class="el-edge" data-e="e01"><path class="el-line" d="M200 58Q200 80 200 94"/><path class="el-head" d="M200 101L204 94L196 94Z"/><text class="el-elabel" x="214" y="80">a</text><circle class="el-tok" r="4.5" opacity="0"><animateMotion dur="0.75s" begin="indefinite" fill="freeze" path="M200 58Q200 80 200 101"/><animate attributeName="opacity" values="1;1;0" keyTimes="0;0.8;1" dur="0.75s" begin="indefinite" fill="freeze"/></circle></g><g class="el-edge" data-e="e12" data-eps><path class="el-line" d="M200 138Q200 165 200 184"/><path class="el-head" d="M200 191L204 184L196 184Z"/><text class="el-elabel" x="214" y="165">ε</text><circle class="el-tok" r="4.5" opacity="0"><animateMotion dur="0.75s" begin="indefinite" fill="freeze" path="M200 138Q200 165 200 191"/><animate attributeName="opacity" values="1;1;0" keyTimes="0;0.8;1" dur="0.75s" begin="indefinite" fill="freeze"/></circle></g><g class="el-edge" data-e="e16" data-eps><path class="el-line" d="M215.4 129.3Q490 295 222.3 456.6"/><path class="el-head" d="M216.3 460.2L224.3 460L220.2 453.1Z"/><text class="el-elabel" x="360.9" y="294.9" text-anchor="start">ε</text><text class="el-note" x="360.9" y="310.9" text-anchor="start">leave loop</text><circle class="el-tok" r="4.5" opacity="0"><animateMotion dur="0.75s" begin="indefinite" fill="freeze" path="M215.4 129.3Q490 295 216.3 460.2"/><animate attributeName="opacity" values="1;1;0" keyTimes="0;0.8;1" dur="0.75s" begin="indefinite" fill="freeze"/></circle></g><g class="el-edge" data-e="e23" data-eps><path class="el-line" d="M188.6 223.9Q165 252.5 146.5 274.9"/><path class="el-head" d="M142.1 280.3L149.6 277.5L143.4 272.4Z"/><text class="el-elabel" x="150" y="244">ε</text><circle class="el-tok" r="4.5" opacity="0"><animateMotion dur="0.75s" begin="indefinite" fill="freeze" path="M188.6 223.9Q165 252.5 142.1 280.3"/><animate attributeName="opacity" values="1;1;0" keyTimes="0;0.8;1" dur="0.75s" begin="indefinite" fill="freeze"/></circle></g><g class="el-edge" data-e="e24" data-eps><path class="el-line" d="M211.4 223.9Q235 252.5 253.5 274.9"/><path class="el-head" d="M257.9 280.3L256.6 272.4L250.4 277.5Z"/><text class="el-elabel" x="250" y="244">ε</text><circle class="el-tok" r="4.5" opacity="0"><animateMotion dur="0.75s" begin="indefinite" fill="freeze" path="M211.4 223.9Q235 252.5 257.9 280.3"/><animate attributeName="opacity" values="1;1;0" keyTimes="0;0.8;1" dur="0.75s" begin="indefinite" fill="freeze"/></circle></g><g class="el-edge" data-e="e35"><path class="el-line" d="M141.4 308.9Q165 337.5 183.5 359.9"/><path class="el-head" d="M187.9 365.3L186.6 357.4L180.4 362.5Z"/><text class="el-elabel" x="150" y="346">b</text><circle class="el-tok" r="4.5" opacity="0"><animateMotion dur="0.75s" begin="indefinite" fill="freeze" path="M141.4 308.9Q165 337.5 187.9 365.3"/><animate attributeName="opacity" values="1;1;0" keyTimes="0;0.8;1" dur="0.75s" begin="indefinite" fill="freeze"/></circle></g><g class="el-edge" data-e="e45"><path class="el-line" d="M258.6 308.9Q235 337.5 216.5 359.9"/><path class="el-head" d="M212.1 365.3L219.6 362.5L213.4 357.4Z"/><text class="el-elabel" x="250" y="346">c</text><circle class="el-tok" r="4.5" opacity="0"><animateMotion dur="0.75s" begin="indefinite" fill="freeze" path="M258.6 308.9Q235 337.5 212.1 365.3"/><animate attributeName="opacity" values="1;1;0" keyTimes="0;0.8;1" dur="0.75s" begin="indefinite" fill="freeze"/></circle></g><g class="el-edge" data-e="e51" data-eps><path class="el-line" d="M183.4 373Q-110 250 176 130.1"/><path class="el-head" d="M182.5 127.3L174.5 126.4L177.6 133.7Z"/><text class="el-elabel" x="52.5" y="250.1" text-anchor="start">ε</text><text class="el-note" x="52.5" y="266.1" text-anchor="start">loop back</text><circle class="el-tok" r="4.5" opacity="0"><animateMotion dur="0.75s" begin="indefinite" fill="freeze" path="M183.4 373Q-110 250 182.5 127.3"/><animate attributeName="opacity" values="1;1;0" keyTimes="0;0.8;1" dur="0.75s" begin="indefinite" fill="freeze"/></circle></g><g class="el-edge" data-e="e67"><path class="el-line" d="M200 488Q200 515 200 534"/><path class="el-head" d="M200 541L204 534L196 534Z"/><text class="el-elabel" x="214" y="515">d</text><circle class="el-tok" r="4.5" opacity="0"><animateMotion dur="0.75s" begin="indefinite" fill="freeze" path="M200 488Q200 515 200 541"/><animate attributeName="opacity" values="1;1;0" keyTimes="0;0.8;1" dur="0.75s" begin="indefinite" fill="freeze"/></circle></g><g class="el-state" data-s="0" transform="translate(200 40)"><circle class="el-ring" r="18"/><text class="el-num">0</text></g><g class="el-state" data-s="1" transform="translate(200 120)"><circle class="el-ring" r="18"/><text class="el-num">1</text></g><g class="el-state" data-s="2" transform="translate(200 210)"><circle class="el-ring" r="18"/><text class="el-num">2</text></g><g class="el-state" data-s="3" transform="translate(130 295)"><circle class="el-ring" r="18"/><text class="el-num">3</text></g><g class="el-state" data-s="4" transform="translate(270 295)"><circle class="el-ring" r="18"/><text class="el-num">4</text></g><g class="el-state" data-s="5" transform="translate(200 380)"><circle class="el-ring" r="18"/><text class="el-num">5</text></g><g class="el-state" data-s="6" transform="translate(200 470)"><circle class="el-ring" r="18"/><text class="el-num">6</text></g><g class="el-state" data-s="7" transform="translate(200 560)"><circle class="el-accept" r="22.5"/><circle class="el-ring" r="18"/><text class="el-num">7</text></g><text class="el-title" x="40" y="608">input</text><g class="el-ch" data-p="0" transform="translate(40 620)"><rect width="36" height="36" rx="5"/><text x="18" y="18">a</text></g><g class="el-ch" data-p="1" transform="translate(84 620)"><rect width="36" height="36" rx="5"/><text x="18" y="18">b</text></g><g class="el-ch" data-p="2" transform="translate(128 620)"><rect width="36" height="36" rx="5"/><text x="18" y="18">c</text></g><g class="el-ch" data-p="3" transform="translate(172 620)"><rect width="36" height="36" rx="5"/><text x="18" y="18">b</text></g><g class="el-ch" data-p="4" transform="translate(216 620)"><rect width="36" height="36" rx="5"/><text x="18" y="18">d</text></g><text class="el-title" x="40" y="674">states the NFA is in</text><text class="el-sname" x="40" y="700">S</text><text class="el-set" x="58" y="700">= {0}</text><g class="el-verdict"><text x="40" y="728">7 ∈ S at the end: match</text></g><g class="el-drop"><text x="40" y="728"></text></g><text class="el-title" x="42" y="776">trace: S at each step</text><text class="el-axis" x="58" y="928" text-anchor="end" dominant-baseline="central">step</text><rect class="el-col" x="60" y="784" width="30" height="150" rx="4" style="transform:translateX(300px)"/><text class="el-gh" data-k="start" x="75" y="794"></text><text class="el-gh" data-k="move" x="105" y="794">a</text><text class="el-gh" data-k="closure" x="135" y="794">ε</text><text class="el-gh" data-k="move" x="165" y="794">b</text><text class="el-gh" data-k="closure" x="195" y="794">ε</text><text class="el-gh" data-k="move" x="225" y="794">c</text><text class="el-gh" data-k="closure" x="255" y="794">ε</text><text class="el-gh" data-k="move" x="285" y="794">b</text><text class="el-gh" data-k="closure" x="315" y="794">ε</text><text class="el-gh" data-k="move" x="345" y="794">d</text><text class="el-gh" data-k="closure" x="375" y="794">ε</text><text class="el-rl" x="50" y="812">0</text><text class="el-rl" x="50" y="826">1</text><text class="el-rl" x="50" y="840">2</text><text class="el-rl" x="50" y="854">3</text><text class="el-rl" x="50" y="868">4</text><text class="el-rl" x="50" y="882">5</text><text class="el-rl" x="50" y="896">6</text><text class="el-rl" x="50" y="910">7</text><rect class="el-cell" data-c="0" data-in x="62" y="807" width="26" height="11" rx="2"/><rect class="el-cell" data-c="0" x="62" y="821" width="26" height="11" rx="2"/><rect class="el-cell" data-c="0" x="62" y="835" width="26" height="11" rx="2"/><rect class="el-cell" data-c="0" x="62" y="849" width="26" height="11" rx="2"/><rect class="el-cell" data-c="0" x="62" y="863" width="26" height="11" rx="2"/><rect class="el-cell" data-c="0" x="62" y="877" width="26" height="11" rx="2"/><rect class="el-cell" data-c="0" x="62" y="891" width="26" height="11" rx="2"/><rect class="el-cell" data-c="0" x="62" y="905" width="26" height="11" rx="2"/><rect class="el-cell" data-c="1" x="92" y="807" width="26" height="11" rx="2"/><rect class="el-cell" data-c="1" data-in x="92" y="821" width="26" height="11" rx="2"/><rect class="el-cell" data-c="1" x="92" y="835" width="26" height="11" rx="2"/><rect class="el-cell" data-c="1" x="92" y="849" width="26" height="11" rx="2"/><rect class="el-cell" data-c="1" x="92" y="863" width="26" height="11" rx="2"/><rect class="el-cell" data-c="1" x="92" y="877" width="26" height="11" rx="2"/><rect class="el-cell" data-c="1" x="92" y="891" width="26" height="11" rx="2"/><rect class="el-cell" data-c="1" x="92" y="905" width="26" height="11" rx="2"/><rect class="el-cell" data-c="2" x="122" y="807" width="26" height="11" rx="2"/><rect class="el-cell" data-c="2" data-in x="122" y="821" width="26" height="11" rx="2"/><rect class="el-cell" data-c="2" data-in x="122" y="835" width="26" height="11" rx="2"/><rect class="el-cell" data-c="2" data-in x="122" y="849" width="26" height="11" rx="2"/><rect class="el-cell" data-c="2" data-in x="122" y="863" width="26" height="11" rx="2"/><rect class="el-cell" data-c="2" x="122" y="877" width="26" height="11" rx="2"/><rect class="el-cell" data-c="2" data-in x="122" y="891" width="26" height="11" rx="2"/><rect class="el-cell" data-c="2" x="122" y="905" width="26" height="11" rx="2"/><rect class="el-cell" data-c="3" x="152" y="807" width="26" height="11" rx="2"/><rect class="el-cell" data-c="3" x="152" y="821" width="26" height="11" rx="2"/><rect class="el-cell" data-c="3" x="152" y="835" width="26" height="11" rx="2"/><rect class="el-cell" data-c="3" x="152" y="849" width="26" height="11" rx="2"/><rect class="el-cell" data-c="3" x="152" y="863" width="26" height="11" rx="2"/><rect class="el-cell" data-c="3" data-in x="152" y="877" width="26" height="11" rx="2"/><rect class="el-cell" data-c="3" x="152" y="891" width="26" height="11" rx="2"/><rect class="el-cell" data-c="3" x="152" y="905" width="26" height="11" rx="2"/><rect class="el-cell" data-c="4" x="182" y="807" width="26" height="11" rx="2"/><rect class="el-cell" data-c="4" data-in x="182" y="821" width="26" height="11" rx="2"/><rect class="el-cell" data-c="4" data-in x="182" y="835" width="26" height="11" rx="2"/><rect class="el-cell" data-c="4" data-in x="182" y="849" width="26" height="11" rx="2"/><rect class="el-cell" data-c="4" data-in x="182" y="863" width="26" height="11" rx="2"/><rect class="el-cell" data-c="4" data-in x="182" y="877" width="26" height="11" rx="2"/><rect class="el-cell" data-c="4" data-in x="182" y="891" width="26" height="11" rx="2"/><rect class="el-cell" data-c="4" x="182" y="905" width="26" height="11" rx="2"/><rect class="el-cell" data-c="5" x="212" y="807" width="26" height="11" rx="2"/><rect class="el-cell" data-c="5" x="212" y="821" width="26" height="11" rx="2"/><rect class="el-cell" data-c="5" x="212" y="835" width="26" height="11" rx="2"/><rect class="el-cell" data-c="5" x="212" y="849" width="26" height="11" rx="2"/><rect class="el-cell" data-c="5" x="212" y="863" width="26" height="11" rx="2"/><rect class="el-cell" data-c="5" data-in x="212" y="877" width="26" height="11" rx="2"/><rect class="el-cell" data-c="5" x="212" y="891" width="26" height="11" rx="2"/><rect class="el-cell" data-c="5" x="212" y="905" width="26" height="11" rx="2"/><rect class="el-cell" data-c="6" x="242" y="807" width="26" height="11" rx="2"/><rect class="el-cell" data-c="6" data-in x="242" y="821" width="26" height="11" rx="2"/><rect class="el-cell" data-c="6" data-in x="242" y="835" width="26" height="11" rx="2"/><rect class="el-cell" data-c="6" data-in x="242" y="849" width="26" height="11" rx="2"/><rect class="el-cell" data-c="6" data-in x="242" y="863" width="26" height="11" rx="2"/><rect class="el-cell" data-c="6" data-in x="242" y="877" width="26" height="11" rx="2"/><rect class="el-cell" data-c="6" data-in x="242" y="891" width="26" height="11" rx="2"/><rect class="el-cell" data-c="6" x="242" y="905" width="26" height="11" rx="2"/><rect class="el-cell" data-c="7" x="272" y="807" width="26" height="11" rx="2"/><rect class="el-cell" data-c="7" x="272" y="821" width="26" height="11" rx="2"/><rect class="el-cell" data-c="7" x="272" y="835" width="26" height="11" rx="2"/><rect class="el-cell" data-c="7" x="272" y="849" width="26" height="11" rx="2"/><rect class="el-cell" data-c="7" x="272" y="863" width="26" height="11" rx="2"/><rect class="el-cell" data-c="7" data-in x="272" y="877" width="26" height="11" rx="2"/><rect class="el-cell" data-c="7" x="272" y="891" width="26" height="11" rx="2"/><rect class="el-cell" data-c="7" x="272" y="905" width="26" height="11" rx="2"/><rect class="el-cell" data-c="8" x="302" y="807" width="26" height="11" rx="2"/><rect class="el-cell" data-c="8" data-in x="302" y="821" width="26" height="11" rx="2"/><rect class="el-cell" data-c="8" data-in x="302" y="835" width="26" height="11" rx="2"/><rect class="el-cell" data-c="8" data-in x="302" y="849" width="26" height="11" rx="2"/><rect class="el-cell" data-c="8" data-in x="302" y="863" width="26" height="11" rx="2"/><rect class="el-cell" data-c="8" data-in x="302" y="877" width="26" height="11" rx="2"/><rect class="el-cell" data-c="8" data-in x="302" y="891" width="26" height="11" rx="2"/><rect class="el-cell" data-c="8" x="302" y="905" width="26" height="11" rx="2"/><rect class="el-cell" data-c="9" x="332" y="807" width="26" height="11" rx="2"/><rect class="el-cell" data-c="9" x="332" y="821" width="26" height="11" rx="2"/><rect class="el-cell" data-c="9" x="332" y="835" width="26" height="11" rx="2"/><rect class="el-cell" data-c="9" x="332" y="849" width="26" height="11" rx="2"/><rect class="el-cell" data-c="9" x="332" y="863" width="26" height="11" rx="2"/><rect class="el-cell" data-c="9" x="332" y="877" width="26" height="11" rx="2"/><rect class="el-cell" data-c="9" x="332" y="891" width="26" height="11" rx="2"/><rect class="el-cell" data-c="9" data-in x="332" y="905" width="26" height="11" rx="2"/><rect class="el-cell" data-c="10" x="362" y="807" width="26" height="11" rx="2"/><rect class="el-cell" data-c="10" x="362" y="821" width="26" height="11" rx="2"/><rect class="el-cell" data-c="10" x="362" y="835" width="26" height="11" rx="2"/><rect class="el-cell" data-c="10" x="362" y="849" width="26" height="11" rx="2"/><rect class="el-cell" data-c="10" x="362" y="863" width="26" height="11" rx="2"/><rect class="el-cell" data-c="10" x="362" y="877" width="26" height="11" rx="2"/><rect class="el-cell" data-c="10" x="362" y="891" width="26" height="11" rx="2"/><rect class="el-cell" data-c="10" data-in x="362" y="905" width="26" height="11" rx="2"/><text class="el-gf" x="75" y="928">0</text><text class="el-gf" x="105" y="928">1</text><text class="el-gf" x="135" y="928">2</text><text class="el-gf" x="165" y="928">3</text><text class="el-gf" x="195" y="928">4</text><text class="el-gf" x="225" y="928">5</text><text class="el-gf" x="255" y="928">6</text><text class="el-gf" x="285" y="928">7</text><text class="el-gf" x="315" y="928">8</text><text class="el-gf" x="345" y="928">9</text><text class="el-gf" x="375" y="928">10</text></g></svg><div class="u-controls"><div class="u-time" data-label="step"><button type="button" data-step="-1" aria-label="Previous step">‹</button><input type="range" min="0" max="10" value="0" aria-label="step"><button type="button" data-step="1" aria-label="Next step">›</button><output>step 0 / 10</output></div></div><div class="u-say" aria-live="polite"><p class="u-at" data-at="0">An NFA can be in several states at once, so it keeps a <b data-hue="blue">set S</b>. It reads <b>abcbd</b> and matches if <b data-hue="green">accept state 7</b> is in S at the end.</p><p class="u-at" data-at="1">Each piece of the regex becomes a piece of the graph. The star adds two <b data-hue="purple">ε edges</b>, which move without reading input.</p><p class="u-at" data-at="2">A state can only follow an edge that carries the <b data-hue="yellow">symbol read</b>. The machine checks every state in S, not one path.</p><p class="u-at" data-at="3">Next the machine follows every <b data-hue="purple">ε edge</b> it can reach, because they read no input. This step, the ε-closure, puts it in five states at once.</p><p class="u-at" data-at="4">States without an edge for the symbol <b data-hue="red">drop out</b>. The ε edge from 5 back to 1 then puts the loop states back into S.</p><p class="u-at" data-at="5">Only state 6 can read d, so S becomes {7}. The input ends with <b data-hue="green">accept state 7</b> in S, so the regex matches.</p></div><nav class="u-steps" aria-label="Scenes"><button type="button" data-go="0" aria-current="step"><span>1</span>Overview</button><button type="button" data-go="1"><span>2</span>Build</button><button type="button" data-go="2"><span>3</span>Read a</button><button type="button" data-go="3"><span>4</span>ε-closure</button><button type="button" data-go="4"><span>5</span>Loop</button><button type="button" data-go="5"><span>6</span>Accept</button></nav><div class="u-key"><span data-hue="blue"><i></i>in S (active state)</span><span data-hue="yellow"><i></i>symbol read</span><span data-hue="purple"><i></i>ε edge (reads no input)</span><span data-hue="red"><i></i>dropped: no edge for the symbol</span><span data-hue="green"><i></i>accept state</span></div></div></div><figcaption class="iso-legend"><span class="iso-caption">The NFA follows Thompson's construction in the compact form with split states. The input abcbd was chosen by hand. Every set comes from a small simulator. It agrees with the JavaScript RegExp engine on all 5,461 strings over a, b, c, d up to length 6.</span></figcaption></figure><section class="u-notes"><h2>Other inputs</h2><p>Each row shows S at the start and after each symbol, with the ε-closure done. The same NFA and the same rule decide every row.</p><table><thead><tr><th>Input</th><th>S after each symbol</th><th>Result</th></tr></thead><tbody><tr><td data-th="Input"><code>ad</code></td><td data-th="S after each symbol"><code>{0} → {1,2,3,4,6} → {7}</code></td><td data-th="Result">match</td></tr><tr><td data-th="Input"><code>abcbd</code></td><td data-th="S after each symbol"><code>{0} → {1,2,3,4,6} → {1,2,3,4,5,6} → {1,2,3,4,5,6} → {1,2,3,4,5,6} → {7}</code></td><td data-th="Result">match</td></tr><tr><td data-th="Input"><code>abcb</code></td><td data-th="S after each symbol"><code>{0} → {1,2,3,4,6} → {1,2,3,4,5,6} → {1,2,3,4,5,6} → {1,2,3,4,5,6}</code></td><td data-th="Result">no match: 7 is not in S at the end</td></tr><tr><td data-th="Input"><code>abdc</code></td><td data-th="S after each symbol"><code>{0} → {1,2,3,4,6} → {1,2,3,4,5,6} → {7} → {}</code></td><td data-th="Result">no match: S is empty, so no state can continue</td></tr></tbody></table><h2>Sets, backtracking and DFAs</h2><p>Real engines use one of three ways to handle the choices in an NFA. For this regex, subset construction gives 4 DFA states plus an empty dead state: <code>{0} {1,2,3,4,6} {1,2,3,4,5,6} {7}</code>.</p><table><thead><tr><th>Approach</th><th>How it handles a choice</th><th>Time for n symbols, m states</th><th>Used by</th></tr></thead><tbody><tr><td data-th="Approach">Set simulation (this figure)</td><td data-th="How it handles a choice">keeps every choice in S at once</td><td data-th="Time for n symbols, m states">O(n·m)</td><td data-th="Used by">RE2, Go regexp, Rust regex (one of its engines)</td></tr><tr><td data-th="Approach">Backtracking</td><td data-th="How it handles a choice">tries one path, and goes back to the last choice if it fails</td><td data-th="Time for n symbols, m states">exponential for some patterns, for example (a*)*b</td><td data-th="Used by">PCRE, Perl, Python re, JavaScript, Java</td></tr><tr><td data-th="Approach">DFA (subset construction)</td><td data-th="How it handles a choice">turns each reachable set into one state before it reads input</td><td data-th="Time for n symbols, m states">O(n), but up to 2<sup>m</sup> states</td><td data-th="Used by">lex and flex; grep and RE2 build DFA states as needed</td></tr></tbody></table><h2>What the figure leaves out</h2><table><thead><tr><th>Left out</th><th>What really happens</th></tr></thead><tbody><tr><td data-th="Left out">Search</td><td data-th="What really happens">The figure checks the whole input. To find a match inside a longer text, the engine adds state 0 to S before each symbol.</td></tr><tr><td data-th="Left out">Capture groups</td><td data-th="What really happens">A Pike VM keeps the start and end of each group next to each state in S. The figure keeps only the states.</td></tr><tr><td data-th="Left out">Backreferences</td><td data-th="What really happens"><code>(a)\1</code> needs to remember text, which no finite set of states can do. Only backtracking engines support it.</td></tr><tr><td data-th="Left out">Order of ε edges</td><td data-th="What really happens">The order does not change match or no match. It only decides which submatch an engine reports.</td></tr></tbody></table><h2>Words used here</h2><table><thead><tr><th>Term</th><th>Meaning</th></tr></thead><tbody><tr><td data-th="Term">NFA</td><td data-th="Meaning">nondeterministic finite automaton: states and edges, can be in many states</td></tr><tr><td data-th="Term">State</td><td data-th="Meaning">a numbered circle. S holds the states the NFA is in now.</td></tr><tr><td data-th="Term">Edge</td><td data-th="Meaning">an arrow between states, labelled with the symbol it reads</td></tr><tr><td data-th="Term">ε edge</td><td data-th="Meaning">an edge that the NFA follows without reading a symbol</td></tr><tr><td data-th="Term">ε-closure</td><td data-th="Meaning">S plus every state reachable from S by ε edges only</td></tr><tr><td data-th="Term">δ(S, x)</td><td data-th="Meaning">the states reached from S by one edge that reads x</td></tr><tr><td data-th="Term">Accept state</td><td data-th="Meaning">a state (double ring) that means match if the input ends there</td></tr></tbody></table></section></main><script type="module">function cellLook(value, max) {
+  const masked = value === -Infinity;
+  const s = masked ? 0 : Math.min(1, Math.abs(value) / max);
+  return { masked, neg: !masked && value < 0, hot: !masked && value > 0 && s > 0.55, alpha: 0.1 + 0.8 * s };
+}
+function fmt(value, places = 1) {
+  if (value === -Infinity) return "−∞";
+  const text = value.toFixed(places);
+  return Number(text) === 0 ? (0).toFixed(places) : text.replace("-", "−");
+}
+function setGrid(grid, values, max = Number(grid.dataset.max)) {
+  const places = Number(grid.dataset.places);
+  grid.querySelectorAll(".u-cell").forEach((cell) => {
+    const value = values[Number(cell.dataset.r)][Number(cell.dataset.c)];
+    const look = cellLook(value, max);
+    cell.toggleAttribute("data-masked", look.masked);
+    cell.toggleAttribute("data-neg", look.neg);
+    cell.toggleAttribute("data-hot", look.hot);
+    cell.querySelector(".u-cell-bg").style.setProperty("--a", look.alpha.toFixed(2));
+    cell.querySelector(".u-num").textContent = fmt(value, places);
+  });
+}
+function showRows(grid, t) {
+  grid.querySelectorAll(".u-cell,.u-mark").forEach((el) => el.toggleAttribute("data-later", Number(el.dataset.r) > t));
+}
+function setBars(group, values) {
+  const h = Number(group.dataset.h);
+  const max = Number(group.dataset.max);
+  const places = Number(group.dataset.places);
+  group.querySelectorAll(".u-bar").forEach((bar) => {
+    const v = values[Number(bar.dataset.i)] ?? 0;
+    const share = Math.max(0, Math.min(1, v / max));
+    bar.style.setProperty("--v", share.toFixed(3));
+    const text = bar.querySelector(".u-bar-value");
+    text.setAttribute("y", String(h - h * share - 6));
+    text.textContent = fmt(v, places);
+  });
+}
+function mark(root, i, selector = ".u-mark") {
+  root.querySelectorAll(`${selector}[data-r],${selector}[data-i]`).forEach((el) => el.toggleAttribute("data-on", Number(el.dataset.r ?? el.dataset.i) === i));
+}
+function showSpans(root, t) {
+  const box = root.querySelector(".u-lanes");
+  const px = Number(box.dataset.px);
+  box.querySelector(".u-now").style.transform = `translateX(${(t - Number(box.dataset.from)) * px}px)`;
+  root.querySelectorAll(".u-span").forEach((el) => {
+    const from = Number(el.dataset.from);
+    const to = Number(el.dataset.to);
+    const v = Math.max(0, Math.min(1, (t - from) / (to - from)));
+    el.style.setProperty("--v", v.toFixed(3));
+    el.toggleAttribute("data-labeled", v * (to - from) * px >= Number(el.dataset.need));
+  });
+}
+function runtime() {
+  const stage = document.querySelector(".u-stage");
+  const count = Number(stage.dataset.count);
+  const dwell = Number(stage.dataset.dwell);
+  const still = matchMedia("(prefers-reduced-motion: reduce)");
+  let scene = 0;
+  let visible = false;
+  let hovering = false;
+  let pausedUntil = 0;
+  let held = false;
+  let next = 0;
+  const beats = [];
+  const go = (i, by = "user") => {
+    scene = Math.max(0, Math.min(count - 1, i));
+    stage.dataset.scene = String(scene);
+    stage.querySelectorAll("[data-go]").forEach((b) => (Number(b.dataset.go) === scene ? b.setAttribute("aria-current", "step") : b.removeAttribute("aria-current")));
+    stage.querySelectorAll("[data-ds]").forEach((el) => {
+      const d = JSON.parse(el.dataset.ds)[scene];
+      el.toggleAttribute("data-off", !d);
+      if (!d) return;
+      if (CSS.supports("d", 'path("M0 0")')) el.style.d = `path("${d}")`;
+      else el.setAttribute("d", d);
+    });
+    stage.dispatchEvent(new CustomEvent("unfold:scene", { detail: { scene, by } }));
+    if (by === "user") pausedUntil = performance.now() + 20000;
+    held = false;
+    next = performance.now() + dwell;
+    for (const b of beats) {
+      b.n = 0;
+      b.at = performance.now() + b.wait - b.ms;
+      if (still.matches && b.scene === scene) b.fn(-1);
+    }
+  };
+  const tour = (now) => {
+    if (visible && !hovering && !still.matches && now > pausedUntil && now > next) go((scene + 1) % count, "tour");
+    for (const b of beats) {
+      if (b.scene === scene && visible && !held && !still.matches && now - b.at >= b.ms) {
+        b.at = now;
+        b.fn(b.n++);
+      }
+    }
+    requestAnimationFrame(tour);
+  };
+  stage.querySelector(".u-steps").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-go]");
+    if (b) go(Number(b.dataset.go));
+  });
+  stage.addEventListener("keydown", (e) => {
+    const to = { ArrowRight: scene + 1, ArrowLeft: scene - 1, Home: 0, End: count - 1 }[e.key];
+    if (to === undefined) return;
+    e.preventDefault();
+    go(to);
+  });
+  // Time by hand: the step control and the "," and "." keys call the page's onTime(t). Its keys stay inside it.
+  const timer = stage.querySelector(".u-time");
+  let onTime = () => {};
+  const range = timer?.querySelector("input");
+  const byHand = (t) => {
+    pause();
+    onTime(Math.max(0, Math.min(Number(range.max), t)));
+  };
+  if (timer) {
+    range.addEventListener("input", () => byHand(Number(range.value)));
+    range.addEventListener("keydown", (e) => e.stopPropagation());
+    timer.addEventListener("click", (e) => {
+      const b = e.target.closest("[data-step]");
+      if (b) byHand(Number(range.value) + Number(b.dataset.step));
+    });
+    stage.addEventListener("keydown", (e) => {
+      const by = { ",": -1, ".": 1 }[e.key];
+      if (by === undefined) return;
+      e.preventDefault();
+      byHand(Number(range.value) + by);
+    });
+  }
+  const timeAt = (t) => {
+    if (!timer) return;
+    range.value = String(t);
+    timer.querySelector("output").textContent = `${timer.dataset.label} ${t} / ${range.max}`;
+  };
+  // Narrow layout: below 560 px the drawing takes its second viewBox and the stage gets data-narrow.
+  const svg = stage.querySelector("svg");
+  const wide = svg?.getAttribute("viewBox");
+  if (stage.dataset.narrowBox)
+    new ResizeObserver(([entry]) => {
+      const on = entry.contentRect.width < 560;
+      if (on === stage.hasAttribute("data-narrow")) return;
+      stage.toggleAttribute("data-narrow", on);
+      svg.setAttribute("viewBox", on ? stage.dataset.narrowBox : wide);
+      stage.dispatchEvent(new CustomEvent("unfold:layout", { detail: { narrow: on } }));
+    }).observe(stage);
+  stage.addEventListener("pointerenter", () => (hovering = true));
+  stage.addEventListener("pointerleave", () => (hovering = false));
+  new IntersectionObserver((entries) => (visible = entries[entries.length - 1].isIntersecting), { rootMargin: "120px 0px" }).observe(stage);
+  next = performance.now() + dwell;
+  requestAnimationFrame(tour);
+  // beat(scene, ms, fn, wait): call fn(0), fn(1), … every ms while that scene shows, starting `wait` ms after it opens.
+  // Under reduced motion fn(-1) is called once instead: show the resting state.
+  const beat = (sceneIndex, ms, fn, wait = 1000) => beats.push({ scene: sceneIndex, ms, fn, wait, n: 0, at: performance.now() + wait - ms });
+  // pause(): the user took control. The tour waits 20 s, and the sweeps hold until the scene changes.
+  const pause = () => {
+    pausedUntil = performance.now() + 20000;
+    held = true;
+  };
+  return { stage, go, beat, pause, scene: () => scene, onTime: (fn) => (onTime = fn), timeAt, narrow: () => stage.hasAttribute("data-narrow") };
+}
+const UNFOLD = runtime();
+
+const STEPS = [{"kind":"start","pos":-1,"set":[0],"edges":[],"died":[],"text":"start · ε-closure({0}) = {0}"},{"kind":"move","sym":"a","pos":0,"set":[1],"edges":["e01"],"died":[],"text":"read a · δ({0}, a) = {1} · edge 0→1 reads a"},{"kind":"closure","sym":"a","pos":0,"set":[1,2,3,4,6],"edges":["e12","e16","e23","e24"],"died":[],"text":"ε-closure({1}) = {1,2,3,4,6} · adds 2, 3, 4, 6"},{"kind":"move","sym":"b","pos":1,"set":[5],"edges":["e35"],"died":[1,2,4,6],"text":"read b · δ({1,2,3,4,6}, b) = {5} · edge 3→5 reads b"},{"kind":"closure","sym":"b","pos":1,"set":[1,2,3,4,5,6],"edges":["e51","e12","e16","e23","e24"],"died":[],"text":"ε-closure({5}) = {1,2,3,4,5,6} · adds 1, 2, 3, 4, 6"},{"kind":"move","sym":"c","pos":2,"set":[5],"edges":["e45"],"died":[1,2,3,6],"text":"read c · δ({1,2,3,4,5,6}, c) = {5} · edge 4→5 reads c"},{"kind":"closure","sym":"c","pos":2,"set":[1,2,3,4,5,6],"edges":["e51","e12","e16","e23","e24"],"died":[],"text":"ε-closure({5}) = {1,2,3,4,5,6} · adds 1, 2, 3, 4, 6"},{"kind":"move","sym":"b","pos":3,"set":[5],"edges":["e35"],"died":[1,2,4,6],"text":"read b · δ({1,2,3,4,5,6}, b) = {5} · edge 3→5 reads b"},{"kind":"closure","sym":"b","pos":3,"set":[1,2,3,4,5,6],"edges":["e51","e12","e16","e23","e24"],"died":[],"text":"ε-closure({5}) = {1,2,3,4,5,6} · adds 1, 2, 3, 4, 6"},{"kind":"move","sym":"d","pos":4,"set":[7],"edges":["e67"],"died":[1,2,3,4,5],"text":"read d · δ({1,2,3,4,5,6}, d) = {7} · edge 6→7 reads d"},{"kind":"closure","sym":"d","pos":4,"set":[7],"edges":[],"died":[],"text":"ε-closure({7}) = {7} · adds nothing · input ends, 7 ∈ S: match"}];
+const RANGES = [[0,10],[0,0],[0,1],[2,2],[3,8],[9,10]];
+const OWNER = [2,2,3,4,4,4,4,4,4,5,5];
+const LAST = 10;
+const MATCH = true;
+const root = UNFOLD.stage;
+const readout = document.querySelector("[data-readout]");
+const still = matchMedia("(prefers-reduced-motion: reduce)");
+const all = (sel) => root.querySelectorAll(sel);
+let step = -1;
+let crossing = false;
+function show(t) {
+  t = Math.max(0, Math.min(LAST, t));
+  const changed = t !== step;
+  step = t;
+  const s = STEPS[t];
+  all(".el-state").forEach((el) => {
+    const k = Number(el.dataset.s);
+    el.toggleAttribute("data-on", s.set.includes(k));
+    el.toggleAttribute("data-died", s.died.includes(k));
+  });
+  all(".el-edge").forEach((el) => {
+    const fire = s.edges.includes(el.dataset.e);
+    el.toggleAttribute("data-fire", fire);
+    if (fire && changed && !still.matches) el.querySelectorAll("animateMotion,animate").forEach((a) => a.beginElement());
+  });
+  all(".el-ch").forEach((el) => {
+    const p = Number(el.dataset.p);
+    el.toggleAttribute("data-done", p < s.pos);
+    el.toggleAttribute("data-cur", p === s.pos);
+  });
+  all(".el-set").forEach((el) => (el.textContent = "= {" + s.set.join(", ") + "}"));
+  all(".el-drop text").forEach((el) => (el.textContent = s.died.length ? "dropped " + s.died.join(", ") + ": no " + s.sym + " edge" : ""));
+  all(".el-verdict").forEach((el) => el.toggleAttribute("data-on", t === LAST && MATCH));
+  all(".el-cell").forEach((el) => el.toggleAttribute("data-later", Number(el.dataset.c) > t));
+  all(".el-col").forEach((el) => (el.style.transform = "translateX(" + t * 30 + "px)"));
+  UNFOLD.timeAt(t);
+  const text = "step " + t + " · " + s.text;
+  if (readout.textContent !== text) readout.textContent = text;
+}
+function stepTo(t) {
+  show(t);
+  const sc = UNFOLD.scene();
+  const [a, b] = RANGES[sc];
+  if (sc > 0 && (step < a || step > b)) {
+    crossing = true;
+    UNFOLD.go(OWNER[step]);
+    crossing = false;
+  }
+  UNFOLD.pause();
+}
+root.addEventListener("unfold:scene", (e) => {
+  if (!crossing) show(RANGES[e.detail.scene][0]);
+});
+RANGES.forEach(([a, b], sc) => UNFOLD.beat(sc, sc === 0 ? 800 : 1300, (n) => show(n < 0 ? b : Math.min(a + n, b)), 700));
+UNFOLD.onTime(stepTo);
+root.addEventListener("keydown", (e) => {
+  const to = { ArrowUp: step - 1, ArrowDown: step + 1 }[e.key];
+  if (to === undefined) return;
+  e.preventDefault();
+  stepTo(to);
+});
+show(still.matches ? LAST : 0);
+</script></body></html>

@@ -1,0 +1,3 @@
+dijkstra	Make an interactive explainer of how Dijkstra's shortest path algorithm works on a small weighted graph, for a CS lecture.
+dns	Explain how a DNS lookup for www.example.com walks from the resolver to the root, TLD and authoritative servers, and how caching changes a second lookup. Interactive, for a networking class.
+fourier	Show how a Fourier series builds a square wave out of sine waves, as an interactive figure for a math blog post.

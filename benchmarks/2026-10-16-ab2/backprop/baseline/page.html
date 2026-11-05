@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Backpropagation, Step by Step</title>
+<style>
+:root{
+  --bg:#f6f5f1; --card:#ffffff; --ink:#1d1f24; --muted:#6b6f78; --line:#d9d7d0; --soft:#efeee9;
+  --fwd:#1f62d6; --fwd-bg:#e6eefc; --grad:#d4570f; --grad-bg:#fcebdf; --param:#6d3fc0; --param-bg:#efe8fb;
+  --target:#1b8a4a; --hot:#f2b705;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#121317; --card:#1b1d22; --ink:#e9e8e4; --muted:#9a9ea8; --line:#34363d; --soft:#24262c;
+    --fwd:#6ea2ff; --fwd-bg:#1c2a45; --grad:#ff8f4d; --grad-bg:#3a2316; --param:#b48dff; --param-bg:#2b2340;
+    --target:#4fd28a; --hot:#f2c94c;
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:1360px;margin:0 auto;padding:20px 16px 40px}
+header h1{margin:0 0 4px;font-size:26px;letter-spacing:-.01em}
+header p{margin:0;color:var(--muted);max-width:900px}
+.legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:10px;font-size:13px;color:var(--muted)}
+.legend span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px;background:currentColor}
+.lf{color:var(--fwd)} .lg{color:var(--grad)} .lp{color:var(--param)} .lt{color:var(--target)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;margin-top:16px}
+.fig{padding:8px 8px 0;overflow-x:auto}
+.fig svg{display:block;width:100%;min-width:820px;height:auto}
+.hint{font-size:12px;color:var(--muted);padding:0 16px 10px}
+.below{display:grid;grid-template-columns:1.25fr 1fr;border-top:1px solid var(--line)}
+.panel{padding:18px 22px;min-width:0}
+.panel+.panel{border-left:1px solid var(--line)}
+.kicker{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+.kicker b{font-weight:700}
+.kicker .ph-f{color:var(--fwd)} .kicker .ph-b{color:var(--grad)} .kicker .ph-c{color:var(--target)}
+h2{margin:4px 0 8px;font-size:21px}
+.text p{margin:0 0 10px}
+.eq{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:14px;background:var(--soft);border-radius:10px;padding:10px 14px;line-height:1.9;overflow-x:auto}
+.eq div{white-space:nowrap}
+.f{color:var(--fwd);font-weight:600} .g{color:var(--grad);font-weight:600} .p{color:var(--param);font-weight:600} .t{color:var(--target);font-weight:600}
+.cm{color:var(--muted)}
+.nav{display:flex;align-items:center;gap:10px;margin-top:14px;flex-wrap:wrap}
+button,select{font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:8px;padding:6px 14px;cursor:pointer}
+button:hover{border-color:var(--muted)}
+button.primary{background:var(--ink);color:var(--card);border-color:var(--ink)}
+button:disabled{opacity:.4;cursor:default}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--fwd);outline-offset:2px}
+.dots{display:flex;gap:5px;flex-wrap:wrap}
+.dots button{width:22px;height:22px;padding:0;border-radius:50%;font-size:11px;color:var(--muted)}
+.dots button.fw{border-color:var(--fwd)} .dots button.bw{border-color:var(--grad)} .dots button.ck{border-color:var(--target)}
+.dots button.on{background:var(--ink);color:var(--card)}
+.ctl h3{margin:0 0 8px;font-size:15px}
+.sl{display:grid;grid-template-columns:92px 1fr 64px;align-items:center;gap:8px;font-size:14px;margin-bottom:4px}
+.sl output{font-family:ui-monospace,Menlo,monospace;text-align:right}
+input[type=range]{width:100%;accent-color:var(--fwd)}
+.trace{margin-top:14px}
+.trace .eq{font-size:13px}
+.train{margin-top:14px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.spark{margin-top:8px}
+.spark svg{width:100%;height:70px;display:block}
+table{line-height:1.35;border-collapse:collapse;width:100%;font-size:13px;font-family:ui-monospace,Menlo,monospace;margin-top:6px}
+th,td{text-align:right;padding:3px 8px;border-bottom:1px solid var(--line)}
+th:first-child,td:first-child{text-align:left}
+th{font-family:system-ui,sans-serif;font-weight:600;color:var(--muted)}
+.ok{color:var(--target)}
+/* svg */
+.node rect{fill:var(--card);stroke:var(--line);stroke-width:1.5}
+.node.hot.fw rect{stroke:var(--fwd);stroke-width:3}
+.node.hot.bw rect{stroke:var(--grad);stroke-width:3}
+.node.hot.ck rect{stroke:var(--target);stroke-width:3}
+.node text{font:13px ui-monospace,SFMono-Regular,Menlo,monospace;fill:var(--ink)}
+.node text.title{font:600 13px system-ui,sans-serif;fill:var(--muted)}
+text.vf{fill:var(--fwd)} text.vg{fill:var(--grad)} text.vp{fill:var(--param)} text.vt{fill:var(--target)}
+text.off{fill:var(--line)}
+.sep{stroke:var(--line)}
+.edge line.base{stroke:var(--line);stroke-width:2.5}
+.edge.hot line.base{stroke:var(--muted)}
+.edge.trace line.base{stroke:var(--hot);stroke-width:4}
+.edge line.flow{stroke-width:3;stroke-dasharray:6 14;opacity:0}
+.edge.hot.fw line.flow{stroke:var(--fwd);opacity:1;animation:flow 0.9s linear infinite}
+.edge.hot.bw line.flow{stroke:var(--grad);opacity:1;animation:flow 0.9s linear infinite reverse}
+@keyframes flow{to{stroke-dashoffset:-40}}
+.edge{cursor:pointer}
+.pill rect{fill:var(--card);stroke:var(--line)}
+.edge:hover .pill rect,.edge.trace .pill rect{stroke:var(--hot);stroke-width:2}
+.pill text{font:12px ui-monospace,SFMono-Regular,Menlo,monospace}
+.arrowhead{fill:var(--line)}
+@media (prefers-reduced-motion: reduce){ .edge line.flow{animation:none!important} }
+@media (max-width:860px){
+  .below{grid-template-columns:1fr}
+  .panel+.panel{border-left:0;border-top:1px solid var(--line)}
+  header h1{font-size:22px}
+  .panel{padding:16px}
+  .eq div{white-space:normal}
+  .eq{line-height:1.6}
+  .eq div+div{margin-top:6px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>Backpropagation, step by step</h1>
+  <p>A network with 2 inputs, 2 sigmoid hidden units and 1 linear output. We compute the loss on one example (forward pass), then send the gradient back through the same graph with the chain rule (backward pass). Every number below is computed live.</p>
+  <div class="legend"><span class="lf">forward value</span><span class="lg">gradient ∂L/∂·</span><span class="lp">parameter</span><span class="lt">target</span></div>
+</header>
+
+<div class="card">
+  <div class="fig"><svg id="net" viewBox="0 35 1100 400" role="img" aria-label="Computation graph of the network"></svg></div>
+  <div class="hint">Click any weight on the graph (or pick one under "Trace a parameter") to see its full chain-rule path.</div>
+  <div class="below">
+    <div class="panel text" aria-live="polite">
+      <div class="kicker" id="kicker"></div>
+      <h2 id="title"></h2>
+      <div id="body"></div>
+      <div class="eq" id="eq"></div>
+      <div class="nav">
+        <button id="prev" aria-label="Previous step">&larr; Back</button>
+        <button id="next" class="primary" aria-label="Next step">Next &rarr;</button>
+        <div class="dots" id="dots"></div>
+      </div>
+    </div>
+    <div class="panel ctl">
+      <h3>Change the example</h3>
+      <div class="sl"><label for="sx1">input x₁</label><input id="sx1" type="range" min="-2" max="2" step="0.1"><output id="ox1"></output></div>
+      <div class="sl"><label for="sx2">input x₂</label><input id="sx2" type="range" min="-2" max="2" step="0.1"><output id="ox2"></output></div>
+      <div class="sl"><label for="sy">target y</label><input id="sy" type="range" min="-1" max="2" step="0.1"><output id="oy"></output></div>
+      <div class="trace">
+        <h3><label for="tsel">Trace a parameter</label></h3>
+        <select id="tsel"></select>
+        <div class="eq" id="teq" style="margin-top:8px"></div>
+      </div>
+      <div class="train">
+        <button id="trainbtn">Take a gradient step</button>
+        <label for="lr" style="font-size:14px">learning rate η</label>
+        <select id="lr"><option selected>0.1</option><option>0.5</option><option>1</option><option>2</option></select>
+        <button id="reset">Reset</button>
+      </div>
+      <div class="spark"><div class="cm" style="font-size:13px" id="sparklabel"></div><svg id="spark" viewBox="0 0 400 70" preserveAspectRatio="none"></svg></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+"use strict";
+// ---------- model ----------
+const sig = z => 1 / (1 + Math.exp(-z));
+const INIT = {w11:0.4, w12:-0.3, w21:0.2, w22:0.6, b1:0.1, b2:-0.1, v1:0.7, v2:-0.5, c:0.2};
+const PARAMS = Object.keys(INIT);
+let p = {...INIT}, x = [1.0, 0.5], y = 1.0, history = [];
+
+function forward(p, x, y){
+  const z = [p.w11*x[0] + p.w12*x[1] + p.b1, p.w21*x[0] + p.w22*x[1] + p.b2];
+  const h = z.map(sig);
+  const yh = p.v1*h[0] + p.v2*h[1] + p.c;
+  return {z, h, yh, L: 0.5*(yh - y)**2};
+}
+function backward(p, x, y, f){
+  const dy = f.yh - y;
+  const dh = [dy*p.v1, dy*p.v2];
+  const dz = [dh[0]*f.h[0]*(1-f.h[0]), dh[1]*f.h[1]*(1-f.h[1])];
+  return {dy, dh, dz, w11:dz[0]*x[0], w12:dz[0]*x[1], w21:dz[1]*x[0], w22:dz[1]*x[1],
+          b1:dz[0], b2:dz[1], v1:dy*f.h[0], v2:dy*f.h[1], c:dy};
+}
+function numeric(p, x, y, k){
+  const e = 1e-5, a = {...p}, b = {...p};
+  a[k] += e; b[k] -= e;
+  return (forward(a,x,y).L - forward(b,x,y).L) / (2*e);
+}
+// self-check: backprop must match finite differences on random inputs
+(function(){
+  for (let t = 0; t < 50; t++){
+    const q = {}; PARAMS.forEach(k => q[k] = Math.random()*4 - 2);
+    const xx = [Math.random()*4-2, Math.random()*4-2], yy = Math.random()*3-1;
+    const g = backward(q, xx, yy, forward(q, xx, yy));
+    PARAMS.forEach(k => console.assert(Math.abs(g[k] - numeric(q, xx, yy, k)) < 1e-6, "grad mismatch " + k));
+  }
+})();
+
+// ---------- formatting ----------
+const fmt = v => (v < 0 ? "−" : "") + (v !== 0 && Math.abs(v) < 5e-5 ? Math.abs(v).toExponential(1) : Math.abs(v).toFixed(4));
+const par = v => v < 0 ? "(" + fmt(v) + ")" : fmt(v);
+const sp = (cls, s) => `<span class="${cls}">${s}</span>`;
+const F = v => sp("f", fmt(v)), G = v => sp("g", fmt(v)), P = v => sp("p", fmt(v));
+const Fp = v => sp("f", par(v)), Gp = v => sp("g", par(v)), Pp = v => sp("p", par(v));
+const SUB = {"1":"₁","2":"₂"};
+const pname = k => k === "c" ? "c" : k[0] + [...k.slice(1)].map(d => SUB[d]).join("");
+
+// ---------- steps ----------
+// each value in the graph appears at a step; reveal[key] = first step where it is shown
+const reveal = {z:1, h:2, yh:3, L:4, dy:5, dL:5, dv:6, dc:6, dh:7, dz:8, dw:9, db:9};
+const steps = [
+  {ph:"c", t:"The network and its 9 parameters", nodes:[], edges:[],
+   b:`<p>The loss L depends on 9 parameters: 4 weights w into the hidden layer, 2 hidden biases b, 2 weights v into the output and the output bias c. Training needs ∂L/∂θ for every one of them.</p><p>Backpropagation gets all 9 from <b>one forward pass and one backward pass</b>.</p>`,
+   eq:() => `<div>z<sub>j</sub> = w<sub>j1</sub>x₁ + w<sub>j2</sub>x₂ + b<sub>j</sub> <span class="cm">pre-activation</span></div>
+     <div>h<sub>j</sub> = σ(z<sub>j</sub>) = 1 / (1 + e<sup>−z<sub>j</sub></sup>)</div>
+     <div>ŷ = v₁h₁ + v₂h₂ + c</div><div>L = ½(ŷ − ${sp("t","y")})²</div>`},
+  {ph:"f", t:"Forward 1: weighted sums", nodes:["x1","x2","h1","h2"], edges:["w11","w12","w21","w22"],
+   b:`<p>Each hidden unit adds up its inputs times their weights, plus its bias.</p>`,
+   eq:S => `<div>z₁ = w₁₁x₁ + w₁₂x₂ + b₁ = ${Pp(p.w11)}·${Fp(x[0])} + ${Pp(p.w12)}·${Fp(x[1])} + ${Pp(p.b1)} = ${F(S.f.z[0])}</div>
+     <div>z₂ = w₂₁x₁ + w₂₂x₂ + b₂ = ${Pp(p.w21)}·${Fp(x[0])} + ${Pp(p.w22)}·${Fp(x[1])} + ${Pp(p.b2)} = ${F(S.f.z[1])}</div>`},
+  {ph:"f", t:"Forward 2: sigmoid", nodes:["h1","h2"], edges:[],
+   b:`<p>The sigmoid squashes each sum into (0, 1). Keep h: the backward pass needs it again.</p>`,
+   eq:S => `<div>h₁ = σ(z₁) = 1 / (1 + e<sup>−${par(S.f.z[0])}</sup>) = ${F(S.f.h[0])}</div>
+     <div>h₂ = σ(z₂) = 1 / (1 + e<sup>−${par(S.f.z[1])}</sup>) = ${F(S.f.h[1])}</div>`},
+  {ph:"f", t:"Forward 3: output", nodes:["h1","h2","out"], edges:["v1","v2"],
+   b:`<p>The output unit is linear: a weighted sum of the hidden activations plus c.</p>`,
+   eq:S => `<div>ŷ = v₁h₁ + v₂h₂ + c = ${Pp(p.v1)}·${F(S.f.h[0])} + ${Pp(p.v2)}·${F(S.f.h[1])} + ${Pp(p.c)} = ${F(S.f.yh)}</div>`},
+  {ph:"f", t:"Forward 4: loss", nodes:["out","loss"], edges:["out"],
+   b:`<p>Squared error against the target. The forward pass is done, and every intermediate value is stored.</p>`,
+   eq:S => `<div>L = ½(ŷ − y)² = ½(${F(S.f.yh)} − ${sp("t",fmt(y))})² = ${F(S.f.L)}</div>`},
+  {ph:"b", t:"Backward 1: start at the loss", nodes:["loss","out"], edges:["out"],
+   b:`<p>Start with ∂L/∂L = 1. Each node then multiplies the gradient it receives by its own <b>local derivative</b> and passes the result back.</p><p>Here the local derivative of ½(ŷ − y)² is (ŷ − y).</p>`,
+   eq:S => `<div>∂L/∂ŷ = ∂L/∂L · (ŷ − y) = 1 · (${F(S.f.yh)} − ${sp("t",fmt(y))}) = ${G(S.g.dy)}</div>`},
+  {ph:"b", t:"Backward 2: output-layer parameters", nodes:["out","h1","h2"], edges:["v1","v2"],
+   b:`<p>ŷ = v₁h₁ + v₂h₂ + c, so ∂ŷ/∂v<sub>j</sub> = h<sub>j</sub> and ∂ŷ/∂c = 1. Multiply by the incoming gradient ∂L/∂ŷ.</p>`,
+   eq:S => `<div>∂L/∂v₁ = ∂L/∂ŷ · h₁ = ${Gp(S.g.dy)}·${F(S.f.h[0])} = ${G(S.g.v1)}</div>
+     <div>∂L/∂v₂ = ∂L/∂ŷ · h₂ = ${Gp(S.g.dy)}·${F(S.f.h[1])} = ${G(S.g.v2)}</div>
+     <div>∂L/∂c &nbsp;= ∂L/∂ŷ · 1 &nbsp;= ${G(S.g.c)}</div>`},
+  {ph:"b", t:"Backward 3: into the hidden units", nodes:["out","h1","h2"], edges:["v1","v2"],
+   b:`<p>∂ŷ/∂h<sub>j</sub> = v<sub>j</sub>. The gradient flows back along each edge and is scaled by that edge's <b>weight</b>, not by the weight's gradient.</p>`,
+   eq:S => `<div>∂L/∂h₁ = ∂L/∂ŷ · v₁ = ${Gp(S.g.dy)}·${Pp(p.v1)} = ${G(S.g.dh[0])}</div>
+     <div>∂L/∂h₂ = ∂L/∂ŷ · v₂ = ${Gp(S.g.dy)}·${Pp(p.v2)} = ${G(S.g.dh[1])}</div>`},
+  {ph:"b", t:"Backward 4: through the sigmoid", nodes:["h1","h2"], edges:[],
+   b:`<p>The sigmoid has a cheap derivative: σ′(z) = σ(z)(1 − σ(z)) = h(1 − h). It reuses the stored h, so there is no new exponential.</p><p>σ′ is at most 0.25, so each sigmoid layer shrinks the gradient. In deep networks this causes vanishing gradients.</p>`,
+   eq:S => `<div>∂L/∂z₁ = ∂L/∂h₁ · h₁(1 − h₁) = ${Gp(S.g.dh[0])}·${F(S.f.h[0])}·${F(1-S.f.h[0])} = ${G(S.g.dz[0])}</div>
+     <div>∂L/∂z₂ = ∂L/∂h₂ · h₂(1 − h₂) = ${Gp(S.g.dh[1])}·${F(S.f.h[1])}·${F(1-S.f.h[1])} = ${G(S.g.dz[1])}</div>`},
+  {ph:"b", t:"Backward 5: first-layer parameters", nodes:["h1","h2","x1","x2"], edges:["w11","w12","w21","w22"],
+   b:`<p>z<sub>j</sub> = w<sub>j1</sub>x₁ + w<sub>j2</sub>x₂ + b<sub>j</sub>, so ∂z<sub>j</sub>/∂w<sub>ji</sub> = x<sub>i</sub>. Each weight's gradient is (gradient at its output end) × (value at its input end). In matrix form, ∂L/∂W = δ xᵀ with δ = ∂L/∂z.</p>`,
+   eq:S => ["w11","w12","w21","w22"].map(k => { const j = +k[1]-1, i = +k[2]-1;
+       return `<div>∂L/∂${pname(k)} = ∂L/∂z${SUB[k[1]]} · x${SUB[k[2]]} = ${Gp(S.g.dz[j])}·${Fp(x[i])} = ${G(S.g[k])}</div>`; }).join("")
+     + `<div>∂L/∂b₁ = ∂L/∂z₁ = ${G(S.g.b1)} &nbsp; ∂L/∂b₂ = ∂L/∂z₂ = ${G(S.g.b2)}</div>`},
+  {ph:"c", t:"Check the gradients, then learn", nodes:[], edges:[],
+   b:`<p>Check: nudge each parameter by ±ε and measure the change in L. This needs 18 extra forward passes. Backprop got the same 9 numbers from one backward pass.</p><p>Gradient descent then moves every parameter against its gradient: θ ← θ − η ∂L/∂θ. Press "Take a gradient step" and watch L fall.</p>`,
+   eq:S => `<table><tr><th>θ</th><th>value</th><th>backprop</th><th>numeric</th><th>|difference|</th></tr>` +
+     PARAMS.map(k => { const n = numeric(p, x, y, k), okv = Math.abs(n - S.g[k]) < 1e-6;
+       return `<tr><td>${pname(k)}</td><td class="p">${fmt(p[k])}</td><td class="g">${fmt(S.g[k])}</td><td>${fmt(n)}</td><td class="${okv?"ok":""}">${Math.abs(n - S.g[k]).toExponential(0)}</td></tr>`; }).join("") + `</table>`}
+];
+let step = 0, traced = "w12";
+
+// ---------- graph geometry ----------
+const N = { // center x, center y, width, height
+  x1:[70,120,110,56], x2:[70,350,110,56],
+  h1:[470,120,190,156], h2:[470,350,190,156],
+  out:[800,235,170,106], loss:[1005,235,170,86]
+};
+const right = k => N[k][0] + N[k][2]/2, left = k => N[k][0] - N[k][2]/2;
+const E = { // param: [from, to, label position t]
+  w11:["x1","h1",.58], w12:["x2","h1",.22], w21:["x1","h2",.22], w22:["x2","h2",.58],
+  v1:["h1","out",.5], v2:["h2","out",.5], out:["out","loss",.5]
+};
+const NS = "http://www.w3.org/2000/svg";
+const el = (tag, attrs, parent) => { const e = document.createElementNS(NS, tag);
+  for (const a in attrs) e.setAttribute(a, attrs[a]); if (parent) parent.appendChild(e); return e; };
+const svg = document.getElementById("net");
+
+function draw(){
+  const S = {f: forward(p, x, y)}; S.g = backward(p, x, y, S.f);
+  const st = steps[step], seen = k => step >= reveal[k];
+  svg.textContent = "";
+  const defs = el("defs", {}, svg);
+  const m = el("marker", {id:"ah", viewBox:"0 0 10 10", refX:"9", refY:"5", markerWidth:"5", markerHeight:"5", orient:"auto"}, defs);
+  el("path", {d:"M0,0 L10,5 L0,10 z", class:"arrowhead"}, m);
+  const path = tracePath(traced);
+
+  // edges
+  for (const k in E){
+    const [a, b, t] = E[k];
+    const x0 = right(a), y0 = N[a][1], x1 = left(b), y1 = N[b][1];
+    const cls = ["edge"];
+    if (st.edges.includes(k)) cls.push("hot", st.ph === "b" ? "bw" : "fw");
+    if (path.edges.includes(k)) cls.push("trace");
+    const g = el("g", {class:cls.join(" "), "data-p":k}, svg);
+    el("line", {x1:x0, y1:y0, x2:x1-2, y2:y1, class:"base", "marker-end":"url(#ah)"}, g);
+    el("line", {x1:x0, y1:y0, x2:x1-2, y2:y1, class:"flow"}, g);
+    if (k === "out") continue;
+    const lx = x0 + (x1-x0)*t, ly = y0 + (y1-y0)*t;
+    const pg = el("g", {class:"pill"}, g);
+    const isV = k[0] === "v", gs = isV ? seen("dv") : seen("dw");
+    el("rect", {x:lx-68, y:ly-21, width:136, height:42, rx:8}, pg);
+    txt(pg, lx, ly-5, `${pname(k)} = ${fmt(p[k])}`, "vp", "middle");
+    txt(pg, lx, ly+13, `∂L/∂${pname(k)} = ${gs ? fmt(S.g[k]) : "…"}`, gs ? "vg" : "off", "middle");
+    g.addEventListener("click", () => { traced = k; render(); });
+  }
+  // nodes
+  const rows = {
+    x1:[["x₁ = " + fmt(x[0]), "vf", true]],
+    x2:[["x₂ = " + fmt(x[1]), "vf", true]],
+    out:[["c = " + fmt(p.c), "vp", true], ["ŷ = " + fmt(S.f.yh), "vf", seen("yh")], null,
+         ["∂L/∂ŷ = " + fmt(S.g.dy), "vg", seen("dy")], ["∂L/∂c = " + fmt(S.g.c), "vg", seen("dc")]],
+    loss:[["y = " + fmt(y), "vt", true], ["L = " + fmt(S.f.L), "vf", seen("L")], null, ["∂L/∂L = 1", "vg", seen("dL")]]
+  };
+  [0,1].forEach(j => { const s = SUB[j+1];
+    rows["h"+(j+1)] = [["b"+s+" = " + fmt(p["b"+(j+1)]), "vp", true], ["z"+s+" = " + fmt(S.f.z[j]), "vf", seen("z")],
+      ["h"+s+" = σ(z"+s+") = " + fmt(S.f.h[j]), "vf", seen("h")], null,
+      ["∂L/∂h"+s+" = " + fmt(S.g.dh[j]), "vg", seen("dh")], ["∂L/∂z"+s+" = " + fmt(S.g.dz[j]), "vg", seen("dz")],
+      ["∂L/∂b"+s+" = " + fmt(S.g.dz[j]), "vg", seen("db")]];
+  });
+  const titles = {x1:"input", x2:"input", h1:"hidden unit 1", h2:"hidden unit 2", out:"output", loss:"loss"};
+  for (const k in N){
+    const [cx, cy, w, h] = N[k];
+    const g = el("g", {class:"node" + (st.nodes.includes(k) ? " hot " + {f:"fw", b:"bw", c:"ck"}[st.ph] : "")}, svg);
+    el("rect", {x:cx-w/2, y:cy-h/2, width:w, height:h, rx:10}, g);
+    let yy = cy - h/2 + 20;
+    txt(g, cx-w/2+12, yy, titles[k], "title");
+    yy += 2;
+    for (const r of rows[k]){
+      if (!r){ el("line", {x1:cx-w/2+10, x2:cx+w/2-10, y1:yy+6, y2:yy+6, class:"sep"}, g); yy += 6; continue; }
+      yy += 18;
+      txt(g, cx-w/2+12, yy, r[2] ? r[0] : r[0].replace(/[−\d.]+$/, "…"), r[2] ? r[1] : "off");
+    }
+  }
+  return S;
+}
+function txt(parent, x, y, s, cls, anchor){
+  const t = el("text", {x, y, class:cls||""}, parent);
+  if (anchor) t.setAttribute("text-anchor", anchor);
+  t.textContent = s; return t;
+}
+
+// chain rule path for one parameter
+function tracePath(k){
+  if (k === "c") return {nodes:["out","loss"], edges:["out"]};
+  if (k[0] === "v") return {nodes:["out","loss","h"+k[1]], edges:[k,"out"]};
+  const j = k[1]; // w_ji or b_j
+  const e = k[0] === "w" ? [k] : [];
+  const n = k[0] === "w" ? ["x"+k[2]] : [];
+  return {nodes:[...n, "h"+j, "out", "loss"], edges:[...e, "v"+j, "out"]};
+}
+function traceEq(k, S){
+  const dy = `(ŷ − y)`, dyv = Gp(S.g.dy);
+  if (k === "c") return `<div>∂L/∂c = ${dy} · 1</div><div>= ${dyv} · 1 = ${G(S.g.c)}</div>`;
+  if (k[0] === "v"){ const j = +k[1]-1;
+    return `<div>∂L/∂${pname(k)} = ${dy} · h${SUB[k[1]]}</div><div>= ${dyv}·${F(S.f.h[j])} = ${G(S.g[k])}</div>`; }
+  const j = +k[1]-1, s = SUB[k[1]], hh = S.f.h[j];
+  const xi = k[0] === "w" ? ` · x${SUB[k[2]]}` : ` · 1`, xv = k[0] === "w" ? `·${Fp(x[+k[2]-1])}` : `·1`;
+  return `<div>∂L/∂${pname(k)} = ${dy} · v${s} · h${s}(1 − h${s})${xi}</div>
+    <div class="cm">&nbsp;&nbsp;loss → output → hidden ${k[1]} → sigmoid → ${k[0]==="w" ? "weight" : "bias"}</div>
+    <div>= ${dyv}·${Pp(p["v"+k[1]])}·${F(hh*(1-hh))}${xv} = ${G(S.g[k])}</div>`;
+}
+
+// ---------- UI ----------
+const $ = id => document.getElementById(id);
+const PH = {f:["ph-f","Forward pass"], b:["ph-b","Backward pass"], c:["ph-c","Overview"]};
+steps.forEach((s, i) => {
+  const b = document.createElement("button");
+  b.textContent = i; b.className = {f:"fw", b:"bw", c:"ck"}[s.ph];
+  b.setAttribute("aria-label", "Go to step " + i + ": " + s.t);
+  b.onclick = () => { step = i; render(); };
+  $("dots").appendChild(b);
+});
+PARAMS.forEach(k => { const o = document.createElement("option"); o.value = k; o.textContent = "∂L/∂" + pname(k); $("tsel").appendChild(o); });
+
+function render(){
+  const S = draw(), st = steps[step];
+  const ph = step === steps.length-1 ? ["ph-c","Gradient check"] : PH[st.ph];
+  $("kicker").innerHTML = `Step ${step} of ${steps.length-1} · <b class="${ph[0]}">${ph[1]}</b>`;
+  $("title").textContent = st.t;
+  $("body").innerHTML = st.b;
+  $("eq").innerHTML = st.eq(S);
+  $("prev").disabled = step === 0;
+  $("next").disabled = step === steps.length-1;
+  [...$("dots").children].forEach((b, i) => b.classList.toggle("on", i === step));
+  // narrow screens pan the graph: bring this step's first highlighted node into view
+  const fig = document.querySelector(".fig"), xs = st.nodes.map(k => left(k));
+  if (fig.scrollWidth > fig.clientWidth) fig.scrollLeft = xs.length ? Math.min(...xs) / 1100 * fig.scrollWidth - 12 : 0;
+  $("tsel").value = traced;
+  $("teq").innerHTML = traceEq(traced, S);
+  $("ox1").textContent = x[0].toFixed(1); $("ox2").textContent = x[1].toFixed(1); $("oy").textContent = y.toFixed(1);
+  $("sx1").value = x[0]; $("sx2").value = x[1]; $("sy").value = y;
+  drawSpark(S.f.L);
+}
+function drawSpark(L){
+  const s = $("spark"); s.textContent = "";
+  const pts = history.concat([L]);
+  $("sparklabel").innerHTML = `Loss after ${history.length} gradient step${history.length===1?"":"s"}: <span class="f">${fmt(L)}</span>`
+    + (history.length ? ` <span class="cm">(started at ${fmt(history[0])})</span>` : "");
+  const mx = Math.max(...pts, 1e-9), n = Math.max(pts.length-1, 1);
+  const d = pts.map((v, i) => `${i ? "L" : "M"}${(i/n*392+4).toFixed(1)},${(64 - v/mx*58).toFixed(1)}`).join(" ");
+  el("line", {x1:0, x2:400, y1:64, y2:64, stroke:"var(--line)"}, s);
+  el("path", {d, fill:"none", stroke:"var(--fwd)", "stroke-width":2, "vector-effect":"non-scaling-stroke"}, s);
+}
+
+$("prev").onclick = () => { if (step > 0){ step--; render(); } };
+$("next").onclick = () => { if (step < steps.length-1){ step++; render(); } };
+document.addEventListener("keydown", e => {
+  if (e.target.matches("input,select")) return;
+  if (e.key === "ArrowRight") $("next").click();
+  if (e.key === "ArrowLeft") $("prev").click();
+});
+const onInput = () => { x = [+$("sx1").value, +$("sx2").value]; y = +$("sy").value; history = []; render(); };
+["sx1","sx2","sy"].forEach(id => $(id).addEventListener("input", onInput));
+$("tsel").onchange = e => { traced = e.target.value; render(); };
+$("trainbtn").onclick = () => {
+  const f = forward(p, x, y), g = backward(p, x, y, f), lr = +$("lr").value;
+  history.push(f.L);
+  PARAMS.forEach(k => p[k] -= lr * g[k]);
+  render();
+};
+$("reset").onclick = () => { p = {...INIT}; history = []; render(); };
+render();
+</script>
+</body>
+</html>

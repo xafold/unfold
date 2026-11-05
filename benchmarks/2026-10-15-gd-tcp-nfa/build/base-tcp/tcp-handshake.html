@@ -1,0 +1,380 @@
+<title>TCP Handshake and Teardown</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: sequence diagram (two lifelines, time flows down) beside an RFC-style segment inspector. */
+:root {
+  --bg: #f3f5f8; --surface: #ffffff; --phase: #e8ecf1; --ink: #17202a; --muted: #586574; --line: #c9d1db;
+  --client: #1d5bbf; --server: #ad4f0c; --focus: #1d5bbf;
+  --display: "IBM Plex Sans Condensed", "Arial Narrow", system-ui, sans-serif;
+  --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f141a; --surface: #161d26; --phase: #1a222c; --ink: #e5eaf0; --muted: #96a3b2; --line: #313d4b;
+    --client: #74a7ff; --server: #f19a5a; --focus: #74a7ff; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f141a; --surface: #161d26; --phase: #1a222c; --ink: #e5eaf0; --muted: #96a3b2; --line: #313d4b;
+  --client: #74a7ff; --server: #f19a5a; --focus: #74a7ff; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font: 15px/1.55 var(--body);
+  padding-block: 24px 40px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 1180px; margin: 0 auto; display: grid; gap: 18px; }
+header h1 { font: 700 2rem/1.1 var(--display); margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+header p { margin: 6px 0 0; color: var(--muted); max-width: 70ch; }
+.c { color: var(--client); } .s { color: var(--server); }
+
+.controls { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: end; }
+.group { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; }
+button {
+  font: 600 0.9rem var(--body); color: var(--ink); background: var(--surface);
+  border: 1px solid var(--line); border-radius: 6px; padding: 7px 14px; cursor: pointer;
+}
+button:hover { border-color: var(--muted); }
+button.primary { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+button:disabled { opacity: 0.4; cursor: default; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+label.in { display: grid; gap: 2px; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+label.in input[type=number] {
+  font: 0.9rem var(--mono); width: 9.5em; padding: 6px 8px; color: var(--ink);
+  background: var(--surface); border: 1px solid var(--line); border-radius: 6px;
+}
+label.in input#len { width: 6em; }
+label.check { display: flex; gap: 6px; align-items: center; font-size: 0.88rem; padding-bottom: 7px; }
+
+.progress { display: flex; gap: 4px; }
+.progress button { padding: 0; width: 26px; height: 26px; font: 600 0.72rem var(--mono); border-radius: 50%; }
+.progress button[aria-current="step"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+
+main { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+@media (max-width: 880px) { main { grid-template-columns: minmax(0, 1fr); } }
+
+.diagram { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow-x: auto; padding: 8px; }
+.diagram svg { display: block; width: 100%; min-width: 480px; height: auto; }
+svg text { font-family: var(--mono); fill: var(--ink); }
+.band { fill: var(--phase); }
+.band-label { font: 600 10px var(--body); letter-spacing: 0.14em; fill: var(--muted); }
+.lifeline { stroke: var(--line); stroke-width: 2; }
+.host { font: 600 15px var(--display); }
+.addr { font-size: 10.5px; fill: var(--muted); }
+.seg { cursor: pointer; transition: opacity 0.25s; }
+.seg .hit { fill: transparent; }
+.seg line { stroke-width: 2; }
+.seg .lbl { font-size: 11px; paint-order: stroke; stroke: var(--phase); stroke-width: 5px; stroke-linejoin: round; }
+.seg .lbl tspan.f { font-weight: 600; }
+.seg.future { opacity: 0.14; }
+.seg.future .lbl { visibility: hidden; }
+.seg.past { opacity: 0.55; }
+.seg:hover { opacity: 1; }
+.seg.current line { stroke-width: 3; }
+.seg.current.anim line { stroke-dasharray: 1; animation: draw 0.6s ease-out both; }
+@keyframes draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+.pill rect { fill: var(--surface); stroke-width: 1.5; }
+.pill text { font-size: 10.5px; font-weight: 600; }
+.pill.est rect { stroke-width: 0; }
+.pill.est text { fill: var(--surface); }
+.pill.future { display: none; }
+.pill.past { opacity: 0.6; }
+.timer { stroke-width: 6; stroke-linecap: round; }
+@media (prefers-reduced-motion: reduce) { .seg.current.anim line { animation: none; } .seg { transition: none; } }
+
+.panel { display: grid; gap: 14px; min-width: 0; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; min-width: 0; }
+.eyebrow { font: 600 0.72rem var(--body); text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
+.card h2 { font: 700 1.5rem/1.15 var(--display); margin: 2px 0 8px; text-wrap: balance; }
+.card p { margin: 0; max-width: 65ch; }
+.dir { font: 0.82rem var(--mono); color: var(--muted); margin-bottom: 8px; }
+
+/* RFC 793 header excerpt: 32-bit rows */
+.hdr { border: 1.5px solid var(--ink); font-family: var(--mono); font-size: 0.82rem; margin-top: 12px; }
+.hdr .row { display: grid; border-top: 1.5px solid var(--ink); }
+.hdr .row:first-child { border-top: 0; }
+.hdr .cell { padding: 5px 8px; min-width: 0; overflow-wrap: anywhere; }
+.hdr .cell + .cell { border-left: 1.5px solid var(--ink); }
+.hdr .k { display: block; font: 0.66rem var(--body); text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.hdr .v { font-size: 1rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.hdr .v.na { color: var(--muted); font-weight: 400; font-size: 0.85rem; }
+.ports { grid-template-columns: 1fr 1fr; }
+.flags { grid-template-columns: repeat(6, 1fr); }
+.flags .cell { text-align: center; padding: 6px 0; font-weight: 600; color: var(--muted); }
+.flags .cell.on { background: var(--sender); color: var(--surface); }
+.math { margin: 12px 0 0; padding: 0; list-style: none; font: 0.88rem/1.7 var(--mono); }
+.math li { overflow-wrap: anywhere; }
+.states { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: 0.9rem; }
+.states b { font-family: var(--mono); }
+.states .ev { font: 0.78rem var(--mono); color: var(--muted); }
+.rule { font: 0.88rem var(--mono); }
+.hint { font-size: 0.8rem; color: var(--muted); }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>TCP Handshake and Teardown</h1>
+    <p>Step through one connection: the three-way handshake, one data segment, and the four-segment close. Change the initial sequence numbers or payload size and every seq and ack value updates.</p>
+  </header>
+
+  <div class="controls">
+    <div class="group">
+      <button id="prev" type="button">&larr; Back</button>
+      <button id="next" type="button" class="primary">Next &rarr;</button>
+      <button id="play" type="button">Play</button>
+    </div>
+    <div class="progress" id="progress" aria-label="Steps"></div>
+    <div class="group">
+      <label class="in"><span class="c">Client ISN (x)</span><input id="cisn" type="number" min="0" max="4294967295" step="1" value="1000"></label>
+      <label class="in"><span class="s">Server ISN (y)</span><input id="sisn" type="number" min="0" max="4294967295" step="1" value="5000"></label>
+      <label class="in">Payload bytes<input id="len" type="number" min="1" max="65495" step="1" value="100"></label>
+      <button id="rand" type="button">Random ISNs</button>
+      <label class="check"><input id="rel" type="checkbox"> Relative numbers</label>
+    </div>
+  </div>
+
+  <main>
+    <div class="diagram"><svg id="svg" role="img" aria-label="TCP sequence diagram"></svg></div>
+    <div class="panel">
+      <section class="card" id="seg-card" aria-live="polite"></section>
+      <section class="card">
+        <div class="eyebrow">Connection state after this step</div>
+        <div class="states" id="states" style="margin-top:8px"></div>
+      </section>
+      <section class="card">
+        <div class="eyebrow">The rule</div>
+        <p class="rule" style="margin-top:6px">next seq = seq + payload bytes (+1 if SYN or FIN)<br>ack = the next byte the receiver expects</p>
+        <p class="hint" style="margin-top:8px">Keys: &larr; and &rarr; move between steps. Click any arrow in the diagram to jump to it. "Relative numbers" shows seq and ack minus the ISN, like Wireshark does.</p>
+      </section>
+    </div>
+  </main>
+</div>
+
+<script>
+const MOD = 2 ** 32;
+const wrap = v => ((v % MOD) + MOD) % MOD;
+const CPORT = 52814, SPORT = 80;
+
+// changes: [side, newState, 'start'|'end' of the arrow, RFC 793 event label]
+const STEPS = [
+  { phase: 'Setup', title: 'Before the connection', from: null, changes: [],
+    text: p => `The server has called listen() on port 80 and waits in LISTEN. The client is CLOSED. Each side picks its own initial sequence number (ISN). Real stacks pick it at random, so attackers cannot guess it and segments from an old connection are not mistaken for new ones.`,
+    math: p => [`client ISN x = ${p.x}`, `server ISN y = ${p.y}`] },
+  { phase: 'Handshake', title: 'SYN', from: 'c', flags: ['SYN'], seq: p => p.x, ack: null, len: 0,
+    changes: [['c', 'SYN_SENT', 'start', 'active OPEN / snd SYN']],
+    text: p => `The client calls connect(). It sends a segment with only the SYN flag set. The sequence number is the client's ISN. The ACK flag is off, so the acknowledgment field means nothing yet.`,
+    math: p => [`seq = x = ${p.x}`, `SYN uses one sequence number, so the client's next seq is ${wrap(p.x + 1)}`] },
+  { phase: 'Handshake', title: 'SYN, ACK', from: 's', flags: ['ACK', 'SYN'], seq: p => p.y, ack: p => p.x + 1, len: 0,
+    changes: [['s', 'SYN_RCVD', 'start', 'rcv SYN / snd SYN,ACK']],
+    text: p => `The server answers with SYN and ACK in one segment. The SYN announces the server's own ISN. The ACK confirms the client's SYN.`,
+    math: p => [`seq = y = ${p.y}`, `ack = x + 1 = ${wrap(p.x + 1)}`] },
+  { phase: 'Handshake', title: 'ACK', from: 'c', flags: ['ACK'], seq: p => p.x + 1, ack: p => p.y + 1, len: 0,
+    changes: [['c', 'ESTABLISHED', 'start', 'rcv SYN,ACK / snd ACK'], ['s', 'ESTABLISHED', 'end', 'rcv ACK of SYN']],
+    text: p => `The client acknowledges the server's SYN and is now ESTABLISHED. The server becomes ESTABLISHED when this ACK arrives. The segment has no payload, so it uses no sequence number.`,
+    math: p => [`seq = x + 1 = ${wrap(p.x + 1)}`, `ack = y + 1 = ${wrap(p.y + 1)}`] },
+  { phase: 'Data', title: p => `Data: ${p.n} bytes`, from: 'c', flags: ['ACK', 'PSH'], seq: p => p.x + 1, ack: p => p.y + 1, len: p => p.n,
+    changes: [],
+    text: p => `The client sends ${p.n} bytes, for example an HTTP request. PSH asks the receiver to pass the data to the application now. Every segment after the first SYN has the ACK flag set.`,
+    math: p => [`seq = ${wrap(p.x + 1)} (first byte of this payload)`, `bytes ${wrap(p.x + 1)} to ${wrap(p.x + p.n)}`, `ack = ${wrap(p.y + 1)} (unchanged, the server sent no data)`] },
+  { phase: 'Data', title: 'ACK of data', from: 's', flags: ['ACK'], seq: p => p.y + 1, ack: p => p.x + 1 + p.n, len: 0,
+    changes: [],
+    text: p => `The server acknowledges the data. The ack number is the next byte the server expects, not the last byte it received. A real server would also send a response; this diagram keeps data in one direction.`,
+    math: p => [`seq = ${wrap(p.y + 1)}`, `ack = ${wrap(p.x + 1)} + ${p.n} = ${wrap(p.x + 1 + p.n)}`] },
+  { phase: 'Teardown', title: 'FIN from client', from: 'c', flags: ['ACK', 'FIN'], seq: p => p.x + 1 + p.n, ack: p => p.y + 1, len: 0,
+    changes: [['c', 'FIN_WAIT_1', 'start', 'CLOSE / snd FIN']],
+    text: p => `The client calls close(). It sends FIN to say it has no more data to send. Like SYN, FIN uses one sequence number.`,
+    math: p => [`seq = ${wrap(p.x + 1 + p.n)}`, `ack = ${wrap(p.y + 1)}`] },
+  { phase: 'Teardown', title: 'ACK of FIN', from: 's', flags: ['ACK'], seq: p => p.y + 1, ack: p => p.x + 2 + p.n, len: 0,
+    changes: [['s', 'CLOSE_WAIT', 'start', 'rcv FIN / snd ACK'], ['c', 'FIN_WAIT_2', 'end', 'rcv ACK of FIN']],
+    text: p => `The server acknowledges the FIN at once. The connection is now half-closed. The client cannot send more data. The server still can, until its application calls close().`,
+    math: p => [`seq = ${wrap(p.y + 1)}`, `ack = ${wrap(p.x + 1 + p.n)} + 1 = ${wrap(p.x + 2 + p.n)}`] },
+  { phase: 'Teardown', title: 'FIN from server', from: 's', flags: ['ACK', 'FIN'], seq: p => p.y + 1, ack: p => p.x + 2 + p.n, len: 0,
+    changes: [['s', 'LAST_ACK', 'start', 'CLOSE / snd FIN']],
+    text: p => `The server's application calls close(), so the server sends its own FIN. Its seq is still y + 1 because it sent no payload after its SYN.`,
+    math: p => [`seq = y + 1 = ${wrap(p.y + 1)}`, `ack = ${wrap(p.x + 2 + p.n)} (same as before)`] },
+  { phase: 'Teardown', title: 'Last ACK', from: 'c', flags: ['ACK'], seq: p => p.x + 2 + p.n, ack: p => p.y + 2, len: 0,
+    changes: [['c', 'TIME_WAIT', 'start', 'rcv FIN / snd ACK'], ['s', 'CLOSED', 'end', 'rcv ACK of FIN']],
+    text: p => `The client acknowledges the server's FIN. The server is CLOSED when this ACK arrives. The client does not close yet. It enters TIME_WAIT.`,
+    math: p => [`seq = ${wrap(p.x + 2 + p.n)}`, `ack = ${wrap(p.y + 1)} + 1 = ${wrap(p.y + 2)}`] },
+  { phase: 'Teardown', title: 'TIME_WAIT expires', from: null, changes: [['c', 'CLOSED', 'end', 'timeout = 2MSL']],
+    text: p => `The client waits 2 × MSL (Maximum Segment Lifetime) before it frees the connection. If the last ACK was lost, the server resends its FIN and the client can ACK it again. The wait also lets delayed segments expire before the same address and port pair is reused. RFC 793 suggests an MSL of 2 minutes. Linux uses a fixed 60-second TIME_WAIT.`,
+    math: p => [] },
+];
+const LAST = STEPS.length - 1;
+const ALL_FLAGS = ['URG', 'ACK', 'PSH', 'RST', 'SYN', 'FIN'];
+
+const $ = id => document.getElementById(id);
+let cur = 0, timer = null, animate = false;
+
+function params() {
+  const num = (el, lo, hi, dflt) => {
+    const v = Number(el.value);
+    const ok = Number.isInteger(v) && v >= lo && v <= hi && el.value !== '';
+    el.setAttribute('aria-invalid', ok ? 'false' : 'true');
+    return ok ? v : dflt;
+  };
+  const cIsn = num($('cisn'), 0, MOD - 1, 1000);
+  const sIsn = num($('sisn'), 0, MOD - 1, 5000);
+  const n = num($('len'), 1, 65495, 100);
+  const rel = $('rel').checked;
+  return { x: rel ? 0 : cIsn, y: rel ? 0 : sIsn, n, rel };
+}
+const val = (f, p) => typeof f === 'function' ? f(p) : f;
+
+// ---- SVG diagram ----
+const W = 580, CX = 140, SX = 440, TOP = 96, ROW = 62, DROP = 40;
+const y0 = i => TOP + (i - 1) * ROW, y1 = i => y0(i) + DROP;
+const H = y1(LAST) + 30;
+const sideX = s => s === 'c' ? CX : SX;
+const color = s => s === 'c' ? 'var(--client)' : 'var(--server)';
+const esc = s => String(s).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+
+function pill(side, state, y, cls) {
+  const w = state.length * 6.6 + 14, h = 18;
+  const x = side === 'c' ? CX - 10 - w : SX + 10;
+  const est = state === 'ESTABLISHED';
+  return `<g class="pill ${cls}${est ? ' est' : ''}"><rect x="${x}" y="${y - h / 2}" width="${w}" height="${h}" rx="9" style="stroke:${color(side)};${est ? 'fill:' + color(side) : ''}"/>` +
+    `<text x="${x + w / 2}" y="${y + 3.8}" text-anchor="middle" style="${est ? '' : 'fill:' + color(side)}">${state}</text></g>`;
+}
+
+function drawSvg(p) {
+  const out = [];
+  const bands = [['HANDSHAKE', 1, 3], ['DATA', 4, 5], ['TEARDOWN', 6, LAST]];
+  for (const [name, a, b] of bands) {
+    const top = y0(a) - 10, bot = y1(b) + 10;
+    out.push(`<rect class="band" x="0" y="${top}" width="${W}" height="${bot - top}" rx="6"/>`);
+    out.push(`<text class="band-label" transform="translate(16 ${(top + bot) / 2}) rotate(-90)" text-anchor="middle">${name}</text>`);
+  }
+  out.push(`<line class="lifeline" x1="${CX}" y1="50" x2="${CX}" y2="${H - 6}"/><line class="lifeline" x1="${SX}" y1="50" x2="${SX}" y2="${H - 6}"/>`);
+  out.push(`<text class="host" x="${CX}" y="22" text-anchor="middle" style="fill:var(--client)">Client</text><text class="addr" x="${CX}" y="38" text-anchor="middle">10.0.0.5:${CPORT}</text>`);
+  out.push(`<text class="host" x="${SX}" y="22" text-anchor="middle" style="fill:var(--server)">Server</text><text class="addr" x="${SX}" y="38" text-anchor="middle">10.0.0.80:${SPORT}</text>`);
+  out.push(pill('c', 'CLOSED', 68, cur === 0 ? 'current' : 'past'), pill('s', 'LISTEN', 68, cur === 0 ? 'current' : 'past'));
+
+  STEPS.forEach((st, i) => {
+    if (i === 0) return;
+    const state = i < cur ? 'past' : i === cur ? 'current' : 'future';
+    if (st.from) {
+      const to = st.from === 'c' ? 's' : 'c';
+      const xa = sideX(st.from), xb = sideX(to) + (to === 's' ? -3 : 3);
+      const seq = wrap(st.seq(p)), ack = st.ack ? wrap(st.ack(p)) : null, len = val(st.len, p);
+      const mx = (CX + SX) / 2, my = (y0(i) + y1(i)) / 2;
+      out.push(`<g class="seg ${state}${state === 'current' && animate ? ' anim' : ''}" data-step="${i}" role="button" tabindex="0" aria-label="Step ${i}: ${st.flags.join(',')}">` +
+        `<rect class="hit" x="${CX}" y="${y0(i) - 8}" width="${SX - CX}" height="${DROP + 16}"/>` +
+        `<line x1="${xa}" y1="${y0(i)}" x2="${xb}" y2="${y1(i)}" pathLength="1" style="stroke:${color(st.from)}" marker-end="url(#ah-${st.from})"/>` +
+        `<text class="lbl" x="${mx}" y="${my - 7}" text-anchor="middle"><tspan class="f" style="fill:${color(st.from)}">${st.flags.join(',')}</tspan>  seq=${seq}${ack !== null ? ' ack=' + ack : ''}</text>` +
+        (len ? `<text class="lbl" x="${mx}" y="${my + 17}" text-anchor="middle">len=${len}</text>` : '') +
+        `</g>`);
+    } else {
+      out.push(`<g class="seg ${state}" data-step="${i}" role="button" tabindex="0" aria-label="Step ${i}: TIME_WAIT timer">` +
+        `<rect class="hit" x="${CX - 8}" y="${y0(i) - 8}" width="${SX - CX}" height="${DROP + 16}"/>` +
+        `<line class="timer" x1="${CX}" y1="${y0(i) - 4}" x2="${CX}" y2="${y1(i) - 12}" style="stroke:${color('c')}"/>` +
+        `<text class="lbl" x="${CX + 14}" y="${(y0(i) + y1(i)) / 2}">2 × MSL timer</text></g>`);
+    }
+    for (const [side, s, at] of st.changes) out.push(pill(side, s, at === 'start' ? y0(i) : y1(i), state));
+  });
+
+  const defs = ['c', 's'].map(s => `<marker id="ah-${s}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" style="fill:${color(s)}"/></marker>`).join('');
+  const svg = $('svg');
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.innerHTML = `<defs>${defs}</defs>` + out.join('');
+}
+
+// ---- Inspector panel ----
+function statesAt(step) {
+  const s = { c: 'CLOSED', s: 'LISTEN' };
+  for (let i = 1; i <= step; i++) for (const [side, st] of STEPS[i].changes) s[side] = st;
+  return s;
+}
+
+function drawPanel(p) {
+  const st = STEPS[cur];
+  const title = val(st.title, p);
+  let html = `<div class="eyebrow">Step ${cur} of ${LAST} · ${st.phase}</div><h2>${esc(title)}</h2>`;
+  if (st.from) {
+    const to = st.from === 'c' ? 's' : 'c';
+    const name = { c: 'Client', s: 'Server' };
+    const ack = st.ack ? wrap(st.ack(p)) : null;
+    const len = val(st.len, p);
+    html += `<div class="dir"><span class="${st.from}">${name[st.from]}</span> → <span class="${to}">${name[to]}</span></div>`;
+    html += `<p>${esc(st.text(p))}</p>`;
+    html += `<div class="hdr" style="--sender:${color(st.from)}" aria-label="TCP header fields">
+      <div class="row ports"><div class="cell"><span class="k">Source port</span><span class="v">${st.from === 'c' ? CPORT : SPORT}</span></div><div class="cell"><span class="k">Destination port</span><span class="v">${st.from === 'c' ? SPORT : CPORT}</span></div></div>
+      <div class="row"><div class="cell"><span class="k">Sequence number${p.rel ? ' (relative)' : ''}</span><span class="v">${wrap(st.seq(p))}</span></div></div>
+      <div class="row"><div class="cell"><span class="k">Acknowledgment number${p.rel ? ' (relative)' : ''}</span>${ack === null ? '<span class="v na">0, ignored because ACK is off</span>' : `<span class="v">${ack}</span>`}</div></div>
+      <div class="row flags">${ALL_FLAGS.map(f => `<div class="cell${st.flags.includes(f) ? ' on' : ''}">${f}</div>`).join('')}</div>
+      <div class="row"><div class="cell"><span class="k">Payload</span><span class="v">${len} bytes</span></div></div>
+    </div>`;
+  } else {
+    html += `<p>${esc(st.text(p))}</p>`;
+  }
+  const math = st.math(p);
+  if (math.length) html += `<ul class="math">${math.map(m => `<li>${esc(m)}</li>`).join('')}</ul>`;
+  $('seg-card').innerHTML = html;
+
+  const before = statesAt(Math.max(0, cur - 1)), after = statesAt(cur);
+  const row = side => {
+    const ch = st.changes.find(c => c[0] === side);
+    const label = side === 'c' ? '<span class="c">Client</span>' : '<span class="s">Server</span>';
+    const value = ch && cur > 0 ? `<b>${before[side]}</b> → <b>${after[side]}</b> <span class="ev">${esc(ch[3])}</span>` : `<b>${after[side]}</b>`;
+    return `<div>${label}</div><div>${value}</div>`;
+  };
+  $('states').innerHTML = row('c') + row('s');
+}
+
+function drawProgress() {
+  $('progress').innerHTML = STEPS.map((_, i) => `<button type="button" data-step="${i}" ${i === cur ? 'aria-current="step"' : ''} aria-label="Go to step ${i}">${i}</button>`).join('');
+  $('prev').disabled = cur === 0;
+  $('next').disabled = cur === LAST;
+}
+
+function render() {
+  const p = params();
+  drawSvg(p);
+  drawPanel(p);
+  drawProgress();
+  animate = false;
+}
+
+function go(i) {
+  const next = Math.max(0, Math.min(LAST, i));
+  animate = next === cur + 1;
+  cur = next;
+  render();
+}
+
+function stop() { clearInterval(timer); timer = null; $('play').textContent = 'Play'; }
+function play() {
+  if (timer) return stop();
+  if (cur === LAST) go(0);
+  $('play').textContent = 'Pause';
+  timer = setInterval(() => { cur >= LAST ? stop() : go(cur + 1); }, 1800);
+}
+
+$('prev').addEventListener('click', () => { stop(); go(cur - 1); });
+$('next').addEventListener('click', () => { stop(); go(cur + 1); });
+$('play').addEventListener('click', play);
+$('progress').addEventListener('click', e => { const b = e.target.closest('[data-step]'); if (b) { stop(); go(+b.dataset.step); } });
+$('svg').addEventListener('click', e => { const g = e.target.closest('[data-step]'); if (g) { stop(); go(+g.dataset.step); } });
+$('svg').addEventListener('keydown', e => {
+  const g = e.target.closest('[data-step]');
+  if (g && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); stop(); go(+g.dataset.step); }
+});
+['cisn', 'sisn', 'len', 'rel'].forEach(id => $(id).addEventListener('input', render));
+$('rand').addEventListener('click', () => {
+  const r = new Uint32Array(2); crypto.getRandomValues(r);
+  $('cisn').value = r[0]; $('sisn').value = r[1]; render();
+});
+document.addEventListener('keydown', e => {
+  if (e.target.matches('input, textarea')) return;
+  if (e.key === 'ArrowRight') { stop(); go(cur + 1); }
+  if (e.key === 'ArrowLeft') { stop(); go(cur - 1); }
+});
+
+render();
+</script>

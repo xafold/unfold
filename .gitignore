@@ -1,0 +1,5 @@
+shots/
+*.png
+node_modules/
+.DS_Store
+benchmarks/**/order[12]/

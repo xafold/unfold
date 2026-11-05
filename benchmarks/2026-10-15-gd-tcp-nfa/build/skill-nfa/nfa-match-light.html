@@ -1,0 +1,533 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Matching a regex with an NFA</title><style>
+.iso{
+  --anatomy-page:#0b0b0b;--anatomy-card:#131313;--anatomy-text:#a3a3a3;--anatomy-strong:#e6e6e6;--anatomy-muted:#6e6e6e;
+  --anatomy-paper:#131313;--anatomy-face:#1b1b1b;--anatomy-top:#1c1c1c;
+  --anatomy-shade-0:#0f0f0f;--anatomy-shade-1:#121212;--anatomy-shade-2:#151515;--anatomy-shade-3:#181818;
+  --anatomy-lit-top:#262626;--anatomy-lit-shade:#1d1d1d;
+  --anatomy-hi:#d4d4d4;--anatomy-mid:#6a6a6a;--anatomy-lo:#3e3e3e;--anatomy-faint:#2a2a2a;--anatomy-lit:#ffffff;
+  --anatomy-halo:#050505;--anatomy-halo-opacity:.9;--anatomy-dot:#e6e6e6;
+  --anatomy-red:#ff6b6b;--anatomy-green:#6be0a0;--anatomy-blue:#6b9bff;
+  --anatomy-weight:.6px;--anatomy-ease:cubic-bezier(.32,.72,0,1);
+  --anatomy-mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --anatomy-lift:inset 0 1px 0 0 #ffffff0a,inset 0 0 0 1px #ffffff06,0 0 0 1px #00000026,0 1px 1px -.5px #00000014,0 3px 3px -1.5px #00000014,0 6px 6px -3px #00000014,0 12px 12px -6px #00000014;
+}
+.iso[data-theme="light"]{
+  --anatomy-page:#f2f2ef;--anatomy-card:#fbfbfa;--anatomy-text:#57575a;--anatomy-strong:#18181a;--anatomy-muted:#8c8c90;
+  --anatomy-paper:#fbfbfa;--anatomy-face:#ffffff;--anatomy-top:#ffffff;
+  --anatomy-shade-0:#dcdcd9;--anatomy-shade-1:#e5e5e2;--anatomy-shade-2:#ededea;--anatomy-shade-3:#f4f4f1;
+  --anatomy-lit-top:#ffffff;--anatomy-lit-shade:#eeeeeb;
+  --anatomy-hi:#26262a;--anatomy-mid:#8a8a8f;--anatomy-lo:#b4b4b8;--anatomy-faint:#d4d4d6;--anatomy-lit:#000000;
+  --anatomy-halo:#8a8a80;--anatomy-halo-opacity:.32;--anatomy-dot:#3a3a3e;
+  --anatomy-red:#e5484d;--anatomy-green:#30a46c;--anatomy-blue:#3e63dd;
+  --anatomy-lift:inset 0 1px 0 0 #ffffff,0 0 0 1px #0000000f,0 1px 1px -.5px #0000000a,0 3px 3px -1.5px #0000000a,0 6px 6px -3px #0000000a,0 12px 12px -6px #0000000a;
+}
+.iso-svg{display:block;width:100%;height:auto;overflow:visible}
+.iso-svg path,.iso-svg circle{vector-effect:non-scaling-stroke}
+.iso-fill{fill:var(--anatomy-paper);stroke:none}
+.iso-solid[data-lit]>.iso-fill{fill:var(--anatomy-face)}
+.iso-shade,.iso-top{stroke:none}
+.iso-shade[data-shade="0"]{fill:var(--anatomy-shade-0)}
+.iso-shade[data-shade="1"]{fill:var(--anatomy-shade-1)}
+.iso-shade[data-shade="2"]{fill:var(--anatomy-shade-2)}
+.iso-shade[data-shade="3"]{fill:var(--anatomy-shade-3)}
+.iso-top{fill:var(--anatomy-top)}
+.iso-solid[data-lit]>.iso-top{fill:var(--anatomy-lit-top)}
+.iso-solid[data-lit]>.iso-shade{fill:var(--anatomy-lit-shade)}
+.iso-solid[data-seamless]>.iso-shade,.iso-solid[data-seamless]>.iso-top{stroke-width:.4;stroke-linejoin:round}
+.iso-solid[data-seamless]>.iso-shade[data-shade="0"]{stroke:var(--anatomy-shade-0)}
+.iso-solid[data-seamless]>.iso-shade[data-shade="1"]{stroke:var(--anatomy-shade-1)}
+.iso-solid[data-seamless]>.iso-shade[data-shade="2"]{stroke:var(--anatomy-shade-2)}
+.iso-solid[data-seamless]>.iso-shade[data-shade="3"]{stroke:var(--anatomy-shade-3)}
+.iso-solid[data-seamless]>.iso-top{stroke:var(--anatomy-top)}
+.iso-solid[data-seamless][data-lit]>.iso-top{stroke:var(--anatomy-lit-top)}
+.iso-solid[data-seamless][data-lit]>.iso-shade{stroke:var(--anatomy-lit-shade)}
+.iso-solid[data-lit]>.iso-edge{stroke:var(--anatomy-lit)}
+.iso-halo{fill:var(--anatomy-halo);stroke:none;filter:blur(9px);opacity:var(--anatomy-halo-opacity);transform:translateY(3px)}
+.iso-line{fill:none;stroke:var(--anatomy-lo);stroke-width:var(--anatomy-weight);stroke-linecap:round;stroke-linejoin:round}
+.iso-line[data-tone="hi"]{stroke:var(--anatomy-hi)}
+.iso-line[data-tone="mid"]{stroke:var(--anatomy-mid)}
+.iso-line[data-tone="lo"]{stroke:var(--anatomy-lo)}
+.iso-line[data-tone="faint"]{stroke:var(--anatomy-faint)}
+.iso-line[data-tone="lit"]{stroke:var(--anatomy-lit)}
+.iso-line[data-tone="red"]{stroke:var(--anatomy-red)}
+.iso-line[data-tone="green"]{stroke:var(--anatomy-green)}
+.iso-line[data-tone="blue"]{stroke:var(--anatomy-blue)}
+.iso-line[data-dotted]{stroke-dasharray:.01 3.5;stroke-width:1}
+.iso-line[data-dashed]{stroke-dasharray:3 3}
+.iso-line[data-flow]{stroke-dasharray:2 6}
+.iso-wire-end{fill:var(--anatomy-paper);stroke:var(--anatomy-lo);stroke-width:var(--anatomy-weight)}
+.iso-wire[data-tone="hi"] .iso-wire-end{stroke:var(--anatomy-hi)}
+.iso-wire[data-tone="mid"] .iso-wire-end{stroke:var(--anatomy-mid)}
+.iso-wire[data-tone="faint"] .iso-wire-end{stroke:var(--anatomy-faint)}
+.iso-wire[data-tone="lit"] .iso-wire-end{stroke:var(--anatomy-lit)}
+.iso-dots circle{fill:var(--anatomy-dot);stroke:none;opacity:.32}
+.iso-dots[data-tone="hi"] circle{opacity:.85}
+.iso-dots[data-tone="mid"] circle{opacity:.45}
+.iso-dots[data-tone="lo"] circle{opacity:.22}
+.iso-dots[data-tone="faint"] circle{opacity:.12}
+.iso-face-text{fill:var(--anatomy-mid);font-family:var(--anatomy-mono);letter-spacing:.04em}
+.iso-face-text[data-tone="hi"]{fill:var(--anatomy-hi)}
+.iso-face-text[data-tone="lo"]{fill:var(--anatomy-lo)}
+.iso-face-text[data-tone="faint"]{fill:var(--anatomy-faint)}
+.tb-body{fill:var(--anatomy-shade-2);stroke:none}
+.tb-shine{fill:var(--anatomy-top);stroke:none}
+.tb-shade{fill:var(--anatomy-shade-0);stroke:none}
+.tb-ring{fill:none;stroke:var(--anatomy-lo);stroke-width:.45;stroke-linecap:butt;stroke-linejoin:round}
+.tb-ring[data-tone="mid"]{stroke:var(--anatomy-mid)}
+.tb-ring[data-tone="faint"]{stroke:var(--anatomy-faint)}
+.tb-ring[data-tone="hi"]{stroke:var(--anatomy-hi)}
+@keyframes iso-flow{to{stroke-dashoffset:-32}}
+@keyframes iso-pulse{0%,100%{opacity:.18}12%{opacity:1}40%{opacity:.18}}
+.iso-line[data-flow]{animation:iso-flow 1600ms linear infinite}
+.iso-dots circle[data-pulse]{animation:iso-pulse 1600ms steps(1,end) infinite;animation-delay:var(--pulse-at,0ms)}
+.iso-figure{margin:32px 0 36px}
+.iso-plate{position:relative;padding:52px 24px;border-radius:0;background:var(--anatomy-card);box-shadow:0 0 0 1px var(--anatomy-mid);--anatomy-paper:var(--anatomy-card)}
+.iso-plate-corners{position:absolute;inset:18px 20px;pointer-events:none}
+.iso-plate-corner{position:absolute;color:var(--anatomy-muted);font-family:var(--anatomy-mono);font-size:10.5px;line-height:1;letter-spacing:.04em;white-space:nowrap}
+.iso-plate-corner[data-corner="fig"]{top:0;left:0;color:var(--anatomy-text)}
+.iso-plate-corner[data-corner="title"]{top:0;right:0;text-transform:uppercase;letter-spacing:.1em}
+.iso-plate-corner[data-corner="hint"]{bottom:0;left:0;text-transform:uppercase;letter-spacing:.1em}
+.iso-plate-corner[data-corner="readout"]{right:0;bottom:0;color:var(--anatomy-text);font-variant-numeric:tabular-nums}
+.iso-plate .iso-svg{margin:0 auto}
+.iso-legend{display:grid;gap:8px;margin-top:12px;color:var(--anatomy-muted);font-size:13px;line-height:1.55}
+.iso-keys{display:flex;flex-wrap:wrap;gap:6px 18px}
+.iso-key{display:inline-flex;align-items:center;gap:7px}
+.iso-swatch{width:16px;height:10px;flex:none;overflow:visible}
+.iso-swatch path{fill:none;stroke:var(--anatomy-hi);stroke-width:1;vector-effect:non-scaling-stroke;stroke-linejoin:round;stroke-linecap:round}
+.iso-swatch[data-mark="raised"] path,.iso-swatch[data-mark="flat"] path{stroke:var(--anatomy-mid)}
+.iso-swatch[data-mark="lit"] path{stroke:var(--anatomy-lit)}
+.iso-swatch[data-mark="dim"] path{stroke:var(--anatomy-lo)}
+.iso-swatch[data-mark="dotted"] path{stroke-dasharray:.01 3;stroke-width:1.4}
+.iso-swatch[data-mark="dashed"] path{stroke-dasharray:3 2.5}
+.iso-swatch[data-mark="red"] path{stroke:var(--anatomy-red)}
+.iso-swatch[data-mark="green"] path{stroke:var(--anatomy-green)}
+.iso-swatch[data-mark="blue"] path{stroke:var(--anatomy-blue)}
+.iso-swatch-crease{stroke:var(--anatomy-lo)!important}
+@media (max-width:560px){.iso-plate{padding:48px 12px 70px}.iso-plate-corner[data-corner="hint"]{bottom:18px}}
+@media (prefers-reduced-motion:reduce){.iso-line[data-flow],.iso-dots circle[data-pulse]{animation:none}}
+
+*{box-sizing:border-box}
+html{color-scheme:dark}
+body[data-theme="light"]{color-scheme:light}
+body{margin:0;background:var(--anatomy-page);color:var(--anatomy-text);font:14px/1.6 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+.iso-page{width:min(900px,100% - 32px);margin:64px auto 96px}
+</style></head><body class="iso" data-theme="light"><main class="iso-page"><style>
+.iso{--unfold-blue:#58c4dd;--unfold-yellow:#f4d345;--unfold-red:#fc6255;--unfold-green:#83c167;--unfold-teal:#5cd0b3;--unfold-purple:#b48ad1;--unfold-gold:#f0ac5f;--unfold-on-hot:#0b0b0b;--unfold-serif:"Latin Modern Math","STIX Two Math","Cambria Math",math,serif}
+.iso[data-theme="light"]{--unfold-blue:#1f78a4;--unfold-yellow:#a67c00;--unfold-red:#cf3b2e;--unfold-green:#3e8a2a;--unfold-teal:#16866b;--unfold-purple:#7a4fa3;--unfold-gold:#b8661a;--unfold-on-hot:#ffffff}
+[data-hue="blue"]{--hue:var(--unfold-blue)}[data-hue="yellow"]{--hue:var(--unfold-yellow)}[data-hue="red"]{--hue:var(--unfold-red)}[data-hue="green"]{--hue:var(--unfold-green)}[data-hue="teal"]{--hue:var(--unfold-teal)}[data-hue="purple"]{--hue:var(--unfold-purple)}[data-hue="gold"]{--hue:var(--unfold-gold)}[data-hue="ink"]{--hue:var(--anatomy-hi)}
+.u-key{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 16px;margin-top:10px;color:var(--anatomy-muted);font-size:12px}
+.u-key>span{display:inline-flex;align-items:center;gap:6px}
+.u-key i{width:10px;height:10px;border-radius:2px;background:var(--hue)}
+.u-key i.u-hollow{background:none;box-shadow:inset 0 0 0 1.2px var(--anatomy-mid)}
+.u-key i.u-solid{background:var(--anatomy-mid)}
+.u-stage{position:relative;outline:none;container-type:inline-size}
+.u-stage:focus-visible{outline:1px solid var(--anatomy-faint);outline-offset:8px}
+.u-stage .iso-svg{overflow:visible}
+.u-eq,.u-say{display:grid;align-items:center}
+.u-eq>.u-at,.u-say>.u-at{grid-area:1/1;opacity:0;visibility:hidden;transition:opacity .45s var(--anatomy-ease),visibility 0s .45s;margin:0}
+.u-eq{min-height:44px;margin-bottom:8px;overflow-x:auto;overflow-y:hidden}
+.u-eq math{font-family:var(--unfold-serif);font-size:20px;color:var(--anatomy-strong)}
+.u-eq [data-hue]{color:var(--hue)}
+.u-say{min-height:48px;margin-top:6px;color:var(--anatomy-text);font-size:14px;line-height:1.55;text-align:center}
+.u-say>.u-at{max-width:62ch;justify-self:center}
+.u-say b{color:var(--anatomy-strong);font-weight:500}
+.u-say [data-hue]{color:var(--hue)}
+.u-steps{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin-top:14px}
+.u-steps button{display:inline-flex;align-items:center;gap:6px;padding:5px 10px 5px 6px;border:0;border-radius:999px;background:transparent;color:var(--anatomy-muted);font:11px/1 var(--anatomy-mono);letter-spacing:.04em;cursor:pointer;box-shadow:0 0 0 1px var(--anatomy-faint);transition:color .2s,box-shadow .2s}
+.u-steps button span{display:inline-grid;place-items:center;width:16px;height:16px;border-radius:50%;background:var(--anatomy-faint);color:var(--anatomy-text);font-size:10px}
+.u-steps button:hover{color:var(--anatomy-text)}
+.u-steps button[aria-current]{color:var(--anatomy-strong);box-shadow:0 0 0 1px var(--anatomy-mid)}
+.u-steps button[aria-current] span{background:var(--anatomy-strong);color:var(--anatomy-card)}
+.u-move{transition:transform .9s var(--anatomy-ease),opacity .6s var(--anatomy-ease)}
+.u-grid text,.u-chip text,.u-bars text,.u-arrow text{dominant-baseline:central;text-anchor:middle}
+.u-cell{transform:translate(var(--x),var(--y));transition:transform .9s var(--anatomy-ease) calc(var(--i) * 18ms)}
+.u-cell-bg{fill:var(--hue);fill-opacity:var(--a);stroke:none;transition:fill-opacity .35s}
+.u-cell[data-neg]>.u-cell-bg,.u-cell-bg[data-neg]{fill-opacity:calc(var(--a) * .18);stroke:var(--hue);stroke-opacity:var(--a);stroke-width:1.2}
+.u-cell[data-masked]>.u-cell-bg,.u-cell-bg[data-masked]{fill:none;stroke:var(--anatomy-faint);stroke-width:.8;stroke-dasharray:2 2}
+.u-num{font:500 10px var(--anatomy-mono);font-variant-numeric:tabular-nums;fill:var(--anatomy-strong)}
+.u-cell[data-hot] .u-num{fill:var(--unfold-on-hot)}
+.u-cell[data-masked] .u-num{fill:var(--anatomy-lo)}
+.u-name{font:italic 600 17px var(--unfold-serif);fill:var(--hue);dominant-baseline:auto!important;text-anchor:start!important}
+.u-dims{font:400 10px var(--anatomy-mono);font-style:normal;fill:var(--anatomy-muted)}
+.u-T,.u-dims-T{display:none}
+.u-mark{fill:none;stroke:var(--anatomy-strong);stroke-width:1.2;opacity:0;transition:opacity .3s}
+.u-mark[data-on]{opacity:.9}
+.u-chip rect{fill:var(--anatomy-card);stroke:var(--anatomy-mid);stroke-width:.8;transition:stroke .25s,fill .25s}
+.u-chip text{font:500 11px var(--anatomy-mono);fill:var(--anatomy-text);transition:fill .25s}
+.u-chip[data-hue] rect{stroke:var(--hue)}
+.u-chip[data-hue] text{fill:var(--hue)}
+.u-cell[data-later],.u-mark[data-later]{opacity:0!important;transition:opacity .3s}
+.u-plot-axis{stroke:var(--anatomy-mid);stroke-width:.9;fill:none}
+.u-plot-grid{stroke:var(--anatomy-faint);stroke-width:.6;fill:none}
+.u-tick-label{font:10px var(--anatomy-mono);fill:var(--anatomy-muted)}
+.u-plot-name{font:italic 600 15px var(--unfold-serif);fill:var(--hue,var(--anatomy-text))}
+.u-curve{fill:none;stroke:var(--hue,var(--anatomy-hi));stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.u-chip[data-on] rect{fill:var(--anatomy-strong);stroke:var(--anatomy-strong)}
+.u-chip[data-on] text{fill:var(--anatomy-card)}
+.u-chip[data-i]{cursor:pointer}
+.u-arrow{--w:1.1;color:var(--anatomy-mid)}
+.u-arrow[data-hue]{color:var(--hue)}
+.u-arrow-line{fill:none;stroke:currentColor;stroke-width:var(--w);stroke-linecap:round;transition:stroke-width .4s,opacity .4s}
+.u-arrow-head{fill:currentColor}
+.u-bar-fill{fill:var(--hue);transform-box:fill-box;transform-origin:50% 100%;transform:scaleY(var(--v));transition:transform .6s var(--anatomy-ease)}
+.u-bar-value{font:500 10px var(--anatomy-mono);fill:var(--anatomy-strong);transition:y .6s var(--anatomy-ease)}
+.u-bar-label{font:11px var(--anatomy-mono);fill:var(--anatomy-muted)}
+.u-axis{stroke:var(--anatomy-mid);stroke-width:.8;fill:none}
+.u-link{fill:none;stroke:var(--hue,var(--anatomy-mid));stroke-width:1.1;stroke-linecap:round;transition:d .9s var(--anatomy-ease),opacity .5s var(--anatomy-ease),stroke .3s}
+.u-link[data-off]{opacity:0}
+.u-eq>.u-at{text-align:center}
+.u-eq .u-rule{font:500 14px/1.5 var(--anatomy-mono);color:var(--anatomy-strong);letter-spacing:.01em}
+.u-lane-bg{fill:var(--anatomy-faint);fill-opacity:.18;stroke:var(--anatomy-faint);stroke-width:.6}
+.u-lane-name{font:11px var(--anatomy-mono);fill:var(--hue,var(--anatomy-muted));text-anchor:end;dominant-baseline:central}
+.u-tick{stroke:var(--anatomy-faint);stroke-width:.6}
+.u-tick-label{font:9px var(--anatomy-mono);fill:var(--anatomy-muted);text-anchor:middle;dominant-baseline:central}
+.u-now{stroke:var(--anatomy-strong);stroke-width:1.2;transition:transform .5s var(--anatomy-ease)}
+.u-span-bar{fill:var(--hue,var(--anatomy-mid));fill-opacity:.9;transform-box:fill-box;transform-origin:0 50%;transform:scaleX(var(--v,1));transition:transform .5s var(--anatomy-ease)}
+.u-span-label{opacity:0;transition:opacity .3s}
+.u-span[data-labeled] .u-span-label{opacity:1}
+.u-span-label text{font:500 10px var(--anatomy-mono);fill:var(--unfold-on-hot);dominant-baseline:central}
+.u-face .u-cell-bg{stroke-width:.5}
+.u-cell-bg{transform-box:fill-box;transform-origin:50% 50%}
+.u-cell[data-hl]>.u-cell-bg{stroke:var(--anatomy-strong);stroke-opacity:1;stroke-width:1.6;animation:u-ping .5s var(--anatomy-ease)}
+.u-pulse{fill:var(--hue,var(--anatomy-strong));filter:drop-shadow(0 0 3px var(--hue,var(--anatomy-strong)))}
+.u-rise{transform-box:fill-box}
+@keyframes u-pop{from{opacity:0;transform:scale(.4)}}
+@keyframes u-fade{from{opacity:0}}
+@keyframes u-rise{from{opacity:0;transform:translateY(-14px)}}
+@keyframes u-grow{from{transform:scaleY(0)}}
+@keyframes u-draw{from{stroke-dasharray:1;stroke-dashoffset:1}to{stroke-dasharray:1;stroke-dashoffset:0}}
+@keyframes u-ping{from{stroke-width:4;stroke-opacity:0}}
+.u-floor-text{font-family:var(--unfold-serif);font-style:italic;font-weight:600;fill:var(--hue,var(--anatomy-text))}
+.u-floor-label{font-family:var(--anatomy-mono);fill:var(--anatomy-muted)}
+.u-guide{fill:none;stroke:var(--anatomy-lo);stroke-width:.8;stroke-dasharray:2 3}
+.u-controls{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px 18px;margin-top:10px}
+.u-controls button{border:0;border-radius:999px;background:transparent;color:var(--anatomy-muted);font:11px/1 var(--anatomy-mono);letter-spacing:.04em;padding:6px 10px;cursor:pointer;box-shadow:0 0 0 1px var(--anatomy-faint);transition:color .2s,box-shadow .2s}
+.u-controls button:hover{color:var(--anatomy-text)}
+.u-controls button[aria-pressed="true"]{color:var(--anatomy-strong);box-shadow:0 0 0 1px var(--anatomy-mid)}
+.u-time{display:flex;align-items:center;gap:8px;flex:1 1 260px;max-width:440px;transition:opacity .4s}
+.u-time button{width:28px;height:28px;padding:0;font-size:15px}
+.u-time input{flex:1;min-width:80px;accent-color:var(--anatomy-hi)}
+.u-time output{font:11px var(--anatomy-mono);color:var(--anatomy-muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.u-notes{margin-top:56px;color:var(--anatomy-text);font-size:14px;line-height:1.65}
+.u-notes h2{margin:36px 0 10px;font:500 12px var(--anatomy-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--anatomy-strong)}
+.u-notes p,.u-notes ul{margin:0 0 12px;max-width:72ch}
+.u-notes li{margin-bottom:6px}
+.u-notes b{color:var(--anatomy-strong);font-weight:500}
+.u-notes code{font:12.5px var(--anatomy-mono);color:var(--anatomy-strong)}
+.u-notes table{width:100%;border-collapse:collapse;font-size:13px;line-height:1.5}
+.u-notes th,.u-notes td{padding:7px 10px 7px 0;border-bottom:1px solid var(--anatomy-faint);text-align:left;vertical-align:top}
+.u-notes th{color:var(--anatomy-muted);font:500 11px var(--anatomy-mono);letter-spacing:.05em;text-transform:uppercase}
+.u-notes td:first-child{color:var(--anatomy-strong);white-space:nowrap}
+@media (max-width:560px){.u-notes thead{display:none}.u-notes tr{display:block;padding:8px 0;border-bottom:1px solid var(--anatomy-faint)}.u-notes td{display:block;padding:2px 0;border:0}.u-notes td[data-th]:not(:first-child)::before{content:attr(data-th) ": ";color:var(--anatomy-muted)}}
+@container (max-width:520px){.u-num,.u-bar-value{display:none}.u-eq math{font-size:14px}.u-steps button{font-size:0;gap:0;padding:4px}}
+@media (max-width:560px){.iso-plate-corner[data-corner="readout"]{left:0;white-space:normal;text-align:right;line-height:1.4}.iso-plate-corner[data-corner="hint"]{display:none}}
+@media (prefers-reduced-motion:reduce){.u-stage *{transition:none!important;animation:none!important}.u-pulse{display:none}}
+</style><figure class="iso-figure"><div class="iso-plate"><div class="iso-plate-corners" aria-hidden="true"><span class="iso-plate-corner" data-corner="fig">Fig 1</span><span class="iso-plate-corner" data-corner="title">Matching a regex with an NFA</span><span class="iso-plate-corner" data-corner="hint">← → scene · , . step</span><span class="iso-plate-corner" data-corner="readout" data-readout>S0 = ε-closure({0}) = {0} · state 0 has no ε edges</span></div><style>.u-stage[data-scene="0"] .u-at[data-at="0"]{opacity:1;visibility:visible;transition-delay:.15s}
+.u-stage[data-scene="0"] .u-grid[data-t~="0"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="0"] .u-grid[data-t~="0"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="0"] .u-grid[data-t~="0"] .u-dims:not(.u-dims-T),.u-stage[data-scene="0"] .u-grid[data-t~="0"] .u-mark{display:none}
+.u-stage[data-scene="1"] .u-at[data-at="1"]{opacity:1;visibility:visible;transition-delay:.15s}
+.u-stage[data-scene="1"] .u-grid[data-t~="1"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="1"] .u-grid[data-t~="1"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="1"] .u-grid[data-t~="1"] .u-dims:not(.u-dims-T),.u-stage[data-scene="1"] .u-grid[data-t~="1"] .u-mark{display:none}
+.u-stage[data-scene="2"] .u-at[data-at="2"]{opacity:1;visibility:visible;transition-delay:.15s}
+.u-stage[data-scene="2"] .u-grid[data-t~="2"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="2"] .u-grid[data-t~="2"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="2"] .u-grid[data-t~="2"] .u-dims:not(.u-dims-T),.u-stage[data-scene="2"] .u-grid[data-t~="2"] .u-mark{display:none}
+.u-stage[data-scene="3"] .u-at[data-at="3"]{opacity:1;visibility:visible;transition-delay:.15s}
+.u-stage[data-scene="3"] .u-grid[data-t~="3"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="3"] .u-grid[data-t~="3"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="3"] .u-grid[data-t~="3"] .u-dims:not(.u-dims-T),.u-stage[data-scene="3"] .u-grid[data-t~="3"] .u-mark{display:none}
+.u-stage[data-scene="4"] .u-at[data-at="4"]{opacity:1;visibility:visible;transition-delay:.15s}
+.u-stage[data-scene="4"] .u-grid[data-t~="4"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="4"] .u-grid[data-t~="4"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="4"] .u-grid[data-t~="4"] .u-dims:not(.u-dims-T),.u-stage[data-scene="4"] .u-grid[data-t~="4"] .u-mark{display:none}.u-stage:not(:is([data-scene="1"],[data-scene="2"],[data-scene="3"],[data-scene="4"])) .u-time{opacity:.4}
+.u-stage .iso-svg{overflow:visible}
+.g-narrow{display:none}
+.u-stage[data-narrow] .g-narrow{display:inline}
+.u-stage[data-narrow] .g-wide{display:none}
+.el-tape{transform:translate(328px,4px)}
+.u-stage[data-narrow] .el-tape{transform:translate(118px,4px)}
+.el-matrix{transform:translate(266px,330px)}
+.u-stage[data-narrow] .el-matrix{transform:translate(62px,722px)}
+.el-label{font:10.5px var(--anatomy-mono);fill:var(--anatomy-muted);letter-spacing:.06em;text-transform:uppercase;dominant-baseline:central}
+.el-small{font:10.5px var(--anatomy-mono);fill:var(--anatomy-muted)}
+.frags{opacity:0;transition:opacity .6s var(--anatomy-ease)}
+.u-stage[data-scene="0"] .frags{opacity:1}
+.fr rect{fill:var(--anatomy-faint);fill-opacity:.08;stroke:var(--anatomy-mid);stroke-width:.8;stroke-dasharray:3 3}
+.fr text{font:500 12px var(--anatomy-mono);fill:var(--anatomy-text)}
+.ed .u-arrow{color:var(--anatomy-mid)}
+.ed-eps .ed-base .u-arrow{color:var(--unfold-purple);opacity:.6}
+.ed-eps .ed-base .u-arrow-line{stroke-dasharray:var(--dash)}
+.ed-lit{opacity:0;transition:opacity .25s}
+.ed-lit .u-arrow{--w:2.4}
+.ed[data-lit] .ed-lit{opacity:1;transition-delay:calc(var(--d,0) * 260ms)}
+.ed[data-lit] .ed-lit .u-arrow-line{animation:u-draw .3s var(--anatomy-ease) backwards;animation-delay:calc(var(--d,0) * 260ms)}
+.ed[data-lit] .ed-lit .u-arrow-head{animation:u-fade .3s backwards;animation-delay:calc(var(--d,0) * 260ms + 200ms)}
+.ed[data-lit="sym"] .ed-lit .u-arrow{color:var(--unfold-yellow)}
+.ed[data-lit="eps"] .ed-lit .u-arrow{color:var(--unfold-purple)}
+.ed-sym{font:600 13px var(--anatomy-mono);fill:var(--anatomy-text);text-anchor:middle;dominant-baseline:central;transition:fill .3s}
+.ed[data-lit="sym"] .ed-sym{fill:var(--unfold-yellow)}
+.st-body{fill:var(--anatomy-card);stroke:var(--anatomy-mid);stroke-width:1.2;transition:fill .3s,stroke .3s;transition-delay:calc(var(--d,0) * 260ms + 200ms)}
+.st-ring{fill:none;stroke:var(--anatomy-mid);stroke-width:1.2;transition:stroke .3s}
+.st text{font:500 12px var(--anatomy-mono);fill:var(--anatomy-muted);text-anchor:middle;dominant-baseline:central;transition:fill .3s}
+.st[data-on] .st-body{fill:color-mix(in srgb,var(--unfold-blue) 30%,var(--anatomy-card));stroke:var(--unfold-blue);stroke-width:2}
+.st[data-on] text,.st[data-src] text,.st[data-dead] text{fill:var(--anatomy-strong)}
+.st[data-src] .st-body{fill:color-mix(in srgb,var(--unfold-blue) 10%,var(--anatomy-card));stroke:var(--unfold-blue);stroke-dasharray:3 2}
+.st[data-dead] .st-body{fill:color-mix(in srgb,var(--unfold-red) 16%,var(--anatomy-card));stroke:var(--unfold-red);stroke-width:1.6}
+.st-acc[data-on] .st-body{fill:color-mix(in srgb,var(--unfold-green) 34%,var(--anatomy-card));stroke:var(--unfold-green)}
+.st-acc[data-on] .st-ring{stroke:var(--unfold-green)}
+.tp .u-chip rect{transition:fill .3s,stroke .3s,opacity .3s}
+.tp .u-chip text{font-size:13px}
+.tp{transition:opacity .3s}
+.tp[data-done]{opacity:.35}
+.tp[data-read] .u-chip rect{fill:color-mix(in srgb,var(--unfold-yellow) 22%,var(--anatomy-card));stroke:var(--unfold-yellow)}
+.tp[data-read] .u-chip text{fill:var(--unfold-yellow)}
+.tp[data-p]{cursor:pointer}
+.tp-cursor{fill:var(--unfold-yellow);transition:transform .45s var(--anatomy-ease),opacity .3s}
+.mx-head{font:10px var(--anatomy-mono);fill:var(--anatomy-muted);text-anchor:middle}
+.mx-name{font:italic 600 13px var(--unfold-serif);fill:var(--unfold-blue);text-anchor:end;dominant-baseline:central}
+.mx-sym{font:600 12px var(--anatomy-mono);fill:var(--unfold-yellow);text-anchor:middle;dominant-baseline:central}
+.mx-hit{fill:transparent;cursor:pointer}
+.mx-cell{fill:var(--anatomy-faint);fill-opacity:.25;pointer-events:none}
+.mx-cell[data-in]{fill:var(--unfold-blue);fill-opacity:.85}
+.mx-acc[data-in]{fill:var(--unfold-green)}
+.mx-row{transition:opacity .35s}
+.mx-row[data-later]{opacity:0}
+.mx-mark{fill:none;stroke:var(--anatomy-strong);stroke-width:1.2;transition:transform .4s var(--anatomy-ease);pointer-events:none}
+</style><div class="u-stage" tabindex="0" role="group" aria-roledescription="explainer" aria-label="NFA matching explainer. Left and right arrows change the scene. Comma and period, or up and down, step through the input." data-scene="0" data-count="5" data-dwell="9500" data-narrow-box="0 0 400 826"><div class="u-eq" aria-live="polite"><div class="u-at" data-at="0"><code class="u-rule">a(b|c)*d → 12 states · 4 symbol edges · 10 <span data-hue="purple">ε edges</span></code></div><div class="u-at" data-at="1"><math display="block"><mi>move</mi><mo>(</mo><msub><mi data-hue="blue">S</mi><mn>0</mn></msub><mo>,</mo><mi data-hue="yellow">a</mi><mo>)</mo><mo>=</mo><mrow data-hue="blue"><mo>{</mo><mn>1</mn><mo>}</mo></mrow></math></div><div class="u-at" data-at="2"><math display="block"><msub><mi data-hue="blue">S</mi><mn>1</mn></msub><mo>=</mo><mi data-hue="purple">ε-closure</mi><mo>(</mo><mrow data-hue="blue"><mo>{</mo><mn>1</mn><mo>}</mo></mrow><mo>)</mo><mo>=</mo><mrow data-hue="blue"><mo>{</mo><mn>1</mn><mo>,</mo><mn>2</mn><mo>,</mo><mn>3</mn><mo>,</mo><mn>4</mn><mo>,</mo><mn>5</mn><mo>,</mo><mn>9</mn><mo>,</mo><mn>10</mn><mo>}</mo></mrow></math></div><div class="u-at" data-at="3"><math display="block"><msub><mi data-hue="blue">S</mi><mrow><mi>i</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>=</mo><mi data-hue="purple">ε-closure</mi><mo>(</mo><mi>move</mi><mo>(</mo><msub><mi data-hue="blue">S</mi><mi>i</mi></msub><mo>,</mo><msub><mi data-hue="yellow">x</mi><mrow><mi>i</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>)</mo><mo>)</mo></math></div><div class="u-at" data-at="4"><math display="block"><mn data-hue="green">11</mn><mo>∈</mo><msub><mi data-hue="blue">S</mi><mn>5</mn></msub><mspace width="0.6em"/><mo>⇒</mo><mspace width="0.6em"/><mtext>match</mtext></math></div></div><svg xmlns="http://www.w3.org/2000/svg" class="iso-svg" viewBox="0 0 820 438" role="img" aria-label="The NFA for a(b|c)*d built by Thompson's construction: 12 numbered states, symbol edges and dashed ε edges. Above it, the input tape abcbd; below it, the set of active states after each symbol."><g class="g-wide"><g class="frags"><g class="fr"><rect x="33" y="153" width="132" height="54" rx="8"/><text x="33" y="147">a</text></g><g class="fr"><rect x="267" y="70" width="288" height="191" rx="8"/><text x="267" y="64">b|c</text></g><g class="fr"><rect x="189" y="70" width="444" height="220" rx="8"/><text x="189" y="64">(b|c)*</text></g><g class="fr"><rect x="657" y="153" width="132" height="54" rx="8"/><text x="657" y="147">d</text></g></g><g class="g-start"><g class="u-arrow"><path class="u-arrow-line" pathLength="1" d="M13 180Q27.5 180 36 180"/><path class="u-arrow-head" d="M42 180L36 183.3L36 176.7Z"/></g><text class="el-small" x="13" y="170">start</text></g><g class="ed" data-e="0"><g class="ed-base"><g class="u-arrow"><path class="u-arrow-line" pathLength="1" d="M77 180Q98.5 180 114 180"/><path class="u-arrow-head" d="M120 180L114 183.3L114 176.7Z"/></g></g><g class="ed-lit"><g class="u-arrow"><path class="u-arrow-line" pathLength="1" d="M77 180Q98.5 180 114 180"/><path class="u-arrow-head" d="M120 180L114 183.3L114 176.7Z"/></g></g><text class="ed-sym" x="99" y="168">a</text></g><g class="ed" data-e="1"><g class="ed-base"><g class="u-arrow"><path class="u-arrow-line" pathLength="1" d="M389 126Q410.5 126 426 126"/><path class="u-arrow-head" d="M432 126L426 129.3L426 122.7Z"/></g></g><g class="ed-lit"><g class="u-arrow"><path class="u-arrow-line" pathLength="1" d="M389 126Q410.5 126 426 126"/><path class="u-arrow-head" d="M432 126L426 129.3L426 122.7Z"/></g></g><text class="ed-sym" x="411" y="114">b</text></g><g class="ed" data-e="2"><g class="ed-base"><g class="u-arrow"><path class="u-arrow-line" pathLength="1" d="M389 234Q410.5 234 426 234"/><path class="u-arrow-head" d="M432 234L426 237.3L426 230.7Z"/></g></g><g class="ed-lit"><g class="u-arrow"><path class="u-arrow-line" pathLength="1" d="M389 234Q410.5 234 426 234"/><path class="u-arrow-head" d="M432 234L426 237.3L426 230.7Z"/></g></g><text class="ed-sym" x="411" y="222">c</text></g><g class="ed ed-eps" data-e="3" style="--dash:0.0422 0.0369"><g class="ed-base"><g class="u-arrow"><path class="u-arrow-line" pathLength="1" d="M308 170.3Q332.6 153.3 352.3 139.7"/><path class="u-arrow-head" d="M357.2 136.2L354.1 142.4L350.4 136.9Z"/></g></g><g class="ed-lit"><g class="u-arrow"><path class="u-arrow-line" pathLength="1" d="M308 170.3Q332.6 153.3 352.3 139.7"/><path class="u-arrow-head" d="M357.2 136.2L354.1 142.4L350.4 136.9Z"/></g></g></g><g class="ed ed-eps" data-e="4" style="--dash:0.0422 0.0369"><g class="ed-base"><g class="u-arrow"><path class="u-arrow-line" pathLength="1" d="M308 189.7Q332.6 206.7 352.3 220.3"/><path class="u-arrow-head" d="M357.2 223.8L350.4 223.1L354.1 217.6Z"/></g></g><g class="ed-lit"><g class="u-arrow"><path class="u-arrow-line" pathLength="1" d="M308 189.7Q332.6 206.7 352.3 220.3"/><path class="u-arrow-head" d="M357.2 223.8L350.4 223.1L354.1 217.6Z"/></g></g></g><g class="ed ed-eps" data-e="5" style="--dash:0.0422 0.0369"><g class="ed-base"><g class="u-arrow"><path class="u-arrow-line" pathLength="1" d="M464 135.7Q488.6 152.7 508.3 166.3"/><path class="u-arrow-head" d="M513.2 169.8L506.4 169.1L510.1 163.6Z"/></g></g><g class="ed-lit"><g class="u-arrow"><path class="u-arrow-line" pathLength="1" d="M464 135.7Q488.6 152.7 508.3 166.3"/><path class="u-arrow-head" d="M513.2 169.8L506.4 169.1L510.1 163.6Z"/></g></g></g><g class="ed ed-eps" data-e="6" style="--dash:0.0422 0.0369"><g class="ed-base"><g class="u-arrow"><path class="u-arrow-line" pathLength="1" d="M464 224.3Q488.6 207.3 508.3 193.7"/><path class="u-arrow-head" d="M513.2 190.2L510.1 196.4L506.4 190.9Z"/></g></g><g class="ed-lit"><g class="u-arrow"><path class="u-arrow-line" pathLength="1" d="M464 224.3Q488.6 207.3 508.3 193.7"/><path class="u-arrow-head" d="M513.2 190.2L510.1 196.4L506.4 190.9Z"/></g></g></g><g class="ed ed-eps" data-e="7" style="--dash:0.0513 0.0449"><g class="ed-base"><g class="u-arrow"><path class="u-arrow-line" pathLength="1" d="M233 180Q254.5 180 270 180"/><path class="u-arrow-head" d="M276 180L270 183.3L270 176.7Z"/></g></g><g class="ed-lit"><g class="u-arrow"><path class="u-arrow-line" pathLength="1" d="M233 180Q254.5 180 270 180"/><path class="u-arrow-head" d="M276 180L270 183.3L270 176.7Z"/></g></g></g><g class="ed ed-eps" data-e="8" style="--dash:0.0103 0.0090"><g class="ed-base"><g class="u-arrow"><path class="u-arrow-line" pathLength="1" d="M227.9 192.2Q410.3 380 589.2 197.2"/><path class="u-arrow-head" d="M593.4 192.9L591.6 199.5L586.9 194.9Z"/></g></g><g class="ed-lit"><g class="u-arrow"><path class="u-arrow-line" pathLength="1" d="M227.9 192.2Q410.3 380 589.2 197.2"/><path class="u-arrow-head" d="M593.4 192.9L591.6 199.5L586.9 194.9Z"/></g></g></g><g class="ed ed-eps" data-e="9" style="--dash:0.0171 0.0150"><g class="ed-base"><g class="u-arrow"><path class="u-arrow-line" pathLength="1" d="M519.4 165.3Q412 -20 306.1 159.3"/><path class="u-arrow-head" d="M303.1 164.5L303.3 157.6L309 161Z"/></g></g><g class="ed-lit"><g class="u-arrow"><path class="u-arrow-line" pathLength="1" d="M519.4 165.3Q412 -20 306.1 159.3"/><path class="u-arrow-head" d="M303.1 164.5L303.3 157.6L309 161Z"/></g></g></g><g class="ed ed-eps" data-e="10" style="--dash:0.0513 0.0449"><g class="ed-base"><g class="u-arrow"><path class="u-arrow-line" pathLength="1" d="M545 180Q566.5 180 582 180"/><path class="u-arrow-head" d="M588 180L582 183.3L582 176.7Z"/></g></g><g class="ed-lit"><g class="u-arrow"><path class="u-arrow-line" pathLength="1" d="M545 180Q566.5 180 582 180"/><path class="u-arrow-head" d="M588 180L582 183.3L582 176.7Z"/></g></g></g><g class="ed ed-eps" data-e="11" style="--dash:0.0513 0.0449"><g class="ed-base"><g class="u-arrow"><path class="u-arrow-line" pathLength="1" d="M155 180Q176.5 180 192 180"/><path class="u-arrow-head" d="M198 180L192 183.3L192 176.7Z"/></g></g><g class="ed-lit"><g class="u-arrow"><path class="u-arrow-line" pathLength="1" d="M155 180Q176.5 180 192 180"/><path class="u-arrow-head" d="M198 180L192 183.3L192 176.7Z"/></g></g></g><g class="ed" data-e="12"><g class="ed-base"><g class="u-arrow"><path class="u-arrow-line" pathLength="1" d="M701 180Q722.5 180 738 180"/><path class="u-arrow-head" d="M744 180L738 183.3L738 176.7Z"/></g></g><g class="ed-lit"><g class="u-arrow"><path class="u-arrow-line" pathLength="1" d="M701 180Q722.5 180 738 180"/><path class="u-arrow-head" d="M744 180L738 183.3L738 176.7Z"/></g></g><text class="ed-sym" x="723" y="168">d</text></g><g class="ed ed-eps" data-e="13" style="--dash:0.0513 0.0449"><g class="ed-base"><g class="u-arrow"><path class="u-arrow-line" pathLength="1" d="M623 180Q644.5 180 660 180"/><path class="u-arrow-head" d="M666 180L660 183.3L660 176.7Z"/></g></g><g class="ed-lit"><g class="u-arrow"><path class="u-arrow-line" pathLength="1" d="M623 180Q644.5 180 660 180"/><path class="u-arrow-head" d="M666 180L660 183.3L660 176.7Z"/></g></g></g><g class="st" data-s="0"><circle class="st-body" cx="60" cy="180" r="17"/><text x="60" y="180">0</text></g><g class="st" data-s="1"><circle class="st-body" cx="138" cy="180" r="17"/><text x="138" y="180">1</text></g><g class="st" data-s="2"><circle class="st-body" cx="216" cy="180" r="17"/><text x="216" y="180">2</text></g><g class="st" data-s="3"><circle class="st-body" cx="294" cy="180" r="17"/><text x="294" y="180">3</text></g><g class="st" data-s="4"><circle class="st-body" cx="372" cy="126" r="17"/><text x="372" y="126">4</text></g><g class="st" data-s="5"><circle class="st-body" cx="372" cy="234" r="17"/><text x="372" y="234">5</text></g><g class="st" data-s="6"><circle class="st-body" cx="450" cy="126" r="17"/><text x="450" y="126">6</text></g><g class="st" data-s="7"><circle class="st-body" cx="450" cy="234" r="17"/><text x="450" y="234">7</text></g><g class="st" data-s="8"><circle class="st-body" cx="528" cy="180" r="17"/><text x="528" y="180">8</text></g><g class="st" data-s="9"><circle class="st-body" cx="606" cy="180" r="17"/><text x="606" y="180">9</text></g><g class="st" data-s="10"><circle class="st-body" cx="684" cy="180" r="17"/><text x="684" y="180">10</text></g><g class="st st-acc" data-s="11"><circle class="st-ring" cx="762" cy="180" r="21"/><circle class="st-body" cx="762" cy="180" r="17"/><text x="762" y="180">11</text></g></g><g class="g-narrow"><g class="frags"><g class="fr"><rect x="173" y="77" width="54" height="114" rx="8"/><text x="173" y="71">a</text></g><g class="fr"><rect x="90" y="257" width="201" height="234" rx="8"/><text x="90" y="251">b|c</text></g><g class="fr"><rect x="90" y="197" width="220" height="354" rx="8"/><text x="90" y="191">(b|c)*</text></g><g class="fr"><rect x="173" y="557" width="54" height="114" rx="8"/><text x="173" y="551">d</text></g></g><g class="g-start"><g class="u-arrow"><path class="u-arrow-line" pathLength="1" d="M200 57Q200 71.5 200 80"/><path class="u-arrow-head" d="M200 86L196.7 80L203.3 80Z"/></g><text class="el-small" x="208" y="65">start</text></g><g class="ed" data-e="0"><g class="ed-base"><g class="u-arrow"><path class="u-arrow-line" pathLength="1" d="M200 121Q200 133.5 200 140"/><path class="u-arrow-head" d="M200 146L196.7 140L203.3 140Z"/></g></g><g class="ed-lit"><g class="u-arrow"><path class="u-arrow-line" pathLength="1" d="M200 121Q200 133.5 200 140"/><path class="u-arrow-head" d="M200 146L196.7 140L203.3 140Z"/></g></g><text class="ed-sym" x="212" y="134">a</text></g><g class="ed" data-e="1"><g class="ed-base"><g class="u-arrow"><path class="u-arrow-line" pathLength="1" d="M136 361Q136 373.5 136 380"/><path class="u-arrow-head" d="M136 386L132.7 380L139.3 380Z"/></g></g><g class="ed-lit"><g class="u-arrow"><path class="u-arrow-line" pathLength="1" d="M136 361Q136 373.5 136 380"/><path class="u-arrow-head" d="M136 386L132.7 380L139.3 380Z"/></g></g><text class="ed-sym" x="148" y="374">b</text></g><g class="ed" data-e="2"><g class="ed-base"><g class="u-arrow"><path class="u-arrow-line" pathLength="1" d="M264 361Q264 373.5 264 380"/><path class="u-arrow-head" d="M264 386L260.7 380L267.3 380Z"/></g></g><g class="ed-lit"><g class="u-arrow"><path class="u-arrow-line" pathLength="1" d="M264 361Q264 373.5 264 380"/><path class="u-arrow-head" d="M264 386L260.7 380L267.3 380Z"/></g></g><text class="ed-sym" x="276" y="374">c</text></g><g class="ed ed-eps" data-e="3" style="--dash:0.0456 0.0399"><g class="ed-base"><g class="u-arrow"><path class="u-arrow-line" pathLength="1" d="M187.6 295.6Q168.4 313.7 153.5 327.6"/><path class="u-arrow-head" d="M149.1 331.7L151.3 325.2L155.8 330Z"/></g></g><g class="ed-lit"><g class="u-arrow"><path class="u-arrow-line" pathLength="1" d="M187.6 295.6Q168.4 313.7 153.5 327.6"/><path class="u-arrow-head" d="M149.1 331.7L151.3 325.2L155.8 330Z"/></g></g></g><g class="ed ed-eps" data-e="4" style="--dash:0.0456 0.0399"><g class="ed-base"><g class="u-arrow"><path class="u-arrow-line" pathLength="1" d="M212.4 295.6Q231.6 313.7 246.5 327.6"/><path class="u-arrow-head" d="M250.9 331.7L244.2 330L248.7 325.2Z"/></g></g><g class="ed-lit"><g class="u-arrow"><path class="u-arrow-line" pathLength="1" d="M212.4 295.6Q231.6 313.7 246.5 327.6"/><path class="u-arrow-head" d="M250.9 331.7L244.2 330L248.7 325.2Z"/></g></g></g><g class="ed ed-eps" data-e="5" style="--dash:0.0456 0.0399"><g class="ed-base"><g class="u-arrow"><path class="u-arrow-line" pathLength="1" d="M148.4 415.6Q167.6 433.7 182.5 447.6"/><path class="u-arrow-head" d="M186.9 451.7L180.2 450L184.7 445.2Z"/></g></g><g class="ed-lit"><g class="u-arrow"><path class="u-arrow-line" pathLength="1" d="M148.4 415.6Q167.6 433.7 182.5 447.6"/><path class="u-arrow-head" d="M186.9 451.7L180.2 450L184.7 445.2Z"/></g></g></g><g class="ed ed-eps" data-e="6" style="--dash:0.0456 0.0399"><g class="ed-base"><g class="u-arrow"><path class="u-arrow-line" pathLength="1" d="M251.6 415.6Q232.4 433.7 217.5 447.6"/><path class="u-arrow-head" d="M213.1 451.7L215.3 445.2L219.8 450Z"/></g></g><g class="ed-lit"><g class="u-arrow"><path class="u-arrow-line" pathLength="1" d="M251.6 415.6Q232.4 433.7 217.5 447.6"/><path class="u-arrow-head" d="M213.1 451.7L215.3 445.2L219.8 450Z"/></g></g></g><g class="ed ed-eps" data-e="7" style="--dash:0.0667 0.0583"><g class="ed-base"><g class="u-arrow"><path class="u-arrow-line" pathLength="1" d="M200 241Q200 253.5 200 260"/><path class="u-arrow-head" d="M200 266L196.7 260L203.3 260Z"/></g></g><g class="ed-lit"><g class="u-arrow"><path class="u-arrow-line" pathLength="1" d="M200 241Q200 253.5 200 260"/><path class="u-arrow-head" d="M200 266L196.7 260L203.3 260Z"/></g></g></g><g class="ed ed-eps" data-e="8" style="--dash:0.0133 0.0117"><g class="ed-base"><g class="u-arrow"><path class="u-arrow-line" pathLength="1" d="M213.6 234.2Q400 373.2 219.2 509.6"/><path class="u-arrow-head" d="M214.4 513.2L217.2 507L221.2 512.2Z"/></g></g><g class="ed-lit"><g class="u-arrow"><path class="u-arrow-line" pathLength="1" d="M213.6 234.2Q400 373.2 219.2 509.6"/><path class="u-arrow-head" d="M214.4 513.2L217.2 507L221.2 512.2Z"/></g></g></g><g class="ed ed-eps" data-e="9" style="--dash:0.0222 0.0194"><g class="ed-base"><g class="u-arrow"><path class="u-arrow-line" pathLength="1" d="M184.5 457Q0 375.2 178.1 293.9"/><path class="u-arrow-head" d="M183.6 291.4L179.5 296.9L176.8 290.9Z"/></g></g><g class="ed-lit"><g class="u-arrow"><path class="u-arrow-line" pathLength="1" d="M184.5 457Q0 375.2 178.1 293.9"/><path class="u-arrow-head" d="M183.6 291.4L179.5 296.9L176.8 290.9Z"/></g></g></g><g class="ed ed-eps" data-e="10" style="--dash:0.0667 0.0583"><g class="ed-base"><g class="u-arrow"><path class="u-arrow-line" pathLength="1" d="M200 481Q200 493.5 200 500"/><path class="u-arrow-head" d="M200 506L196.7 500L203.3 500Z"/></g></g><g class="ed-lit"><g class="u-arrow"><path class="u-arrow-line" pathLength="1" d="M200 481Q200 493.5 200 500"/><path class="u-arrow-head" d="M200 506L196.7 500L203.3 500Z"/></g></g></g><g class="ed ed-eps" data-e="11" style="--dash:0.0667 0.0583"><g class="ed-base"><g class="u-arrow"><path class="u-arrow-line" pathLength="1" d="M200 181Q200 193.5 200 200"/><path class="u-arrow-head" d="M200 206L196.7 200L203.3 200Z"/></g></g><g class="ed-lit"><g class="u-arrow"><path class="u-arrow-line" pathLength="1" d="M200 181Q200 193.5 200 200"/><path class="u-arrow-head" d="M200 206L196.7 200L203.3 200Z"/></g></g></g><g class="ed" data-e="12"><g class="ed-base"><g class="u-arrow"><path class="u-arrow-line" pathLength="1" d="M200 601Q200 613.5 200 620"/><path class="u-arrow-head" d="M200 626L196.7 620L203.3 620Z"/></g></g><g class="ed-lit"><g class="u-arrow"><path class="u-arrow-line" pathLength="1" d="M200 601Q200 613.5 200 620"/><path class="u-arrow-head" d="M200 626L196.7 620L203.3 620Z"/></g></g><text class="ed-sym" x="212" y="614">d</text></g><g class="ed ed-eps" data-e="13" style="--dash:0.0667 0.0583"><g class="ed-base"><g class="u-arrow"><path class="u-arrow-line" pathLength="1" d="M200 541Q200 553.5 200 560"/><path class="u-arrow-head" d="M200 566L196.7 560L203.3 560Z"/></g></g><g class="ed-lit"><g class="u-arrow"><path class="u-arrow-line" pathLength="1" d="M200 541Q200 553.5 200 560"/><path class="u-arrow-head" d="M200 566L196.7 560L203.3 560Z"/></g></g></g><g class="st" data-s="0"><circle class="st-body" cx="200" cy="104" r="17"/><text x="200" y="104">0</text></g><g class="st" data-s="1"><circle class="st-body" cx="200" cy="164" r="17"/><text x="200" y="164">1</text></g><g class="st" data-s="2"><circle class="st-body" cx="200" cy="224" r="17"/><text x="200" y="224">2</text></g><g class="st" data-s="3"><circle class="st-body" cx="200" cy="284" r="17"/><text x="200" y="284">3</text></g><g class="st" data-s="4"><circle class="st-body" cx="136" cy="344" r="17"/><text x="136" y="344">4</text></g><g class="st" data-s="5"><circle class="st-body" cx="264" cy="344" r="17"/><text x="264" y="344">5</text></g><g class="st" data-s="6"><circle class="st-body" cx="136" cy="404" r="17"/><text x="136" y="404">6</text></g><g class="st" data-s="7"><circle class="st-body" cx="264" cy="404" r="17"/><text x="264" y="404">7</text></g><g class="st" data-s="8"><circle class="st-body" cx="200" cy="464" r="17"/><text x="200" y="464">8</text></g><g class="st" data-s="9"><circle class="st-body" cx="200" cy="524" r="17"/><text x="200" y="524">9</text></g><g class="st" data-s="10"><circle class="st-body" cx="200" cy="584" r="17"/><text x="200" y="584">10</text></g><g class="st st-acc" data-s="11"><circle class="st-ring" cx="200" cy="644" r="21"/><circle class="st-body" cx="200" cy="644" r="17"/><text x="200" y="644">11</text></g></g><g class="el-tape"><text class="el-label" x="-10" y="12" text-anchor="end">input</text><g class="tp" data-p="0"><g class="u-chip " transform="translate(0 0)"><rect width="28" height="24" rx="4"/><text x="14" y="12">a</text></g></g><g class="tp" data-p="1"><g class="u-chip " transform="translate(34 0)"><rect width="28" height="24" rx="4"/><text x="14" y="12">b</text></g></g><g class="tp" data-p="2"><g class="u-chip " transform="translate(68 0)"><rect width="28" height="24" rx="4"/><text x="14" y="12">c</text></g></g><g class="tp" data-p="3"><g class="u-chip " transform="translate(102 0)"><rect width="28" height="24" rx="4"/><text x="14" y="12">b</text></g></g><g class="tp" data-p="4"><g class="u-chip " transform="translate(136 0)"><rect width="28" height="24" rx="4"/><text x="14" y="12">d</text></g></g><path class="tp-cursor" d="M14 29l-5 7h10z"/></g><g class="el-matrix"><text class="el-label" x="0" y="-22">active set after each symbol</text><text class="mx-head" x="12" y="-7">0</text><text class="mx-head" x="36" y="-7">1</text><text class="mx-head" x="60" y="-7">2</text><text class="mx-head" x="84" y="-7">3</text><text class="mx-head" x="108" y="-7">4</text><text class="mx-head" x="132" y="-7">5</text><text class="mx-head" x="156" y="-7">6</text><text class="mx-head" x="180" y="-7">7</text><text class="mx-head" x="204" y="-7">8</text><text class="mx-head" x="228" y="-7">9</text><text class="mx-head" x="252" y="-7">10</text><text class="mx-head" x="276" y="-7">11</text><g class="mx-row" data-r="0" data-t="0"><rect class="mx-hit" x="-64" y="0" width="352" height="15"/><text class="mx-name" x="-10" y="7.5">S0</text><rect class="mx-cell" data-c="0" data-in x="1" y="1" width="22" height="13" rx="2"/><rect class="mx-cell" data-c="1" x="25" y="1" width="22" height="13" rx="2"/><rect class="mx-cell" data-c="2" x="49" y="1" width="22" height="13" rx="2"/><rect class="mx-cell" data-c="3" x="73" y="1" width="22" height="13" rx="2"/><rect class="mx-cell" data-c="4" x="97" y="1" width="22" height="13" rx="2"/><rect class="mx-cell" data-c="5" x="121" y="1" width="22" height="13" rx="2"/><rect class="mx-cell" data-c="6" x="145" y="1" width="22" height="13" rx="2"/><rect class="mx-cell" data-c="7" x="169" y="1" width="22" height="13" rx="2"/><rect class="mx-cell" data-c="8" x="193" y="1" width="22" height="13" rx="2"/><rect class="mx-cell" data-c="9" x="217" y="1" width="22" height="13" rx="2"/><rect class="mx-cell" data-c="10" x="241" y="1" width="22" height="13" rx="2"/><rect class="mx-cell mx-acc" data-c="11" x="265" y="1" width="22" height="13" rx="2"/></g><g class="mx-row" data-r="1" data-t="2"><rect class="mx-hit" x="-64" y="15" width="352" height="15"/><text class="mx-sym" x="-46" y="22.5">a</text><text class="mx-name" x="-10" y="22.5">S1</text><rect class="mx-cell" data-c="0" x="1" y="16" width="22" height="13" rx="2"/><rect class="mx-cell" data-c="1" data-in x="25" y="16" width="22" height="13" rx="2"/><rect class="mx-cell" data-c="2" data-in x="49" y="16" width="22" height="13" rx="2"/><rect class="mx-cell" data-c="3" data-in x="73" y="16" width="22" height="13" rx="2"/><rect class="mx-cell" data-c="4" data-in x="97" y="16" width="22" height="13" rx="2"/><rect class="mx-cell" data-c="5" data-in x="121" y="16" width="22" height="13" rx="2"/><rect class="mx-cell" data-c="6" x="145" y="16" width="22" height="13" rx="2"/><rect class="mx-cell" data-c="7" x="169" y="16" width="22" height="13" rx="2"/><rect class="mx-cell" data-c="8" x="193" y="16" width="22" height="13" rx="2"/><rect class="mx-cell" data-c="9" data-in x="217" y="16" width="22" height="13" rx="2"/><rect class="mx-cell" data-c="10" data-in x="241" y="16" width="22" height="13" rx="2"/><rect class="mx-cell mx-acc" data-c="11" x="265" y="16" width="22" height="13" rx="2"/></g><g class="mx-row" data-r="2" data-t="4"><rect class="mx-hit" x="-64" y="30" width="352" height="15"/><text class="mx-sym" x="-46" y="37.5">b</text><text class="mx-name" x="-10" y="37.5">S2</text><rect class="mx-cell" data-c="0" x="1" y="31" width="22" height="13" rx="2"/><rect class="mx-cell" data-c="1" x="25" y="31" width="22" height="13" rx="2"/><rect class="mx-cell" data-c="2" x="49" y="31" width="22" height="13" rx="2"/><rect class="mx-cell" data-c="3" data-in x="73" y="31" width="22" height="13" rx="2"/><rect class="mx-cell" data-c="4" data-in x="97" y="31" width="22" height="13" rx="2"/><rect class="mx-cell" data-c="5" data-in x="121" y="31" width="22" height="13" rx="2"/><rect class="mx-cell" data-c="6" data-in x="145" y="31" width="22" height="13" rx="2"/><rect class="mx-cell" data-c="7" x="169" y="31" width="22" height="13" rx="2"/><rect class="mx-cell" data-c="8" data-in x="193" y="31" width="22" height="13" rx="2"/><rect class="mx-cell" data-c="9" data-in x="217" y="31" width="22" height="13" rx="2"/><rect class="mx-cell" data-c="10" data-in x="241" y="31" width="22" height="13" rx="2"/><rect class="mx-cell mx-acc" data-c="11" x="265" y="31" width="22" height="13" rx="2"/></g><g class="mx-row" data-r="3" data-t="6"><rect class="mx-hit" x="-64" y="45" width="352" height="15"/><text class="mx-sym" x="-46" y="52.5">c</text><text class="mx-name" x="-10" y="52.5">S3</text><rect class="mx-cell" data-c="0" x="1" y="46" width="22" height="13" rx="2"/><rect class="mx-cell" data-c="1" x="25" y="46" width="22" height="13" rx="2"/><rect class="mx-cell" data-c="2" x="49" y="46" width="22" height="13" rx="2"/><rect class="mx-cell" data-c="3" data-in x="73" y="46" width="22" height="13" rx="2"/><rect class="mx-cell" data-c="4" data-in x="97" y="46" width="22" height="13" rx="2"/><rect class="mx-cell" data-c="5" data-in x="121" y="46" width="22" height="13" rx="2"/><rect class="mx-cell" data-c="6" x="145" y="46" width="22" height="13" rx="2"/><rect class="mx-cell" data-c="7" data-in x="169" y="46" width="22" height="13" rx="2"/><rect class="mx-cell" data-c="8" data-in x="193" y="46" width="22" height="13" rx="2"/><rect class="mx-cell" data-c="9" data-in x="217" y="46" width="22" height="13" rx="2"/><rect class="mx-cell" data-c="10" data-in x="241" y="46" width="22" height="13" rx="2"/><rect class="mx-cell mx-acc" data-c="11" x="265" y="46" width="22" height="13" rx="2"/></g><g class="mx-row" data-r="4" data-t="8"><rect class="mx-hit" x="-64" y="60" width="352" height="15"/><text class="mx-sym" x="-46" y="67.5">b</text><text class="mx-name" x="-10" y="67.5">S4</text><rect class="mx-cell" data-c="0" x="1" y="61" width="22" height="13" rx="2"/><rect class="mx-cell" data-c="1" x="25" y="61" width="22" height="13" rx="2"/><rect class="mx-cell" data-c="2" x="49" y="61" width="22" height="13" rx="2"/><rect class="mx-cell" data-c="3" data-in x="73" y="61" width="22" height="13" rx="2"/><rect class="mx-cell" data-c="4" data-in x="97" y="61" width="22" height="13" rx="2"/><rect class="mx-cell" data-c="5" data-in x="121" y="61" width="22" height="13" rx="2"/><rect class="mx-cell" data-c="6" data-in x="145" y="61" width="22" height="13" rx="2"/><rect class="mx-cell" data-c="7" x="169" y="61" width="22" height="13" rx="2"/><rect class="mx-cell" data-c="8" data-in x="193" y="61" width="22" height="13" rx="2"/><rect class="mx-cell" data-c="9" data-in x="217" y="61" width="22" height="13" rx="2"/><rect class="mx-cell" data-c="10" data-in x="241" y="61" width="22" height="13" rx="2"/><rect class="mx-cell mx-acc" data-c="11" x="265" y="61" width="22" height="13" rx="2"/></g><g class="mx-row" data-r="5" data-t="10"><rect class="mx-hit" x="-64" y="75" width="352" height="15"/><text class="mx-sym" x="-46" y="82.5">d</text><text class="mx-name" x="-10" y="82.5">S5</text><rect class="mx-cell" data-c="0" x="1" y="76" width="22" height="13" rx="2"/><rect class="mx-cell" data-c="1" x="25" y="76" width="22" height="13" rx="2"/><rect class="mx-cell" data-c="2" x="49" y="76" width="22" height="13" rx="2"/><rect class="mx-cell" data-c="3" x="73" y="76" width="22" height="13" rx="2"/><rect class="mx-cell" data-c="4" x="97" y="76" width="22" height="13" rx="2"/><rect class="mx-cell" data-c="5" x="121" y="76" width="22" height="13" rx="2"/><rect class="mx-cell" data-c="6" x="145" y="76" width="22" height="13" rx="2"/><rect class="mx-cell" data-c="7" x="169" y="76" width="22" height="13" rx="2"/><rect class="mx-cell" data-c="8" x="193" y="76" width="22" height="13" rx="2"/><rect class="mx-cell" data-c="9" x="217" y="76" width="22" height="13" rx="2"/><rect class="mx-cell" data-c="10" x="241" y="76" width="22" height="13" rx="2"/><rect class="mx-cell mx-acc" data-c="11" data-in x="265" y="76" width="22" height="13" rx="2"/></g><rect class="mx-mark" x="-2" y="-1" width="292" height="17" rx="3"/></g></svg><div class="u-controls"><div class="u-time" data-label="step"><button type="button" data-step="-1" aria-label="Previous step">‹</button><input type="range" min="0" max="10" value="0" aria-label="step"><button type="button" data-step="1" aria-label="Next step">›</button><output>step 0 / 10</output></div></div><div class="u-say" aria-live="polite"><p class="u-at" data-at="0">Thompson's construction turns each piece of the regex into a small graph with one way in and one way out, then joins the pieces. A dashed <b data-hue="purple">ε edge</b> can be followed without reading any input.</p><p class="u-at" data-at="1">The matcher keeps a <b data-hue="blue">set of states</b>, not one state. It starts in {0}. Reading <b data-hue="yellow">a</b> follows only the edges labelled a, so {0} becomes {1}.</p><p class="u-at" data-at="2">Then it follows every <b data-hue="purple">ε edge</b>, wave by wave, until no new state is reached. From state 1 that gives 7 states. The NFA is in all of them at once.</p><p class="u-at" data-at="3">Each symbol repeats the same two steps. A state whose edge needs another symbol <b data-hue="red">dies</b>. The set never holds more than 12 states, so the work per symbol has a fixed limit.</p><p class="u-at" data-at="4">Reading <b data-hue="yellow">d</b> leaves only state 11. The input is used up and the <b data-hue="green">accept state</b> is in the set, so "abcbd" matches.</p></div><nav class="u-steps" aria-label="Scenes"><button type="button" data-go="0" aria-current="step"><span>1</span>Compile</button><button type="button" data-go="1"><span>2</span>Move</button><button type="button" data-go="2"><span>3</span>ε-closure</button><button type="button" data-go="3"><span>4</span>Repeat</button><button type="button" data-go="4"><span>5</span>Accept</button></nav><div class="u-key"><span data-hue="blue"><i></i>active set S</span><span data-hue="yellow"><i></i>symbol read, symbol edge</span><span data-hue="purple"><i></i>ε edge (no input)</span><span data-hue="red"><i></i>state that dies</span><span data-hue="green"><i></i>accept state</span></div></div></div><figcaption class="iso-legend"><span class="iso-caption">The NFA is the real output of Thompson's construction for a(b|c)*d, with its states numbered left to right. Every set comes from simulating it. model.mjs checks the simulation against JavaScript's RegExp on all 21,845 strings over {a, b, c, d} up to length 7. The input &quot;abcbd&quot; was chosen by hand so that it uses both branches of b|c.</span></figcaption></figure><section class="u-notes"><h2>Why a set of states</h2><p>An NFA can be in several states at once. The matcher does not guess a path and back up when the guess is wrong. It carries every possible path forward together, as one set. Each symbol touches each state and edge at most once, so the time is <b>O(n·m)</b> for n states and m input symbols. Here that is 12 states and 5 symbols.</p><p>Most regex engines in standard libraries (JavaScript, Python <code>re</code>, Java, PCRE) backtrack instead. They try one path at a time. On some patterns, for example <code>(a*)*b</code> against a long run of a, that takes exponential time. RE2, Go's <code>regexp</code> and Rust's <code>regex</code> crate promise linear time. They use this set simulation, or automata built from it, and so they do not support backreferences.</p><h2>From the NFA to a DFA</h2><p>Each distinct set is one state of a DFA (the subset construction). This run meets 5 distinct sets: <code>{0}</code>, <code>{1,2,3,4,5,9,10}</code>, <code>{3,4,5,6,8,9,10}</code>, <code>{3,4,5,7,8,9,10}</code>, <code>{11}</code>. A full subset construction over the alphabet {a, b, c, d} also finds 5 sets, plus the empty set where every path has died. A DFA does one table lookup per symbol, but on some regexes it needs exponentially many states, so engines often build it lazily, one set at a time.</p><h2>Other inputs</h2><table><thead><tr><th>input</th><th>result</th><th>why</th></tr></thead><tbody><tr><td data-th="input"><code>abcb</code></td><td data-th="result">no match</td><td data-th="why">It ends in <code>{3,4,5,6,8,9,10}</code>. State 11 is not in the set.</td></tr><tr><td data-th="input"><code>ad</code></td><td data-th="result">match</td><td data-th="why">The ε edge 2 -> 9 skips the loop, so (b|c)* repeats zero times.</td></tr><tr><td data-th="input"><code>abcbdd</code></td><td data-th="result">no match</td><td data-th="why">After the first d the set is {11}. State 11 has no edges, so the second d leaves an empty set.</td></tr></tbody></table><h2>What the figure leaves out</h2><ul><li>The whole input must match, as with <code>^a(b|c)*d$</code>. To find a match anywhere in a text, the matcher adds state 0 back into the set before each symbol.</li><li>Capture groups. A Pike VM, a variant of this simulation, gives each state in the set the positions where its groups started.</li><li>Real engines do not store the states that have only ε edges (1, 2, 3, 8 and 9 here). They keep only the states that read a symbol, plus the accept state. The figure keeps them all, as the textbook construction does.</li></ul><h2>Terms</h2><table><thead><tr><th>term</th><th>meaning</th></tr></thead><tbody><tr><td data-th="term"><code>NFA</code></td><td data-th="meaning">Nondeterministic finite automaton: states and labelled edges, where one state can have several edges for the same input, or ε edges.</td></tr><tr><td data-th="term"><code>ε edge</code></td><td data-th="meaning">An edge the matcher may follow without reading a symbol.</td></tr><tr><td data-th="term"><code>move(S, x)</code></td><td data-th="meaning">The states reached from set S by one edge labelled x.</td></tr><tr><td data-th="term"><code>ε-closure(S)</code></td><td data-th="meaning">S plus every state reached from S by ε edges only.</td></tr><tr><td data-th="term"><code>Thompson's construction</code></td><td data-th="meaning">Builds an NFA from a regex, one small fragment per piece, joined by ε edges (Ken Thompson, 1968).</td></tr></tbody></table></section></main><script type="module">function cellLook(value, max) {
+  const masked = value === -Infinity;
+  const s = masked ? 0 : Math.min(1, Math.abs(value) / max);
+  return { masked, neg: !masked && value < 0, hot: !masked && value > 0 && s > 0.55, alpha: 0.1 + 0.8 * s };
+}
+function fmt(value, places = 1) {
+  if (value === -Infinity) return "−∞";
+  const text = value.toFixed(places);
+  return Number(text) === 0 ? (0).toFixed(places) : text.replace("-", "−");
+}
+function setGrid(grid, values, max = Number(grid.dataset.max)) {
+  const places = Number(grid.dataset.places);
+  grid.querySelectorAll(".u-cell").forEach((cell) => {
+    const value = values[Number(cell.dataset.r)][Number(cell.dataset.c)];
+    const look = cellLook(value, max);
+    cell.toggleAttribute("data-masked", look.masked);
+    cell.toggleAttribute("data-neg", look.neg);
+    cell.toggleAttribute("data-hot", look.hot);
+    cell.querySelector(".u-cell-bg").style.setProperty("--a", look.alpha.toFixed(2));
+    cell.querySelector(".u-num").textContent = fmt(value, places);
+  });
+}
+function showRows(grid, t) {
+  grid.querySelectorAll(".u-cell,.u-mark").forEach((el) => el.toggleAttribute("data-later", Number(el.dataset.r) > t));
+}
+function setBars(group, values) {
+  const h = Number(group.dataset.h);
+  const max = Number(group.dataset.max);
+  const places = Number(group.dataset.places);
+  group.querySelectorAll(".u-bar").forEach((bar) => {
+    const v = values[Number(bar.dataset.i)] ?? 0;
+    const share = Math.max(0, Math.min(1, v / max));
+    bar.style.setProperty("--v", share.toFixed(3));
+    const text = bar.querySelector(".u-bar-value");
+    text.setAttribute("y", String(h - h * share - 6));
+    text.textContent = fmt(v, places);
+  });
+}
+function mark(root, i, selector = ".u-mark") {
+  root.querySelectorAll(`${selector}[data-r],${selector}[data-i]`).forEach((el) => el.toggleAttribute("data-on", Number(el.dataset.r ?? el.dataset.i) === i));
+}
+function showSpans(root, t) {
+  const box = root.querySelector(".u-lanes");
+  const px = Number(box.dataset.px);
+  box.querySelector(".u-now").style.transform = `translateX(${(t - Number(box.dataset.from)) * px}px)`;
+  root.querySelectorAll(".u-span").forEach((el) => {
+    const from = Number(el.dataset.from);
+    const to = Number(el.dataset.to);
+    const v = Math.max(0, Math.min(1, (t - from) / (to - from)));
+    el.style.setProperty("--v", v.toFixed(3));
+    el.toggleAttribute("data-labeled", v * (to - from) * px >= Number(el.dataset.need));
+  });
+}
+function runtime() {
+  const stage = document.querySelector(".u-stage");
+  const count = Number(stage.dataset.count);
+  const dwell = Number(stage.dataset.dwell);
+  const still = matchMedia("(prefers-reduced-motion: reduce)");
+  let scene = 0;
+  let visible = false;
+  let hovering = false;
+  let pausedUntil = 0;
+  let held = false;
+  let next = 0;
+  const beats = [];
+  const go = (i, by = "user") => {
+    scene = Math.max(0, Math.min(count - 1, i));
+    stage.dataset.scene = String(scene);
+    stage.querySelectorAll("[data-go]").forEach((b) => (Number(b.dataset.go) === scene ? b.setAttribute("aria-current", "step") : b.removeAttribute("aria-current")));
+    stage.querySelectorAll("[data-ds]").forEach((el) => {
+      const d = JSON.parse(el.dataset.ds)[scene];
+      el.toggleAttribute("data-off", !d);
+      if (!d) return;
+      if (CSS.supports("d", 'path("M0 0")')) el.style.d = `path("${d}")`;
+      else el.setAttribute("d", d);
+    });
+    stage.dispatchEvent(new CustomEvent("unfold:scene", { detail: { scene, by } }));
+    if (by === "user") pausedUntil = performance.now() + 20000;
+    held = false;
+    next = performance.now() + dwell;
+    for (const b of beats) {
+      b.n = 0;
+      b.at = performance.now() + b.wait - b.ms;
+      if (still.matches && b.scene === scene) b.fn(-1);
+    }
+  };
+  const tour = (now) => {
+    if (visible && !hovering && !still.matches && now > pausedUntil && now > next) go((scene + 1) % count, "tour");
+    for (const b of beats) {
+      if (b.scene === scene && visible && !held && !still.matches && now - b.at >= b.ms) {
+        b.at = now;
+        b.fn(b.n++);
+      }
+    }
+    requestAnimationFrame(tour);
+  };
+  stage.querySelector(".u-steps").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-go]");
+    if (b) go(Number(b.dataset.go));
+  });
+  stage.addEventListener("keydown", (e) => {
+    const to = { ArrowRight: scene + 1, ArrowLeft: scene - 1, Home: 0, End: count - 1 }[e.key];
+    if (to === undefined) return;
+    e.preventDefault();
+    go(to);
+  });
+  // Time by hand: the step control and the "," and "." keys call the page's onTime(t). Its keys stay inside it.
+  const timer = stage.querySelector(".u-time");
+  let onTime = () => {};
+  const range = timer?.querySelector("input");
+  const byHand = (t) => {
+    pause();
+    onTime(Math.max(0, Math.min(Number(range.max), t)));
+  };
+  if (timer) {
+    range.addEventListener("input", () => byHand(Number(range.value)));
+    range.addEventListener("keydown", (e) => e.stopPropagation());
+    timer.addEventListener("click", (e) => {
+      const b = e.target.closest("[data-step]");
+      if (b) byHand(Number(range.value) + Number(b.dataset.step));
+    });
+    stage.addEventListener("keydown", (e) => {
+      const by = { ",": -1, ".": 1 }[e.key];
+      if (by === undefined) return;
+      e.preventDefault();
+      byHand(Number(range.value) + by);
+    });
+  }
+  const timeAt = (t) => {
+    if (!timer) return;
+    range.value = String(t);
+    timer.querySelector("output").textContent = `${timer.dataset.label} ${t} / ${range.max}`;
+  };
+  // Narrow layout: below 560 px the drawing takes its second viewBox and the stage gets data-narrow.
+  const svg = stage.querySelector("svg");
+  const wide = svg?.getAttribute("viewBox");
+  if (stage.dataset.narrowBox)
+    new ResizeObserver(([entry]) => {
+      const on = entry.contentRect.width < 560;
+      if (on === stage.hasAttribute("data-narrow")) return;
+      stage.toggleAttribute("data-narrow", on);
+      svg.setAttribute("viewBox", on ? stage.dataset.narrowBox : wide);
+      stage.dispatchEvent(new CustomEvent("unfold:layout", { detail: { narrow: on } }));
+    }).observe(stage);
+  stage.addEventListener("pointerenter", () => (hovering = true));
+  stage.addEventListener("pointerleave", () => (hovering = false));
+  new IntersectionObserver((entries) => (visible = entries[entries.length - 1].isIntersecting), { rootMargin: "120px 0px" }).observe(stage);
+  next = performance.now() + dwell;
+  requestAnimationFrame(tour);
+  // beat(scene, ms, fn, wait): call fn(0), fn(1), … every ms while that scene shows, starting `wait` ms after it opens.
+  // Under reduced motion fn(-1) is called once instead: show the resting state.
+  const beat = (sceneIndex, ms, fn, wait = 1000) => beats.push({ scene: sceneIndex, ms, fn, wait, n: 0, at: performance.now() + wait - ms });
+  // pause(): the user took control. The tour waits 20 s, and the sweeps hold until the scene changes.
+  const pause = () => {
+    pausedUntil = performance.now() + 20000;
+    held = true;
+  };
+  return { stage, go, beat, pause, scene: () => scene, onTime: (fn) => (onTime = fn), timeAt, narrow: () => stage.hasAttribute("data-narrow") };
+}
+const UNFOLD = runtime();
+
+const DATA = [{"kind":"start","pos":0,"set":[0],"src":[],"dead":[],"taken":[],"added":[],"row":0,"say":"S0 = ε-closure({0}) = {0} · state 0 has no ε edges"},{"kind":"move","pos":0,"set":[1],"src":[0],"dead":[],"taken":[0],"added":[],"row":0,"say":"read a · move(S0, a) = {1} · 0 -a-> 1"},{"kind":"close","pos":1,"set":[1,2,3,4,5,9,10],"src":[],"dead":[],"taken":[],"added":[{"state":2,"edge":11,"depth":1},{"state":3,"edge":7,"depth":2},{"state":9,"edge":8,"depth":2},{"state":4,"edge":3,"depth":3},{"state":5,"edge":4,"depth":3},{"state":10,"edge":13,"depth":3}],"row":1,"say":"S1 = ε-closure({1}) = {1,2,3,4,5,9,10} · 6 states added in 3 ε waves"},{"kind":"move","pos":1,"set":[6],"src":[4],"dead":[5,10],"taken":[1],"added":[],"row":1,"say":"read b · move(S1, b) = {6} · 4 -b-> 6 · 5 and 10 die"},{"kind":"close","pos":2,"set":[3,4,5,6,8,9,10],"src":[],"dead":[],"taken":[],"added":[{"state":8,"edge":5,"depth":1},{"state":3,"edge":9,"depth":2},{"state":9,"edge":10,"depth":2},{"state":4,"edge":3,"depth":3},{"state":5,"edge":4,"depth":3},{"state":10,"edge":13,"depth":3}],"row":2,"say":"S2 = ε-closure({6}) = {3,4,5,6,8,9,10} · 6 states added in 3 ε waves"},{"kind":"move","pos":2,"set":[7],"src":[5],"dead":[4,10],"taken":[2],"added":[],"row":2,"say":"read c · move(S2, c) = {7} · 5 -c-> 7 · 4 and 10 die"},{"kind":"close","pos":3,"set":[3,4,5,7,8,9,10],"src":[],"dead":[],"taken":[],"added":[{"state":8,"edge":6,"depth":1},{"state":3,"edge":9,"depth":2},{"state":9,"edge":10,"depth":2},{"state":4,"edge":3,"depth":3},{"state":5,"edge":4,"depth":3},{"state":10,"edge":13,"depth":3}],"row":3,"say":"S3 = ε-closure({7}) = {3,4,5,7,8,9,10} · 6 states added in 3 ε waves"},{"kind":"move","pos":3,"set":[6],"src":[4],"dead":[5,10],"taken":[1],"added":[],"row":3,"say":"read b · move(S3, b) = {6} · 4 -b-> 6 · 5 and 10 die"},{"kind":"close","pos":4,"set":[3,4,5,6,8,9,10],"src":[],"dead":[],"taken":[],"added":[{"state":8,"edge":5,"depth":1},{"state":3,"edge":9,"depth":2},{"state":9,"edge":10,"depth":2},{"state":4,"edge":3,"depth":3},{"state":5,"edge":4,"depth":3},{"state":10,"edge":13,"depth":3}],"row":4,"say":"S4 = ε-closure({6}) = {3,4,5,6,8,9,10} · 6 states added in 3 ε waves"},{"kind":"move","pos":4,"set":[11],"src":[10],"dead":[4,5],"taken":[12],"added":[],"row":4,"say":"read d · move(S4, d) = {11} · 10 -d-> 11 · 4 and 5 die"},{"kind":"close","pos":5,"set":[11],"src":[],"dead":[],"taken":[],"added":[],"row":5,"say":"S5 = ε-closure({11}) = {11} · 11 ∈ S5, so \"abcbd\" matches"}];
+const RANGES = [[0,0],[0,1],[2,2],[3,8],[9,10]];
+const LAST = 10;
+const ACCEPT = 11;
+const LEN = 5;
+const PITCH = 34;
+const root = UNFOLD.stage;
+const readout = document.querySelector("[data-readout]");
+const all = (sel) => root.querySelectorAll(sel);
+let step = 0;
+let crossing = false;
+function show(t) {
+  step = Math.max(0, Math.min(LAST, t));
+  const s = DATA[step];
+  const depth = new Map(s.added.map((a) => [a.state, a.depth]));
+  all(".st").forEach((el) => {
+    const k = Number(el.dataset.s);
+    el.style.setProperty("--d", s.kind === "move" ? 0 : depth.get(k) ?? 0);
+    el.toggleAttribute("data-on", s.set.includes(k));
+    el.toggleAttribute("data-src", s.src.includes(k));
+    el.toggleAttribute("data-dead", s.dead.includes(k));
+  });
+  const lit = new Map(s.kind === "move" ? s.taken.map((k) => [k, ["sym", 0]]) : s.added.map((a) => [a.edge, ["eps", a.depth - 1]]));
+  all(".ed").forEach((el) => {
+    const hit = lit.get(Number(el.dataset.e));
+    if (hit) {
+      el.style.setProperty("--d", hit[1]);
+      if (el.dataset.lit !== hit[0]) el.dataset.lit = hit[0];
+    } else el.removeAttribute("data-lit");
+  });
+  const consumed = s.pos;
+  all(".tp").forEach((el) => {
+    const p = Number(el.dataset.p);
+    el.toggleAttribute("data-done", p < consumed);
+    el.toggleAttribute("data-read", s.kind === "move" && p === s.pos);
+  });
+  const cursor = root.querySelector(".tp-cursor");
+  cursor.style.transform = "translateX(" + Math.min(consumed, LEN - 1) * PITCH + "px)";
+  cursor.style.opacity = consumed >= LEN ? 0 : 1;
+  all(".mx-row").forEach((el) => el.toggleAttribute("data-later", Number(el.dataset.r) > s.row));
+  root.querySelector(".mx-mark").style.transform = "translateY(" + s.row * 15 + "px)";
+  UNFOLD.timeAt(step);
+  if (readout.textContent !== s.say) readout.textContent = s.say;
+}
+// Stepping by hand moves to the scene that owns the step.
+function stepTo(t) {
+  show(t);
+  const sc = UNFOLD.scene();
+  const [a, b] = RANGES[sc];
+  if (sc === 0 || step < a || step > b) {
+    crossing = true;
+    UNFOLD.go(RANGES.findIndex((r, i) => i > 0 && step >= r[0] && step <= r[1]));
+    crossing = false;
+  }
+  UNFOLD.pause();
+}
+root.addEventListener("unfold:scene", (e) => {
+  if (!crossing) show(RANGES[e.detail.scene][0]);
+});
+RANGES.forEach(([a, b], sc) => UNFOLD.beat(sc, 1400, (n) => show(n < 0 ? b : Math.min(a + n, b)), 900));
+UNFOLD.onTime(stepTo);
+root.addEventListener("keydown", (e) => {
+  const to = { ArrowUp: step - 1, ArrowDown: step + 1 }[e.key];
+  if (to === undefined) return;
+  e.preventDefault();
+  stepTo(to);
+});
+root.addEventListener("click", (e) => {
+  const row = e.target.closest(".mx-row");
+  if (row) return stepTo(Number(row.dataset.t));
+  const chip = e.target.closest(".tp");
+  if (chip) stepTo(2 * Number(chip.dataset.p) + 1);
+});
+show(0);
+</script></body></html>

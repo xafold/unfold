@@ -1,0 +1,1 @@
+SessionEnd hook [http://localhost:8000/otel/v1/hooks] failed: HTTP undefined from http://localhost:8000/otel/v1/hooks

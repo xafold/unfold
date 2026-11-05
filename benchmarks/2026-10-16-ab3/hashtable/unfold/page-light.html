@@ -1,0 +1,820 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Hash table: store, collide, grow</title><style>
+.iso{
+  --anatomy-page:#0b0b0b;--anatomy-card:#131313;--anatomy-text:#a3a3a3;--anatomy-strong:#e6e6e6;--anatomy-muted:#6e6e6e;
+  --anatomy-paper:#131313;--anatomy-face:#1b1b1b;--anatomy-top:#1c1c1c;
+  --anatomy-shade-0:#0f0f0f;--anatomy-shade-1:#121212;--anatomy-shade-2:#151515;--anatomy-shade-3:#181818;
+  --anatomy-lit-top:#262626;--anatomy-lit-shade:#1d1d1d;
+  --anatomy-hi:#d4d4d4;--anatomy-mid:#6a6a6a;--anatomy-lo:#3e3e3e;--anatomy-faint:#2a2a2a;--anatomy-lit:#ffffff;
+  --anatomy-halo:#050505;--anatomy-halo-opacity:.9;--anatomy-dot:#e6e6e6;
+  --anatomy-red:#ff6b6b;--anatomy-green:#6be0a0;--anatomy-blue:#6b9bff;
+  --anatomy-weight:.6px;--anatomy-ease:cubic-bezier(.32,.72,0,1);
+  --anatomy-mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --anatomy-lift:inset 0 1px 0 0 #ffffff0a,inset 0 0 0 1px #ffffff06,0 0 0 1px #00000026,0 1px 1px -.5px #00000014,0 3px 3px -1.5px #00000014,0 6px 6px -3px #00000014,0 12px 12px -6px #00000014;
+}
+.iso[data-theme="light"]{
+  --anatomy-page:#f2f2ef;--anatomy-card:#fbfbfa;--anatomy-text:#57575a;--anatomy-strong:#18181a;--anatomy-muted:#8c8c90;
+  --anatomy-paper:#fbfbfa;--anatomy-face:#ffffff;--anatomy-top:#ffffff;
+  --anatomy-shade-0:#dcdcd9;--anatomy-shade-1:#e5e5e2;--anatomy-shade-2:#ededea;--anatomy-shade-3:#f4f4f1;
+  --anatomy-lit-top:#ffffff;--anatomy-lit-shade:#eeeeeb;
+  --anatomy-hi:#26262a;--anatomy-mid:#8a8a8f;--anatomy-lo:#b4b4b8;--anatomy-faint:#d4d4d6;--anatomy-lit:#000000;
+  --anatomy-halo:#8a8a80;--anatomy-halo-opacity:.32;--anatomy-dot:#3a3a3e;
+  --anatomy-red:#e5484d;--anatomy-green:#30a46c;--anatomy-blue:#3e63dd;
+  --anatomy-lift:inset 0 1px 0 0 #ffffff,0 0 0 1px #0000000f,0 1px 1px -.5px #0000000a,0 3px 3px -1.5px #0000000a,0 6px 6px -3px #0000000a,0 12px 12px -6px #0000000a;
+}
+.iso-svg{display:block;width:100%;height:auto;overflow:visible}
+.iso-svg path,.iso-svg circle{vector-effect:non-scaling-stroke}
+.iso-fill{fill:var(--anatomy-paper);stroke:none}
+.iso-solid[data-lit]>.iso-fill{fill:var(--anatomy-face)}
+.iso-shade,.iso-top{stroke:none}
+.iso-shade[data-shade="0"]{fill:var(--anatomy-shade-0)}
+.iso-shade[data-shade="1"]{fill:var(--anatomy-shade-1)}
+.iso-shade[data-shade="2"]{fill:var(--anatomy-shade-2)}
+.iso-shade[data-shade="3"]{fill:var(--anatomy-shade-3)}
+.iso-top{fill:var(--anatomy-top)}
+.iso-solid[data-lit]>.iso-top{fill:var(--anatomy-lit-top)}
+.iso-solid[data-lit]>.iso-shade{fill:var(--anatomy-lit-shade)}
+.iso-solid[data-seamless]>.iso-shade,.iso-solid[data-seamless]>.iso-top{stroke-width:.4;stroke-linejoin:round}
+.iso-solid[data-seamless]>.iso-shade[data-shade="0"]{stroke:var(--anatomy-shade-0)}
+.iso-solid[data-seamless]>.iso-shade[data-shade="1"]{stroke:var(--anatomy-shade-1)}
+.iso-solid[data-seamless]>.iso-shade[data-shade="2"]{stroke:var(--anatomy-shade-2)}
+.iso-solid[data-seamless]>.iso-shade[data-shade="3"]{stroke:var(--anatomy-shade-3)}
+.iso-solid[data-seamless]>.iso-top{stroke:var(--anatomy-top)}
+.iso-solid[data-seamless][data-lit]>.iso-top{stroke:var(--anatomy-lit-top)}
+.iso-solid[data-seamless][data-lit]>.iso-shade{stroke:var(--anatomy-lit-shade)}
+.iso-solid[data-lit]>.iso-edge{stroke:var(--anatomy-lit)}
+.iso-halo{fill:var(--anatomy-halo);stroke:none;filter:blur(9px);opacity:var(--anatomy-halo-opacity);transform:translateY(3px)}
+.iso-line{fill:none;stroke:var(--anatomy-lo);stroke-width:var(--anatomy-weight);stroke-linecap:round;stroke-linejoin:round}
+.iso-line[data-tone="hi"]{stroke:var(--anatomy-hi)}
+.iso-line[data-tone="mid"]{stroke:var(--anatomy-mid)}
+.iso-line[data-tone="lo"]{stroke:var(--anatomy-lo)}
+.iso-line[data-tone="faint"]{stroke:var(--anatomy-faint)}
+.iso-line[data-tone="lit"]{stroke:var(--anatomy-lit)}
+.iso-line[data-tone="red"]{stroke:var(--anatomy-red)}
+.iso-line[data-tone="green"]{stroke:var(--anatomy-green)}
+.iso-line[data-tone="blue"]{stroke:var(--anatomy-blue)}
+.iso-line[data-dotted]{stroke-dasharray:.01 3.5;stroke-width:1}
+.iso-line[data-dashed]{stroke-dasharray:3 3}
+.iso-line[data-flow]{stroke-dasharray:2 6}
+.iso-wire-end{fill:var(--anatomy-paper);stroke:var(--anatomy-lo);stroke-width:var(--anatomy-weight)}
+.iso-wire[data-tone="hi"] .iso-wire-end{stroke:var(--anatomy-hi)}
+.iso-wire[data-tone="mid"] .iso-wire-end{stroke:var(--anatomy-mid)}
+.iso-wire[data-tone="faint"] .iso-wire-end{stroke:var(--anatomy-faint)}
+.iso-wire[data-tone="lit"] .iso-wire-end{stroke:var(--anatomy-lit)}
+.iso-dots circle{fill:var(--anatomy-dot);stroke:none;opacity:.32}
+.iso-dots[data-tone="hi"] circle{opacity:.85}
+.iso-dots[data-tone="mid"] circle{opacity:.45}
+.iso-dots[data-tone="lo"] circle{opacity:.22}
+.iso-dots[data-tone="faint"] circle{opacity:.12}
+.iso-face-text{fill:var(--anatomy-mid);font-family:var(--anatomy-mono);letter-spacing:.04em}
+.iso-face-text[data-tone="hi"]{fill:var(--anatomy-hi)}
+.iso-face-text[data-tone="lo"]{fill:var(--anatomy-lo)}
+.iso-face-text[data-tone="faint"]{fill:var(--anatomy-faint)}
+.tb-body{fill:var(--anatomy-shade-2);stroke:none}
+.tb-shine{fill:var(--anatomy-top);stroke:none}
+.tb-shade{fill:var(--anatomy-shade-0);stroke:none}
+.tb-ring{fill:none;stroke:var(--anatomy-lo);stroke-width:.45;stroke-linecap:butt;stroke-linejoin:round}
+.tb-ring[data-tone="mid"]{stroke:var(--anatomy-mid)}
+.tb-ring[data-tone="faint"]{stroke:var(--anatomy-faint)}
+.tb-ring[data-tone="hi"]{stroke:var(--anatomy-hi)}
+@keyframes iso-flow{to{stroke-dashoffset:-32}}
+@keyframes iso-pulse{0%,100%{opacity:.18}12%{opacity:1}40%{opacity:.18}}
+.iso-line[data-flow]{animation:iso-flow 1600ms linear infinite}
+.iso-dots circle[data-pulse]{animation:iso-pulse 1600ms steps(1,end) infinite;animation-delay:var(--pulse-at,0ms)}
+.iso-figure{margin:32px 0 36px}
+.iso-plate{position:relative;padding:52px 24px;border-radius:0;background:var(--anatomy-card);box-shadow:0 0 0 1px var(--anatomy-mid);--anatomy-paper:var(--anatomy-card)}
+.iso-plate-corners{position:absolute;inset:18px 20px;pointer-events:none}
+.iso-plate-corner{position:absolute;color:var(--anatomy-muted);font-family:var(--anatomy-mono);font-size:10.5px;line-height:1;letter-spacing:.04em;white-space:nowrap}
+.iso-plate-corner[data-corner="fig"]{top:0;left:0;color:var(--anatomy-text)}
+.iso-plate-corner[data-corner="title"]{top:0;right:0;text-transform:uppercase;letter-spacing:.1em}
+.iso-plate-corner[data-corner="hint"]{bottom:0;left:0;text-transform:uppercase;letter-spacing:.1em}
+.iso-plate-corner[data-corner="readout"]{right:0;bottom:0;color:var(--anatomy-text);font-variant-numeric:tabular-nums}
+.iso-plate .iso-svg{margin:0 auto}
+.iso-legend{display:grid;gap:8px;margin-top:12px;color:var(--anatomy-muted);font-size:13px;line-height:1.55}
+.iso-keys{display:flex;flex-wrap:wrap;gap:6px 18px}
+.iso-key{display:inline-flex;align-items:center;gap:7px}
+.iso-swatch{width:16px;height:10px;flex:none;overflow:visible}
+.iso-swatch path{fill:none;stroke:var(--anatomy-hi);stroke-width:1;vector-effect:non-scaling-stroke;stroke-linejoin:round;stroke-linecap:round}
+.iso-swatch[data-mark="raised"] path,.iso-swatch[data-mark="flat"] path{stroke:var(--anatomy-mid)}
+.iso-swatch[data-mark="lit"] path{stroke:var(--anatomy-lit)}
+.iso-swatch[data-mark="dim"] path{stroke:var(--anatomy-lo)}
+.iso-swatch[data-mark="dotted"] path{stroke-dasharray:.01 3;stroke-width:1.4}
+.iso-swatch[data-mark="dashed"] path{stroke-dasharray:3 2.5}
+.iso-swatch[data-mark="red"] path{stroke:var(--anatomy-red)}
+.iso-swatch[data-mark="green"] path{stroke:var(--anatomy-green)}
+.iso-swatch[data-mark="blue"] path{stroke:var(--anatomy-blue)}
+.iso-swatch-crease{stroke:var(--anatomy-lo)!important}
+@media (max-width:560px){.iso-plate{padding:48px 12px 70px}.iso-plate-corner[data-corner="hint"]{bottom:18px}}
+@media (prefers-reduced-motion:reduce){.iso-line[data-flow],.iso-dots circle[data-pulse]{animation:none}}
+
+*{box-sizing:border-box}
+html{color-scheme:dark}
+body[data-theme="light"]{color-scheme:light}
+body{margin:0;background:var(--anatomy-page);color:var(--anatomy-text);font:14px/1.6 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+.iso-page{width:min(900px,100% - 32px);margin:64px auto 96px}
+</style></head><body class="iso" data-theme="light"><main class="iso-page"><style>
+.iso{--unfold-blue:#58c4dd;--unfold-yellow:#f4d345;--unfold-red:#fc6255;--unfold-green:#83c167;--unfold-teal:#5cd0b3;--unfold-purple:#b48ad1;--unfold-gold:#f0ac5f;--unfold-on-hot:#0b0b0b;--unfold-serif:"Latin Modern Math","STIX Two Math","Cambria Math",math,serif}
+.iso[data-theme="light"]{--unfold-blue:#1f78a4;--unfold-yellow:#a67c00;--unfold-red:#cf3b2e;--unfold-green:#3e8a2a;--unfold-teal:#16866b;--unfold-purple:#7a4fa3;--unfold-gold:#b8661a;--unfold-on-hot:#ffffff}
+[data-hue="blue"]{--hue:var(--unfold-blue)}[data-hue="yellow"]{--hue:var(--unfold-yellow)}[data-hue="red"]{--hue:var(--unfold-red)}[data-hue="green"]{--hue:var(--unfold-green)}[data-hue="teal"]{--hue:var(--unfold-teal)}[data-hue="purple"]{--hue:var(--unfold-purple)}[data-hue="gold"]{--hue:var(--unfold-gold)}[data-hue="ink"]{--hue:var(--anatomy-hi)}
+.u-key{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 16px;margin-top:10px;color:var(--anatomy-muted);font-size:12px}
+.u-key>span{display:inline-flex;align-items:center;gap:6px}
+.u-key i{width:10px;height:10px;border-radius:2px;background:var(--hue)}
+.u-key i.u-hollow{background:none;box-shadow:inset 0 0 0 1.2px var(--anatomy-mid)}
+.u-key i.u-solid{background:var(--anatomy-mid)}
+.u-stage{position:relative;outline:none;container-type:inline-size;--u-fade:.5s;--u-fade-at:.22s}
+.u-stage:focus-visible{outline:1px solid var(--anatomy-faint);outline-offset:8px}
+.u-stage .iso-svg{overflow:visible}
+.u-eq,.u-say{display:grid;align-items:center}
+.u-eq>.u-at,.u-say>.u-at{grid-area:1/1;opacity:0;visibility:hidden;transition:opacity .2s var(--anatomy-ease),visibility 0s .2s;margin:0}
+.u-eq{min-height:44px;margin-bottom:8px;overflow-x:auto;overflow-y:hidden}
+.u-eq math{font-family:var(--unfold-serif);font-size:20px;color:var(--anatomy-strong)}
+.u-eq [data-hue]{color:var(--hue)}
+.u-say{min-height:48px;margin-top:6px;color:var(--anatomy-text);font-size:14px;line-height:1.55;text-align:center}
+.u-say>.u-at{max-width:62ch;justify-self:center}
+.u-say b{color:var(--anatomy-strong);font-weight:500}
+.u-say [data-hue]{color:var(--hue)}
+.u-steps{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin-top:14px}
+.u-steps button{display:inline-flex;align-items:center;gap:6px;padding:5px 10px 5px 6px;border:0;border-radius:999px;background:transparent;color:var(--anatomy-muted);font:11px/1 var(--anatomy-mono);letter-spacing:.04em;cursor:pointer;box-shadow:0 0 0 1px var(--anatomy-faint);transition:color .2s,box-shadow .2s}
+.u-steps button span{display:inline-grid;place-items:center;width:16px;height:16px;border-radius:50%;background:var(--anatomy-faint);color:var(--anatomy-text);font-size:10px}
+.u-steps button:hover{color:var(--anatomy-text)}
+.u-steps button[aria-current]{color:var(--anatomy-strong);box-shadow:0 0 0 1px var(--anatomy-mid)}
+.u-steps button[aria-current] span{background:var(--anatomy-strong);color:var(--anatomy-card)}
+.u-steps .u-play{margin-right:6px}.u-steps .u-play[aria-pressed="true"]{color:var(--anatomy-strong);box-shadow:0 0 0 1px var(--anatomy-mid)}
+.u-move{transition:transform .9s var(--anatomy-ease),opacity var(--u-fade) var(--anatomy-ease) var(--u-fade-at)}
+.u-grid text,.u-chip text,.u-bars text,.u-arrow text{dominant-baseline:central;text-anchor:middle}
+.u-cell{transform:translate(var(--x),var(--y));transition:transform .9s var(--anatomy-ease) calc(var(--i) * 18ms)}
+.u-cell-bg{fill:var(--hue);fill-opacity:var(--a);stroke:none;transition:fill-opacity .35s}
+.u-cell[data-neg]>.u-cell-bg,.u-cell-bg[data-neg]{fill-opacity:calc(var(--a) * .18);stroke:var(--hue);stroke-opacity:var(--a);stroke-width:1.2}
+.u-cell[data-masked]>.u-cell-bg,.u-cell-bg[data-masked]{fill:none;stroke:var(--anatomy-faint);stroke-width:.8;stroke-dasharray:2 2}
+.u-num{font:500 10px var(--anatomy-mono);font-variant-numeric:tabular-nums;fill:var(--anatomy-strong)}
+.u-cell[data-hot] .u-num{fill:var(--unfold-on-hot)}
+.u-cell[data-masked] .u-num{fill:var(--anatomy-lo)}
+.u-name{font:italic 600 17px var(--unfold-serif);fill:var(--hue);dominant-baseline:auto!important;text-anchor:start!important}
+.u-dims{font:400 10px var(--anatomy-mono);font-style:normal;fill:var(--anatomy-muted)}
+.u-T,.u-dims-T{display:none}
+.u-mark{fill:none;stroke:var(--anatomy-strong);stroke-width:1.2;opacity:0;transition:opacity .3s}
+.u-mark[data-on]{opacity:.9}
+.u-chip rect{fill:var(--anatomy-card);stroke:var(--anatomy-mid);stroke-width:.8;transition:stroke .25s,fill .25s}
+.u-chip text{font:500 11px var(--anatomy-mono);fill:var(--anatomy-text);transition:fill .25s}
+.u-chip[data-hue] rect{stroke:var(--hue)}
+.u-chip[data-hue] text{fill:var(--hue)}
+.u-cell[data-later],.u-mark[data-later]{opacity:0!important;transition:opacity .3s}
+.u-plot-axis{stroke:var(--anatomy-mid);stroke-width:.9;fill:none}
+.u-plot-grid{stroke:var(--anatomy-faint);stroke-width:.6;fill:none}
+.u-tick-label{font:10px var(--anatomy-mono);fill:var(--anatomy-muted)}
+.u-plot-name{font:italic 600 15px var(--unfold-serif);fill:var(--hue,var(--anatomy-text))}
+.u-curve{fill:none;stroke:var(--hue,var(--anatomy-hi));stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.u-chip[data-on] rect{fill:var(--anatomy-strong);stroke:var(--anatomy-strong)}
+.u-chip[data-on] text{fill:var(--anatomy-card)}
+.u-chip[data-i]{cursor:pointer}
+.u-arrow{--w:1.1;color:var(--anatomy-mid)}
+.u-arrow[data-hue]{color:var(--hue)}
+.u-arrow-line{fill:none;stroke:currentColor;stroke-width:var(--w);stroke-linecap:round;transition:stroke-width .4s,opacity .4s}
+.u-arrow-head{fill:currentColor}
+.u-bar-fill{fill:var(--hue);transform-box:fill-box;transform-origin:50% 100%;transform:scaleY(var(--v));transition:transform .6s var(--anatomy-ease)}
+.u-bar-value{font:500 10px var(--anatomy-mono);fill:var(--anatomy-strong);transition:y .6s var(--anatomy-ease)}
+.u-bar-label{font:11px var(--anatomy-mono);fill:var(--anatomy-muted)}
+.u-axis{stroke:var(--anatomy-mid);stroke-width:.8;fill:none}
+.u-link{fill:none;stroke:var(--hue,var(--anatomy-mid));stroke-width:1.1;stroke-linecap:round;transition:d .9s var(--anatomy-ease),opacity .5s var(--anatomy-ease),stroke .3s}
+.u-link[data-off]{opacity:0}
+.u-eq>.u-at{text-align:center}
+.u-eq .u-rule{font:500 14px/1.5 var(--anatomy-mono);color:var(--anatomy-strong);letter-spacing:.01em}
+.u-lane-bg{fill:var(--anatomy-faint);fill-opacity:.18;stroke:var(--anatomy-faint);stroke-width:.6}
+.u-lane-name{font:11px var(--anatomy-mono);fill:var(--hue,var(--anatomy-muted));text-anchor:end;dominant-baseline:central}
+.u-tick{stroke:var(--anatomy-faint);stroke-width:.6}
+.u-tick-label{font:9px var(--anatomy-mono);fill:var(--anatomy-muted);text-anchor:middle;dominant-baseline:central}
+.u-now{stroke:var(--anatomy-strong);stroke-width:1.2;transition:transform .5s var(--anatomy-ease)}
+.u-span-bar{fill:var(--hue,var(--anatomy-mid));fill-opacity:.9;transform-box:fill-box;transform-origin:0 50%;transform:scaleX(var(--v,1));transition:transform .5s var(--anatomy-ease)}
+.u-span-label{opacity:0;transition:opacity .3s}
+.u-span[data-labeled] .u-span-label{opacity:1}
+.u-span-label text{font:500 10px var(--anatomy-mono);fill:var(--unfold-on-hot);dominant-baseline:central}
+.u-face .u-cell-bg{stroke-width:.5}
+.u-cell-bg{transform-box:fill-box;transform-origin:50% 50%}
+.u-cell[data-hl]>.u-cell-bg{stroke:var(--anatomy-strong);stroke-opacity:1;stroke-width:1.6;animation:u-ping .5s var(--anatomy-ease)}
+.u-pulse{fill:var(--hue,var(--anatomy-strong));filter:drop-shadow(0 0 3px var(--hue,var(--anatomy-strong)))}
+.u-rise{transform-box:fill-box}
+@keyframes u-pop{from{opacity:0;transform:scale(.4)}}
+@keyframes u-fade{from{opacity:0}}
+@keyframes u-rise{from{opacity:0;transform:translateY(-14px)}}
+@keyframes u-grow{from{transform:scaleY(0)}}
+@keyframes u-draw{from{stroke-dasharray:1;stroke-dashoffset:1}to{stroke-dasharray:1;stroke-dashoffset:0}}
+@keyframes u-ping{from{stroke-width:4;stroke-opacity:0}}
+.u-floor-text{font-family:var(--unfold-serif);font-style:italic;font-weight:600;fill:var(--hue,var(--anatomy-text))}
+.u-floor-label{font-family:var(--anatomy-mono);fill:var(--anatomy-muted)}
+.u-guide{fill:none;stroke:var(--anatomy-lo);stroke-width:.8;stroke-dasharray:2 3}
+.u-controls{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px 18px;margin-top:10px}
+.u-controls button{border:0;border-radius:999px;background:transparent;color:var(--anatomy-muted);font:11px/1 var(--anatomy-mono);letter-spacing:.04em;padding:6px 10px;cursor:pointer;box-shadow:0 0 0 1px var(--anatomy-faint);transition:color .2s,box-shadow .2s}
+.u-controls button:hover{color:var(--anatomy-text)}
+.u-controls button[aria-pressed="true"]{color:var(--anatomy-strong);box-shadow:0 0 0 1px var(--anatomy-mid)}
+.u-time{display:flex;align-items:center;gap:8px;flex:1 1 260px;max-width:440px;transition:opacity .4s}
+.u-time button{width:28px;height:28px;padding:0;font-size:15px}
+.u-time input{flex:1;min-width:80px;accent-color:var(--anatomy-hi)}
+.u-ctl{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px 12px;transition:opacity .4s}
+.u-controls [data-scenes]{transition:opacity .4s}.u-controls [data-idle]{opacity:.4}
+.u-sub{font-size:72%}
+.u-line rect{fill:var(--hue,var(--anatomy-hi));fill-opacity:0;transition:fill-opacity .25s}
+.u-line[data-on] rect{fill-opacity:.18}
+.u-line-num{font:10px var(--anatomy-mono);fill:var(--anatomy-lo);text-anchor:end;dominant-baseline:central}
+.u-line-text{font:11.5px var(--anatomy-mono);fill:var(--anatomy-text);dominant-baseline:central;white-space:pre}
+.u-line[data-on] .u-line-text{fill:var(--anatomy-strong)}
+.u-controls label{display:inline-flex;align-items:center;gap:6px;color:var(--anatomy-muted);font:11px var(--anatomy-mono)}
+.u-controls :is(input[type=number],input[type=text]){width:calc(5ch + 28px);padding:4px 6px;border:0;border-radius:6px;background:transparent;color:var(--anatomy-text);font:12px var(--anatomy-mono);font-variant-numeric:tabular-nums;box-shadow:0 0 0 1px var(--anatomy-faint)}
+.u-controls input[type=range]{accent-color:var(--anatomy-hi)}
+.u-controls select{max-width:100%;padding:4px 22px 4px 8px;border:0;border-radius:6px;background:var(--anatomy-card);color:var(--anatomy-text);font:11px var(--anatomy-mono);box-shadow:0 0 0 1px var(--anatomy-faint);cursor:pointer}
+.iso-plate-corner[data-corner="readout"]{max-width:62%;white-space:normal;text-align:right;line-height:1.4}
+.u-time output{font:11px var(--anatomy-mono);color:var(--anatomy-muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.u-notes{margin-top:56px;color:var(--anatomy-text);font-size:14px;line-height:1.65}
+.u-notes h2{margin:36px 0 10px;font:500 13px var(--anatomy-mono);letter-spacing:.04em;color:var(--anatomy-strong)}
+.u-notes p,.u-notes ul{margin:0 0 12px;max-width:72ch}
+.u-notes li{margin-bottom:6px}
+.u-notes b{color:var(--anatomy-strong);font-weight:500}
+.u-notes code{font:12.5px var(--anatomy-mono);color:var(--anatomy-strong)}
+.u-notes table{width:100%;border-collapse:collapse;font-size:13px;line-height:1.5}
+.u-notes th,.u-notes td{padding:7px 10px 7px 0;border-bottom:1px solid var(--anatomy-faint);text-align:left;vertical-align:top}
+.u-notes th{color:var(--anatomy-muted);font:500 11.5px var(--anatomy-mono);letter-spacing:.03em}
+.u-notes svg{display:block;width:100%;max-width:640px;height:auto;margin:6px 0 14px;overflow:visible}
+.u-notes td:first-child{color:var(--anatomy-strong);white-space:nowrap}
+@media (max-width:560px){.u-notes thead{display:none}.u-notes tr{display:block;padding:8px 0;border-bottom:1px solid var(--anatomy-faint)}.u-notes td{display:block;padding:2px 0;border:0}.u-notes td[data-th]:not(:first-child)::before{content:attr(data-th) ": ";color:var(--anatomy-muted)}}
+@container (max-width:520px){:not([data-keep])>.u-cell .u-num,:not([data-keep])>.u-bar .u-bar-value{display:none}.u-eq math{font-size:14px}.u-steps button{font-size:0;gap:0;padding:4px}.u-controls{gap:8px;flex-direction:column;align-items:stretch}.u-ctl{gap:6px 8px}.u-time{flex:none;max-width:none}.u-controls label{gap:4px}}
+@media (max-width:560px){.iso-plate-corner[data-corner="readout"]{left:0;max-width:none;white-space:normal;text-align:right;line-height:1.4}.iso-plate-corner[data-corner="hint"]{display:none}}
+@media (prefers-reduced-motion:reduce){.u-stage *{transition:none!important;animation:none!important}.u-pulse{display:none}}
+</style><figure class="iso-figure"><div class="iso-plate"><div class="iso-plate-corners" aria-hidden="true"><span class="iso-plate-corner" data-corner="fig">Fig 1</span><span class="iso-plate-corner" data-corner="title">Hash table: store, collide, grow</span><span class="iso-plate-corner" data-corner="hint">type a key, press insert · click a key to look it up</span><span class="iso-plate-corner" data-corner="readout" data-readout>step 0 · empty table: 4 buckets, grows above 0.75 × 4 = 3 keys</span></div><style>.u-stage[data-scene="0"] .u-at[data-at="0"]{opacity:1;visibility:visible;transition:opacity .4s var(--anatomy-ease) .2s,visibility 0s .2s}
+.u-stage[data-scene="0"] .u-grid[data-t~="0"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="0"] .u-grid[data-t~="0"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="0"] .u-grid[data-t~="0"] .u-dims:not(.u-dims-T),.u-stage[data-scene="0"] .u-grid[data-t~="0"] .u-mark{display:none}
+.u-stage[data-scene="1"] .u-at[data-at="1"]{opacity:1;visibility:visible;transition:opacity .4s var(--anatomy-ease) .2s,visibility 0s .2s}
+.u-stage[data-scene="1"] .u-grid[data-t~="1"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="1"] .u-grid[data-t~="1"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="1"] .u-grid[data-t~="1"] .u-dims:not(.u-dims-T),.u-stage[data-scene="1"] .u-grid[data-t~="1"] .u-mark{display:none}
+.u-stage[data-scene="2"] .u-at[data-at="2"]{opacity:1;visibility:visible;transition:opacity .4s var(--anatomy-ease) .2s,visibility 0s .2s}
+.u-stage[data-scene="2"] .u-grid[data-t~="2"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="2"] .u-grid[data-t~="2"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="2"] .u-grid[data-t~="2"] .u-dims:not(.u-dims-T),.u-stage[data-scene="2"] .u-grid[data-t~="2"] .u-mark{display:none}
+.u-stage[data-scene="3"] .u-at[data-at="3"]{opacity:1;visibility:visible;transition:opacity .4s var(--anatomy-ease) .2s,visibility 0s .2s}
+.u-stage[data-scene="3"] .u-grid[data-t~="3"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="3"] .u-grid[data-t~="3"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="3"] .u-grid[data-t~="3"] .u-dims:not(.u-dims-T),.u-stage[data-scene="3"] .u-grid[data-t~="3"] .u-mark{display:none}
+.u-stage[data-scene="4"] .u-at[data-at="4"]{opacity:1;visibility:visible;transition:opacity .4s var(--anatomy-ease) .2s,visibility 0s .2s}
+.u-stage[data-scene="4"] .u-grid[data-t~="4"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="4"] .u-grid[data-t~="4"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="4"] .u-grid[data-t~="4"] .u-dims:not(.u-dims-T),.u-stage[data-scene="4"] .u-grid[data-t~="4"] .u-mark{display:none}
+.u-stage[data-scene="5"] .u-at[data-at="5"]{opacity:1;visibility:visible;transition:opacity .4s var(--anatomy-ease) .2s,visibility 0s .2s}
+.u-stage[data-scene="5"] .u-grid[data-t~="5"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="5"] .u-grid[data-t~="5"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="5"] .u-grid[data-t~="5"] .u-dims:not(.u-dims-T),.u-stage[data-scene="5"] .u-grid[data-t~="5"] .u-mark{display:none}.el-right{transform:translate(500px,6px)}
+.el-left,.el-right{transition:transform .5s var(--anatomy-ease)}
+.u-stage[data-narrow] .el-right{transform:translate(12px,458px) scale(1.16)}
+.u-stage[data-narrow] :is(.el-row-bg,.el-bar-bg){width:400px}
+.el-th{font:500 11px var(--anatomy-mono);fill:var(--anatomy-muted);dominant-baseline:central}
+.el-row{transition:transform .8s var(--anatomy-ease),opacity .45s var(--anatomy-ease)}
+.el-row text{font:500 12px var(--anatomy-mono);fill:var(--anatomy-muted);dominant-baseline:central;text-anchor:end;font-variant-numeric:tabular-nums}
+.el-row .el-ri{fill:var(--anatomy-text)}
+.el-row-bg{fill:transparent;transition:fill .3s}
+.el-row[data-focus] .el-row-bg{fill:color-mix(in srgb,var(--unfold-yellow) 14%,transparent)}
+.el-row[data-focus] :is(.el-ri,.el-rb){fill:var(--unfold-yellow)}
+.el-slot{fill:var(--anatomy-card);stroke:var(--anatomy-mid);stroke-width:.9}
+.el-row[data-focus] .el-slot{stroke:var(--unfold-yellow);stroke-width:1.6}
+.el-null{stroke:var(--anatomy-lo);stroke-width:1;transition:opacity .3s}
+.el-row[data-full] .el-null{opacity:0}
+.el-row .el-note{text-anchor:start;font-size:11.5px;transition:opacity .3s}
+.el-note[data-kind="chain"]{fill:var(--unfold-red)}
+.el-note[data-kind="key"]{fill:var(--unfold-blue)}
+.el-note[data-kind="split"]{fill:var(--unfold-purple)}
+.el-note[data-kind="found"]{fill:var(--anatomy-strong)}
+.el-node{transition:transform .8s var(--anatomy-ease),opacity .45s var(--anatomy-ease)}
+.el-ptr{stroke:var(--anatomy-mid);stroke-width:1.1}.el-ptr-head{fill:var(--anatomy-mid)}
+.el-node .u-chip text{font-size:12px;fill:var(--anatomy-strong)}
+.el-node .u-chip rect{fill:var(--anatomy-card);stroke:var(--anatomy-mid)}
+.el-node[data-hue] .u-chip rect{stroke:var(--hue);stroke-width:1.8;fill:color-mix(in srgb,var(--hue) 16%,var(--anatomy-card))}
+.el-node[data-hue] :is(.el-ptr){stroke:var(--hue)}.el-node[data-hue] .el-ptr-head{fill:var(--hue)}
+.el-node[data-cmp] .u-chip rect{stroke-dasharray:3 2;stroke:var(--anatomy-text)}
+.el-node[data-found] .u-chip rect{stroke:var(--anatomy-strong);stroke-width:2.2}
+.el-node:hover .u-chip rect{stroke-width:2.2}
+.el-load-t{font:500 12px var(--anatomy-mono);fill:var(--hue);dominant-baseline:central}
+.el-bar-bg{fill:none;stroke:var(--anatomy-faint);stroke-width:.8}
+.el-bar{fill:color-mix(in srgb,var(--hue) 55%,transparent);transition:width .6s var(--anatomy-ease)}
+.el-load[data-over] .el-bar{fill:var(--hue)}
+.el-tick{stroke:var(--anatomy-strong);stroke-width:1.4;stroke-dasharray:3 2}
+.el-tick-t{font:11px var(--anatomy-mono);fill:var(--anatomy-muted);text-anchor:middle;dominant-baseline:central}
+.el-hc{font:500 12px var(--anatomy-mono);fill:var(--anatomy-text);dominant-baseline:central}
+.el-bl{font:11px var(--anatomy-mono);fill:var(--anatomy-muted);dominant-baseline:central}
+.el-bit text{font:500 11px var(--anatomy-mono);fill:var(--anatomy-text);text-anchor:middle;dominant-baseline:central}
+.el-bit rect{fill:transparent;stroke:none}
+.el-bit[data-off] text{fill:var(--anatomy-lo)}
+.el-bit[data-blank]{opacity:0}
+.el-b2 .el-bit[data-idx] rect{fill:color-mix(in srgb,var(--unfold-yellow) 26%,transparent);stroke:var(--unfold-yellow);stroke-width:.8}
+.el-b2 .el-bit[data-idx] text{fill:var(--anatomy-strong)}
+.el-b2 .el-bit[data-split] rect{fill:color-mix(in srgb,var(--unfold-purple) 30%,transparent);stroke:var(--unfold-purple);stroke-width:1.2}
+.el-b0 .el-bit[data-mix] text,.el-b1 .el-bit:not([data-blank]) text{fill:var(--unfold-blue)}
+.el-xor{stroke:var(--anatomy-mid);stroke-width:.8}
+.el-iline{font:500 13px var(--anatomy-mono);fill:var(--anatomy-text);dominant-baseline:central}
+.el-iline .t-i{fill:var(--unfold-yellow);font-weight:700}.el-iline .t-s{fill:var(--unfold-purple);font-weight:700}
+#el-kchip .u-chip rect{fill:color-mix(in srgb,var(--unfold-blue) 16%,var(--anatomy-card));stroke-width:1.6}#el-kchip .u-chip text{font-size:12px}
+.el-thr{stroke:var(--anatomy-strong);stroke-width:1;stroke-dasharray:3 2}
+.el-hist{fill:none;stroke:var(--hue);stroke-width:1.8;stroke-linejoin:round}
+.el-now{fill:var(--hue)}
+.el-drop{transition:opacity .3s}.el-drop text{font:11px var(--anatomy-mono);fill:var(--unfold-purple);text-anchor:start;dominant-baseline:central}.el-drop path{stroke:var(--unfold-purple);stroke-width:2.6;fill:none}
+.el-chartbox .u-tick-label{font-size:10px}
+.u-ctl input[type=text]{width:9ch}
+.u-stage[data-narrow] .el-row text{font-size:13px}.u-stage[data-narrow] .el-th{font-size:12px}.u-stage[data-narrow] .el-node .u-chip text{font-size:13px}</style><div class="u-stage" tabindex="0" role="group" aria-roledescription="explainer" aria-label="Hash table explainer. Type a key and press insert, or click a key in the table to look it up. Left and right arrows change the scene. Comma and period step through the run." data-scene="0" data-count="6" data-dwell="7000" data-narrow-box="0 0 400 970"><div class="u-eq" aria-live="polite"><div class="u-at" data-at="0"><math display="block"><mi data-hue="blue">h</mi><mo>=</mo><mi>hashCode</mi><mo stretchy="false">(</mo><mi data-hue="blue">k</mi><mo stretchy="false">)</mo><mo>⊕</mo><mo stretchy="false">(</mo><mi>hashCode</mi><mo stretchy="false">(</mo><mi data-hue="blue">k</mi><mo stretchy="false">)</mo><mo>≫</mo><mn>16</mn><mo stretchy="false">)</mo><mo>=</mo><mn data-live="h0" data-places="0">98262</mn><mo>⊕</mo><mn data-live="hs" data-places="0">1</mn><mo>=</mo><mn data-live="h" data-places="0">98263</mn></math></div><div class="u-at" data-at="1"><math display="block"><mi data-hue="yellow">i</mi><mo>=</mo><mi data-hue="blue">h</mi><mo lspace=".3em" rspace=".3em">mod</mo><mi>n</mi><mo>=</mo><mn data-live="h" data-places="0">98263</mn><mo lspace=".3em" rspace=".3em">mod</mo><mn data-live="n" data-places="0">4</mn><mo>=</mo><mn data-hue="yellow" data-live="i" data-places="0">3</mn></math></div><div class="u-at" data-at="2"><math display="block"><mi data-hue="blue">h</mi><mo stretchy="false">(</mo><mtext data-live="k">cat</mtext><mo stretchy="false">)</mo><mo lspace=".3em" rspace=".3em">mod</mo><mn data-live="n" data-places="0">4</mn><mo>=</mo><mi>h</mi><mo stretchy="false">(</mo><mtext data-live="kB">cat</mtext><mo stretchy="false">)</mo><mo lspace=".3em" rspace=".3em">mod</mo><mn data-live="n" data-places="0">4</mn><mo>=</mo><mn data-hue="yellow" data-live="i" data-places="0">3</mn></math></div><div class="u-at" data-at="3"><math display="block"><mi data-hue="gold">α</mi><mo>=</mo><mfrac><mi>size</mi><mi>n</mi></mfrac><mo>=</mo><mfrac><mn data-live="size" data-places="0">4</mn><mn data-live="n" data-places="0">4</mn></mfrac><mo>=</mo><mn data-hue="gold" data-live="load" data-places="2">1.00</mn><mo data-live="cmp">&gt;</mo><mn>0.75</mn></math></div><div class="u-at" data-at="4"><math display="block"><msup><mi data-hue="yellow">i</mi><mo>′</mo></msup><mo>=</mo><mi data-hue="blue">h</mi><mo lspace=".3em" rspace=".3em">mod</mo><mn>2</mn><mi>n</mi><mo>=</mo><mn data-live="h" data-places="0">0</mn><mo lspace=".3em" rspace=".3em">mod</mo><mn data-live="n2" data-places="0">8</mn><mo>=</mo><mn data-hue="yellow" data-live="i2" data-places="0">7</mn></math></div><div class="u-at" data-at="5"><math display="block"><mfrac><mtext>nodes copied</mtext><mtext>puts</mtext></mfrac><mo>=</mo><mfrac><mn data-live="copies" data-places="0">11</mn><mn data-live="puts" data-places="0">7</mn></mfrac><mo>=</mo><mn data-hue="gold" data-live="ratio" data-places="2">1.57</mn></math></div></div><svg xmlns="http://www.w3.org/2000/svg" class="iso-svg" viewBox="0 0 820 446" role="img" aria-label="A hash table with chaining: a bucket array with chains of keys, the bits of the hash of one key, the put code, and the load history."><g class="el-left"><text class="el-th" x="20" y="12" text-anchor="end">i</text><text class="el-th" x="58" y="12" text-anchor="end">bits</text><text class="el-th" x="66" y="12">table[i] and its chain, oldest node first</text><g class="el-row" data-k="0" style="transform:translate(0px,52px);opacity:1"><rect class="el-row-bg" x="0" y="-10" width="470" height="20" rx="4"/><text class="el-ri" x="20">0</text><text class="el-rb" x="58">00</text><rect class="el-slot" x="66" y="-8" width="26" height="16" rx="3"/><path class="el-null" d="M71 5L87 -5"/><text class="el-note" x="120">·</text></g><g class="el-row" data-k="1" style="transform:translate(0px,96px);opacity:1"><rect class="el-row-bg" x="0" y="-10" width="470" height="20" rx="4"/><text class="el-ri" x="20">1</text><text class="el-rb" x="58">01</text><rect class="el-slot" x="66" y="-8" width="26" height="16" rx="3"/><path class="el-null" d="M71 5L87 -5"/><text class="el-note" x="120">·</text></g><g class="el-row" data-k="2" style="transform:translate(0px,140px);opacity:1"><rect class="el-row-bg" x="0" y="-10" width="470" height="20" rx="4"/><text class="el-ri" x="20">2</text><text class="el-rb" x="58">10</text><rect class="el-slot" x="66" y="-8" width="26" height="16" rx="3"/><path class="el-null" d="M71 5L87 -5"/><text class="el-note" x="120">·</text></g><g class="el-row" data-k="3" style="transform:translate(0px,184px);opacity:1"><rect class="el-row-bg" x="0" y="-10" width="470" height="20" rx="4"/><text class="el-ri" x="20">3</text><text class="el-rb" x="58">11</text><rect class="el-slot" x="66" y="-8" width="26" height="16" rx="3"/><path class="el-null" d="M71 5L87 -5"/><text class="el-note" x="120">·</text></g><g class="el-row" data-k="4" style="transform:translate(0px,52px);opacity:0"><rect class="el-row-bg" x="0" y="-10" width="470" height="20" rx="4"/><text class="el-ri" x="20">4</text><text class="el-rb" x="58">100</text><rect class="el-slot" x="66" y="-8" width="26" height="16" rx="3"/><path class="el-null" d="M71 5L87 -5"/><text class="el-note" x="120">·</text></g><g class="el-row" data-k="5" style="transform:translate(0px,96px);opacity:0"><rect class="el-row-bg" x="0" y="-10" width="470" height="20" rx="4"/><text class="el-ri" x="20">5</text><text class="el-rb" x="58">101</text><rect class="el-slot" x="66" y="-8" width="26" height="16" rx="3"/><path class="el-null" d="M71 5L87 -5"/><text class="el-note" x="120">·</text></g><g class="el-row" data-k="6" style="transform:translate(0px,140px);opacity:0"><rect class="el-row-bg" x="0" y="-10" width="470" height="20" rx="4"/><text class="el-ri" x="20">6</text><text class="el-rb" x="58">110</text><rect class="el-slot" x="66" y="-8" width="26" height="16" rx="3"/><path class="el-null" d="M71 5L87 -5"/><text class="el-note" x="120">·</text></g><g class="el-row" data-k="7" style="transform:translate(0px,184px);opacity:0"><rect class="el-row-bg" x="0" y="-10" width="470" height="20" rx="4"/><text class="el-ri" x="20">7</text><text class="el-rb" x="58">111</text><rect class="el-slot" x="66" y="-8" width="26" height="16" rx="3"/><path class="el-null" d="M71 5L87 -5"/><text class="el-note" x="120">·</text></g><g class="el-row" data-k="8" style="transform:translate(0px,52px);opacity:0"><rect class="el-row-bg" x="0" y="-10" width="470" height="20" rx="4"/><text class="el-ri" x="20">8</text><text class="el-rb" x="58">1000</text><rect class="el-slot" x="66" y="-8" width="26" height="16" rx="3"/><path class="el-null" d="M71 5L87 -5"/><text class="el-note" x="120">·</text></g><g class="el-row" data-k="9" style="transform:translate(0px,96px);opacity:0"><rect class="el-row-bg" x="0" y="-10" width="470" height="20" rx="4"/><text class="el-ri" x="20">9</text><text class="el-rb" x="58">1001</text><rect class="el-slot" x="66" y="-8" width="26" height="16" rx="3"/><path class="el-null" d="M71 5L87 -5"/><text class="el-note" x="120">·</text></g><g class="el-row" data-k="10" style="transform:translate(0px,140px);opacity:0"><rect class="el-row-bg" x="0" y="-10" width="470" height="20" rx="4"/><text class="el-ri" x="20">10</text><text class="el-rb" x="58">1010</text><rect class="el-slot" x="66" y="-8" width="26" height="16" rx="3"/><path class="el-null" d="M71 5L87 -5"/><text class="el-note" x="120">·</text></g><g class="el-row" data-k="11" style="transform:translate(0px,184px);opacity:0"><rect class="el-row-bg" x="0" y="-10" width="470" height="20" rx="4"/><text class="el-ri" x="20">11</text><text class="el-rb" x="58">1011</text><rect class="el-slot" x="66" y="-8" width="26" height="16" rx="3"/><path class="el-null" d="M71 5L87 -5"/><text class="el-note" x="120">·</text></g><g class="el-row" data-k="12" style="transform:translate(0px,52px);opacity:0"><rect class="el-row-bg" x="0" y="-10" width="470" height="20" rx="4"/><text class="el-ri" x="20">12</text><text class="el-rb" x="58">1100</text><rect class="el-slot" x="66" y="-8" width="26" height="16" rx="3"/><path class="el-null" d="M71 5L87 -5"/><text class="el-note" x="120">·</text></g><g class="el-row" data-k="13" style="transform:translate(0px,96px);opacity:0"><rect class="el-row-bg" x="0" y="-10" width="470" height="20" rx="4"/><text class="el-ri" x="20">13</text><text class="el-rb" x="58">1101</text><rect class="el-slot" x="66" y="-8" width="26" height="16" rx="3"/><path class="el-null" d="M71 5L87 -5"/><text class="el-note" x="120">·</text></g><g class="el-row" data-k="14" style="transform:translate(0px,140px);opacity:0"><rect class="el-row-bg" x="0" y="-10" width="470" height="20" rx="4"/><text class="el-ri" x="20">14</text><text class="el-rb" x="58">1110</text><rect class="el-slot" x="66" y="-8" width="26" height="16" rx="3"/><path class="el-null" d="M71 5L87 -5"/><text class="el-note" x="120">·</text></g><g class="el-row" data-k="15" style="transform:translate(0px,184px);opacity:0"><rect class="el-row-bg" x="0" y="-10" width="470" height="20" rx="4"/><text class="el-ri" x="20">15</text><text class="el-rb" x="58">1111</text><rect class="el-slot" x="66" y="-8" width="26" height="16" rx="3"/><path class="el-null" d="M71 5L87 -5"/><text class="el-note" x="120">·</text></g><g class="el-node" data-id="0" style="transform:translate(104px,30px);opacity:0"><path class="el-ptr" d="M-12 9H-4"/><path class="el-ptr-head" d="M0 9L-5 6V12Z"/><g class="u-chip " data-i="0" transform="translate(0 0)"><rect width="50" height="18" rx="4"/><text x="25" y="9"></text></g></g><g class="el-node" data-id="1" style="transform:translate(104px,30px);opacity:0"><path class="el-ptr" d="M-12 9H-4"/><path class="el-ptr-head" d="M0 9L-5 6V12Z"/><g class="u-chip " data-i="1" transform="translate(0 0)"><rect width="50" height="18" rx="4"/><text x="25" y="9"></text></g></g><g class="el-node" data-id="2" style="transform:translate(104px,30px);opacity:0"><path class="el-ptr" d="M-12 9H-4"/><path class="el-ptr-head" d="M0 9L-5 6V12Z"/><g class="u-chip " data-i="2" transform="translate(0 0)"><rect width="50" height="18" rx="4"/><text x="25" y="9"></text></g></g><g class="el-node" data-id="3" style="transform:translate(104px,30px);opacity:0"><path class="el-ptr" d="M-12 9H-4"/><path class="el-ptr-head" d="M0 9L-5 6V12Z"/><g class="u-chip " data-i="3" transform="translate(0 0)"><rect width="50" height="18" rx="4"/><text x="25" y="9"></text></g></g><g class="el-node" data-id="4" style="transform:translate(104px,30px);opacity:0"><path class="el-ptr" d="M-12 9H-4"/><path class="el-ptr-head" d="M0 9L-5 6V12Z"/><g class="u-chip " data-i="4" transform="translate(0 0)"><rect width="50" height="18" rx="4"/><text x="25" y="9"></text></g></g><g class="el-node" data-id="5" style="transform:translate(104px,30px);opacity:0"><path class="el-ptr" d="M-12 9H-4"/><path class="el-ptr-head" d="M0 9L-5 6V12Z"/><g class="u-chip " data-i="5" transform="translate(0 0)"><rect width="50" height="18" rx="4"/><text x="25" y="9"></text></g></g><g class="el-node" data-id="6" style="transform:translate(104px,30px);opacity:0"><path class="el-ptr" d="M-12 9H-4"/><path class="el-ptr-head" d="M0 9L-5 6V12Z"/><g class="u-chip " data-i="6" transform="translate(0 0)"><rect width="50" height="18" rx="4"/><text x="25" y="9"></text></g></g><g class="el-node" data-id="7" style="transform:translate(104px,30px);opacity:0"><path class="el-ptr" d="M-12 9H-4"/><path class="el-ptr-head" d="M0 9L-5 6V12Z"/><g class="u-chip " data-i="7" transform="translate(0 0)"><rect width="50" height="18" rx="4"/><text x="25" y="9"></text></g></g><g class="el-node" data-id="8" style="transform:translate(104px,30px);opacity:0"><path class="el-ptr" d="M-12 9H-4"/><path class="el-ptr-head" d="M0 9L-5 6V12Z"/><g class="u-chip " data-i="8" transform="translate(0 0)"><rect width="50" height="18" rx="4"/><text x="25" y="9"></text></g></g><g class="el-node" data-id="9" style="transform:translate(104px,30px);opacity:0"><path class="el-ptr" d="M-12 9H-4"/><path class="el-ptr-head" d="M0 9L-5 6V12Z"/><g class="u-chip " data-i="9" transform="translate(0 0)"><rect width="50" height="18" rx="4"/><text x="25" y="9"></text></g></g><g class="el-node" data-id="10" style="transform:translate(104px,30px);opacity:0"><path class="el-ptr" d="M-12 9H-4"/><path class="el-ptr-head" d="M0 9L-5 6V12Z"/><g class="u-chip " data-i="10" transform="translate(0 0)"><rect width="50" height="18" rx="4"/><text x="25" y="9"></text></g></g><g class="el-node" data-id="11" style="transform:translate(104px,30px);opacity:0"><path class="el-ptr" d="M-12 9H-4"/><path class="el-ptr-head" d="M0 9L-5 6V12Z"/><g class="u-chip " data-i="11" transform="translate(0 0)"><rect width="50" height="18" rx="4"/><text x="25" y="9"></text></g></g><g class="el-load" data-hue="gold" transform="translate(0 404)"><text class="el-load-t" x="0" y="0">load α = size / n</text><rect class="el-bar-bg" x="0" y="12" width="470" height="10" rx="3"/><rect class="el-bar" x="0" y="12" width="0" height="10" rx="3"/><path class="el-tick" d="M352.5 8V26"/><text class="el-tick-t" x="352.5" y="38">0.75: grow above</text><text class="el-tick-t" x="0" y="38" text-anchor="start">0</text><text class="el-tick-t" x="470" y="38" text-anchor="end">1</text></g></g><g class="el-right"><g class="el-hash"><text class="el-th" x="0" y="8" id="el-what">put</text><g id="el-kchip"><g class="u-chip " data-hue="blue" transform="translate(54 -2)"><rect width="50" height="20" rx="4"/><text x="25" y="10">cat</text></g></g><text class="el-hc" x="114" y="8" id="el-hc">hashCode = 98262</text><g class="el-bits el-b0" transform="translate(0 34)"><text class="el-bl" x="0">hashCode</text><g class="el-bit" data-b="0"><rect x="308" y="-8" width="8.2" height="16" rx="2"/><text x="312">0</text></g><g class="el-bit" data-b="1"><rect x="299.4" y="-8" width="8.2" height="16" rx="2"/><text x="303.4">0</text></g><g class="el-bit" data-b="2"><rect x="290.8" y="-8" width="8.2" height="16" rx="2"/><text x="294.8">0</text></g><g class="el-bit" data-b="3"><rect x="282.2" y="-8" width="8.2" height="16" rx="2"/><text x="286.2">0</text></g><g class="el-bit" data-b="4"><rect x="273.6" y="-8" width="8.2" height="16" rx="2"/><text x="277.6">0</text></g><g class="el-bit" data-b="5"><rect x="265" y="-8" width="8.2" height="16" rx="2"/><text x="269">0</text></g><g class="el-bit" data-b="6"><rect x="256.4" y="-8" width="8.2" height="16" rx="2"/><text x="260.4">0</text></g><g class="el-bit" data-b="7"><rect x="247.8" y="-8" width="8.2" height="16" rx="2"/><text x="251.8">0</text></g><g class="el-bit" data-b="8"><rect x="239.2" y="-8" width="8.2" height="16" rx="2"/><text x="243.2">0</text></g><g class="el-bit" data-b="9"><rect x="230.6" y="-8" width="8.2" height="16" rx="2"/><text x="234.6">0</text></g><g class="el-bit" data-b="10"><rect x="222" y="-8" width="8.2" height="16" rx="2"/><text x="226">0</text></g><g class="el-bit" data-b="11"><rect x="213.4" y="-8" width="8.2" height="16" rx="2"/><text x="217.4">0</text></g><g class="el-bit" data-b="12"><rect x="204.8" y="-8" width="8.2" height="16" rx="2"/><text x="208.8">0</text></g><g class="el-bit" data-b="13"><rect x="196.2" y="-8" width="8.2" height="16" rx="2"/><text x="200.2">0</text></g><g class="el-bit" data-b="14"><rect x="187.6" y="-8" width="8.2" height="16" rx="2"/><text x="191.6">0</text></g><g class="el-bit" data-b="15"><rect x="179" y="-8" width="8.2" height="16" rx="2"/><text x="183">0</text></g><g class="el-bit" data-b="16"><rect x="170.4" y="-8" width="8.2" height="16" rx="2"/><text x="174.4">0</text></g><g class="el-bit" data-b="17"><rect x="161.8" y="-8" width="8.2" height="16" rx="2"/><text x="165.8">0</text></g><g class="el-bit" data-b="18"><rect x="153.2" y="-8" width="8.2" height="16" rx="2"/><text x="157.2">0</text></g><g class="el-bit" data-b="19"><rect x="144.6" y="-8" width="8.2" height="16" rx="2"/><text x="148.6">0</text></g><g class="el-bit" data-b="20"><rect x="136" y="-8" width="8.2" height="16" rx="2"/><text x="140">0</text></g><g class="el-bit" data-b="21"><rect x="127.4" y="-8" width="8.2" height="16" rx="2"/><text x="131.4">0</text></g><g class="el-bit" data-b="22"><rect x="118.8" y="-8" width="8.2" height="16" rx="2"/><text x="122.8">0</text></g><g class="el-bit" data-b="23"><rect x="110.2" y="-8" width="8.2" height="16" rx="2"/><text x="114.2">0</text></g><g class="el-bit" data-b="24"><rect x="101.6" y="-8" width="8.2" height="16" rx="2"/><text x="105.6">0</text></g><g class="el-bit" data-b="25"><rect x="93" y="-8" width="8.2" height="16" rx="2"/><text x="97">0</text></g><g class="el-bit" data-b="26"><rect x="84.4" y="-8" width="8.2" height="16" rx="2"/><text x="88.4">0</text></g></g><g class="el-bits el-b1" transform="translate(0 52)"><text class="el-bl" x="0">h >>> 16</text><g class="el-bit" data-b="0"><rect x="308" y="-8" width="8.2" height="16" rx="2"/><text x="312">0</text></g><g class="el-bit" data-b="1"><rect x="299.4" y="-8" width="8.2" height="16" rx="2"/><text x="303.4">0</text></g><g class="el-bit" data-b="2"><rect x="290.8" y="-8" width="8.2" height="16" rx="2"/><text x="294.8">0</text></g><g class="el-bit" data-b="3"><rect x="282.2" y="-8" width="8.2" height="16" rx="2"/><text x="286.2">0</text></g><g class="el-bit" data-b="4"><rect x="273.6" y="-8" width="8.2" height="16" rx="2"/><text x="277.6">0</text></g><g class="el-bit" data-b="5"><rect x="265" y="-8" width="8.2" height="16" rx="2"/><text x="269">0</text></g><g class="el-bit" data-b="6"><rect x="256.4" y="-8" width="8.2" height="16" rx="2"/><text x="260.4">0</text></g><g class="el-bit" data-b="7"><rect x="247.8" y="-8" width="8.2" height="16" rx="2"/><text x="251.8">0</text></g><g class="el-bit" data-b="8"><rect x="239.2" y="-8" width="8.2" height="16" rx="2"/><text x="243.2">0</text></g><g class="el-bit" data-b="9"><rect x="230.6" y="-8" width="8.2" height="16" rx="2"/><text x="234.6">0</text></g><g class="el-bit" data-b="10"><rect x="222" y="-8" width="8.2" height="16" rx="2"/><text x="226">0</text></g><g class="el-bit" data-b="11"><rect x="213.4" y="-8" width="8.2" height="16" rx="2"/><text x="217.4">0</text></g><g class="el-bit" data-b="12"><rect x="204.8" y="-8" width="8.2" height="16" rx="2"/><text x="208.8">0</text></g><g class="el-bit" data-b="13"><rect x="196.2" y="-8" width="8.2" height="16" rx="2"/><text x="200.2">0</text></g><g class="el-bit" data-b="14"><rect x="187.6" y="-8" width="8.2" height="16" rx="2"/><text x="191.6">0</text></g><g class="el-bit" data-b="15"><rect x="179" y="-8" width="8.2" height="16" rx="2"/><text x="183">0</text></g><g class="el-bit" data-b="16"><rect x="170.4" y="-8" width="8.2" height="16" rx="2"/><text x="174.4">0</text></g><g class="el-bit" data-b="17"><rect x="161.8" y="-8" width="8.2" height="16" rx="2"/><text x="165.8">0</text></g><g class="el-bit" data-b="18"><rect x="153.2" y="-8" width="8.2" height="16" rx="2"/><text x="157.2">0</text></g><g class="el-bit" data-b="19"><rect x="144.6" y="-8" width="8.2" height="16" rx="2"/><text x="148.6">0</text></g><g class="el-bit" data-b="20"><rect x="136" y="-8" width="8.2" height="16" rx="2"/><text x="140">0</text></g><g class="el-bit" data-b="21"><rect x="127.4" y="-8" width="8.2" height="16" rx="2"/><text x="131.4">0</text></g><g class="el-bit" data-b="22"><rect x="118.8" y="-8" width="8.2" height="16" rx="2"/><text x="122.8">0</text></g><g class="el-bit" data-b="23"><rect x="110.2" y="-8" width="8.2" height="16" rx="2"/><text x="114.2">0</text></g><g class="el-bit" data-b="24"><rect x="101.6" y="-8" width="8.2" height="16" rx="2"/><text x="105.6">0</text></g><g class="el-bit" data-b="25"><rect x="93" y="-8" width="8.2" height="16" rx="2"/><text x="97">0</text></g><g class="el-bit" data-b="26"><rect x="84.4" y="-8" width="8.2" height="16" rx="2"/><text x="88.4">0</text></g></g><path class="el-xor" d="M78 62H316"/><g class="el-bits el-b2" transform="translate(0 72)"><text class="el-bl" x="0">h = xor</text><g class="el-bit" data-b="0"><rect x="308" y="-8" width="8.2" height="16" rx="2"/><text x="312">0</text></g><g class="el-bit" data-b="1"><rect x="299.4" y="-8" width="8.2" height="16" rx="2"/><text x="303.4">0</text></g><g class="el-bit" data-b="2"><rect x="290.8" y="-8" width="8.2" height="16" rx="2"/><text x="294.8">0</text></g><g class="el-bit" data-b="3"><rect x="282.2" y="-8" width="8.2" height="16" rx="2"/><text x="286.2">0</text></g><g class="el-bit" data-b="4"><rect x="273.6" y="-8" width="8.2" height="16" rx="2"/><text x="277.6">0</text></g><g class="el-bit" data-b="5"><rect x="265" y="-8" width="8.2" height="16" rx="2"/><text x="269">0</text></g><g class="el-bit" data-b="6"><rect x="256.4" y="-8" width="8.2" height="16" rx="2"/><text x="260.4">0</text></g><g class="el-bit" data-b="7"><rect x="247.8" y="-8" width="8.2" height="16" rx="2"/><text x="251.8">0</text></g><g class="el-bit" data-b="8"><rect x="239.2" y="-8" width="8.2" height="16" rx="2"/><text x="243.2">0</text></g><g class="el-bit" data-b="9"><rect x="230.6" y="-8" width="8.2" height="16" rx="2"/><text x="234.6">0</text></g><g class="el-bit" data-b="10"><rect x="222" y="-8" width="8.2" height="16" rx="2"/><text x="226">0</text></g><g class="el-bit" data-b="11"><rect x="213.4" y="-8" width="8.2" height="16" rx="2"/><text x="217.4">0</text></g><g class="el-bit" data-b="12"><rect x="204.8" y="-8" width="8.2" height="16" rx="2"/><text x="208.8">0</text></g><g class="el-bit" data-b="13"><rect x="196.2" y="-8" width="8.2" height="16" rx="2"/><text x="200.2">0</text></g><g class="el-bit" data-b="14"><rect x="187.6" y="-8" width="8.2" height="16" rx="2"/><text x="191.6">0</text></g><g class="el-bit" data-b="15"><rect x="179" y="-8" width="8.2" height="16" rx="2"/><text x="183">0</text></g><g class="el-bit" data-b="16"><rect x="170.4" y="-8" width="8.2" height="16" rx="2"/><text x="174.4">0</text></g><g class="el-bit" data-b="17"><rect x="161.8" y="-8" width="8.2" height="16" rx="2"/><text x="165.8">0</text></g><g class="el-bit" data-b="18"><rect x="153.2" y="-8" width="8.2" height="16" rx="2"/><text x="157.2">0</text></g><g class="el-bit" data-b="19"><rect x="144.6" y="-8" width="8.2" height="16" rx="2"/><text x="148.6">0</text></g><g class="el-bit" data-b="20"><rect x="136" y="-8" width="8.2" height="16" rx="2"/><text x="140">0</text></g><g class="el-bit" data-b="21"><rect x="127.4" y="-8" width="8.2" height="16" rx="2"/><text x="131.4">0</text></g><g class="el-bit" data-b="22"><rect x="118.8" y="-8" width="8.2" height="16" rx="2"/><text x="122.8">0</text></g><g class="el-bit" data-b="23"><rect x="110.2" y="-8" width="8.2" height="16" rx="2"/><text x="114.2">0</text></g><g class="el-bit" data-b="24"><rect x="101.6" y="-8" width="8.2" height="16" rx="2"/><text x="105.6">0</text></g><g class="el-bit" data-b="25"><rect x="93" y="-8" width="8.2" height="16" rx="2"/><text x="97">0</text></g><g class="el-bit" data-b="26"><rect x="84.4" y="-8" width="8.2" height="16" rx="2"/><text x="88.4">0</text></g></g><g transform="translate(0 100)"><text class="el-iline" id="el-iline" x="0">i = h mod n</text></g></g><g class="u-code" id="el-code" data-hue="blue" transform="translate(0 122)"><g class="u-line" data-i="0" transform="translate(0 0)"><rect width="320" height="17.5" rx="3"/><text class="u-line-num" x="16" y="8.75">1</text><text class="u-line-text" x="26" y="8.75">int h = key.hashCode();</text></g><g class="u-line" data-i="1" transform="translate(0 17.5)"><rect width="320" height="17.5" rx="3"/><text class="u-line-num" x="16" y="8.75">2</text><text class="u-line-text" x="26" y="8.75">h = h ^ (h &gt;&gt;&gt; 16);       // spread</text></g><g class="u-line" data-i="2" transform="translate(0 35)"><rect width="320" height="17.5" rx="3"/><text class="u-line-num" x="16" y="8.75">3</text><text class="u-line-text" x="26" y="8.75">int i = h &amp; (n - 1);      // = h mod n</text></g><g class="u-line" data-i="3" transform="translate(0 52.5)"><rect width="320" height="17.5" rx="3"/><text class="u-line-num" x="16" y="8.75">4</text><text class="u-line-text" x="26" y="8.75">if (table[i] == null)</text></g><g class="u-line" data-i="4" transform="translate(0 70)"><rect width="320" height="17.5" rx="3"/><text class="u-line-num" x="16" y="8.75">5</text><text class="u-line-text" x="26" y="8.75">  table[i] = new Node(h, key);</text></g><g class="u-line" data-i="5" transform="translate(0 87.5)"><rect width="320" height="17.5" rx="3"/><text class="u-line-num" x="16" y="8.75">6</text><text class="u-line-text" x="26" y="8.75">else if (chain has key)</text></g><g class="u-line" data-i="6" transform="translate(0 105)"><rect width="320" height="17.5" rx="3"/><text class="u-line-num" x="16" y="8.75">7</text><text class="u-line-text" x="26" y="8.75">  return;                 // stored already</text></g><g class="u-line" data-i="7" transform="translate(0 122.5)"><rect width="320" height="17.5" rx="3"/><text class="u-line-num" x="16" y="8.75">8</text><text class="u-line-text" x="26" y="8.75">else</text></g><g class="u-line" data-i="8" transform="translate(0 140)"><rect width="320" height="17.5" rx="3"/><text class="u-line-num" x="16" y="8.75">9</text><text class="u-line-text" x="26" y="8.75">  add new Node(h, key) at chain end;</text></g><g class="u-line" data-i="9" transform="translate(0 157.5)"><rect width="320" height="17.5" rx="3"/><text class="u-line-num" x="16" y="8.75">10</text><text class="u-line-text" x="26" y="8.75">if (++size &gt; 0.75 * n) resize();</text></g><g class="u-line" data-i="10" transform="translate(0 175)"><rect width="320" height="17.5" rx="3"/><text class="u-line-num" x="16" y="8.75">11</text><text class="u-line-text" x="26" y="8.75">// resize: 2n buckets, i stays or i + n</text></g></g><g class="el-chartbox" data-hue="gold"><text class="el-th" x="0" y="332">load after each put</text><g class="u-plot" id="el-chart" data-scale="34 344 274 72 0 16 0 1"><path class="u-plot-grid" d="M34 344V416M102.5 344V416M171 344V416M239.5 344V416M308 344V416M34 416H308M34 344H308"/><path class="u-plot-axis" d="M34 416H308M34 344V416M34 416v4M102.5 416v4M171 416v4M239.5 416v4M308 416v4M34 416h-4M34 344h-4"/><text class="u-tick-label" x="34" y="431" text-anchor="middle">0</text><text class="u-tick-label" x="102.5" y="431" text-anchor="middle">4</text><text class="u-tick-label" x="171" y="431" text-anchor="middle">8</text><text class="u-tick-label" x="239.5" y="431" text-anchor="middle">12</text><text class="u-tick-label" x="308" y="431" text-anchor="middle">16</text><text class="u-tick-label" x="27" y="419.5" text-anchor="end">0</text><text class="u-tick-label" x="27" y="347.5" text-anchor="end">1</text></g><path class="el-thr" d="M34 362H308"/><text class="u-tick-label" x="27" y="365.5" text-anchor="end">0.75</text><polyline class="el-hist" points=""/><circle class="el-now" r="3.5" cx="34" cy="416"/><g class="el-drop" data-j="0" style="opacity:0"><path d=""/><text x="0" y="0">copy 4</text></g><g class="el-drop" data-j="1" style="opacity:0"><path d=""/><text x="0" y="0">copy 4</text></g><text class="el-th" x="308" y="444" text-anchor="end">puts</text></g></g></svg><div class="u-controls"><div class="u-ctl"><label>key <input type="text" id="el-key" maxlength="5" placeholder="fox" autocomplete="off" spellcheck="false"></label><button type="button" id="el-put">insert</button><button type="button" id="el-get">look up</button><button type="button" id="el-reset">reset</button></div><div class="u-time" data-label="step"><button type="button" data-step="-1" aria-label="Previous step">‹</button><input type="range" min="0" max="9" value="0" aria-label="step"><button type="button" data-step="1" aria-label="Next step">›</button><output>step 0 / 9</output></div></div><div class="u-say" aria-live="polite"><p class="u-at" data-at="0">A hash function turns the <b data-hue="blue">key</b> into a number h. The last bits of h pick the <b data-hue="yellow">bucket</b>, so a key always lands in the same place.</p><p class="u-at" data-at="1">A new key goes into the empty <b data-hue="yellow">bucket</b> at index i. A lookup computes the same i and goes straight there.</p><p class="u-at" data-at="2">Two keys can get the same index. The new node then joins the end of the bucket's <b data-hue="red">chain</b>, and a lookup checks each key in it.</p><p class="u-at" data-at="3">The <b data-hue="gold">load</b> α is the number of keys per bucket. When it passes 0.75, chains get long, so the table must grow.</p><p class="u-at" data-at="4">The table doubles and copies every node to an array of 2n buckets. One more bit of h decides: the node stays at i or <b data-hue="purple">moves to i + n</b>.</p><p class="u-at" data-at="5">Each resize copies all keys, but resizes come less often as the table doubles. So a put does O(1) work on average.</p></div><nav class="u-steps" aria-label="Scenes"><button type="button" class="u-play" aria-pressed="false"><span>▶</span>Play</button><button type="button" data-go="0" aria-current="step"><span>1</span>Hash</button><button type="button" data-go="1"><span>2</span>Store</button><button type="button" data-go="2"><span>3</span>Collide</button><button type="button" data-go="3"><span>4</span>Full</button><button type="button" data-go="4"><span>5</span>Grow</button><button type="button" data-go="5"><span>6</span>Repeat</button></nav><div class="u-key"><span data-hue="blue"><i></i>key now</span><span data-hue="yellow"><i></i>index bits, bucket</span><span data-hue="red"><i></i>collision</span><span data-hue="gold"><i></i>load α</span><span data-hue="purple"><i></i>split bit, moved node</span></div></div></div><figcaption class="iso-legend"><span class="iso-caption">The rules of Java's HashMap: 4 buckets to start, load factor 0.75, new nodes at the chain end. The 7 first keys were chosen by hand. Java 21 ran the same puts, and its own HashMap held the same buckets after every put.</span></figcaption></figure><section class="u-notes"><h2>Growth at real sizes</h2><p>Copies per put stay near 2 at every size, so the whole cost of growing is O(1) per put on average.</p><table><thead><tr><th>puts</th><th>buckets n</th><th>resizes</th><th>nodes copied</th><th>copies per put</th><th>load α</th></tr></thead><tbody><tr><td data-th="puts">10</td><td data-th="buckets n">16</td><td data-th="resizes">2</td><td data-th="nodes copied">11</td><td data-th="copies per put">1.10</td><td data-th="load α">0.63</td></tr><tr><td data-th="puts">100</td><td data-th="buckets n">256</td><td data-th="resizes">6</td><td data-th="nodes copied">195</td><td data-th="copies per put">1.95</td><td data-th="load α">0.39</td></tr><tr><td data-th="puts">1,000</td><td data-th="buckets n">2,048</td><td data-th="resizes">9</td><td data-th="nodes copied">1,542</td><td data-th="copies per put">1.54</td><td data-th="load α">0.49</td></tr><tr><td data-th="puts">10,000</td><td data-th="buckets n">16,384</td><td data-th="resizes">12</td><td data-th="nodes copied">12,297</td><td data-th="copies per put">1.23</td><td data-th="load α">0.61</td></tr><tr><td data-th="puts">100,000</td><td data-th="buckets n">262,144</td><td data-th="resizes">16</td><td data-th="nodes copied">196,621</td><td data-th="copies per put">1.97</td><td data-th="load α">0.38</td></tr><tr><td data-th="puts">1,000,000</td><td data-th="buckets n">2,097,152</td><td data-th="resizes">19</td><td data-th="nodes copied">1,572,880</td><td data-th="copies per put">1.57</td><td data-th="load α">0.48</td></tr><tr><td data-th="puts">10,000,000</td><td data-th="buckets n">16,777,216</td><td data-th="resizes">22</td><td data-th="nodes copied">12,582,931</td><td data-th="copies per put">1.26</td><td data-th="load α">0.60</td></tr><tr><td data-th="puts">100,000,000</td><td data-th="buckets n">134,217,728</td><td data-th="resizes">25</td><td data-th="nodes copied">100,663,318</td><td data-th="copies per put">1.01</td><td data-th="load α">0.75</td></tr><tr><td data-th="puts">1,000,000,000</td><td data-th="buckets n">2,147,483,648</td><td data-th="resizes">29</td><td data-th="nodes copied">1,610,612,762</td><td data-th="copies per put">1.61</td><td data-th="load α">0.47</td></tr></tbody></table><h2>Other hash tables</h2><p>The figure follows Java's HashMap. Other languages store collisions in other ways. We ran the real tool for the Java row only.</p><table><thead><tr><th>table</th><th>collisions</th><th>grows when</th><th>checked</th></tr></thead><tbody><tr><td data-th="table">Java <code>HashMap</code></td><td data-th="collisions">chain per bucket. A chain of 8 or more becomes a red-black tree when n ≥ 64</td><td data-th="grows when">α &gt; 0.75, to 2n</td><td data-th="checked">yes, Java 21</td></tr><tr><td data-th="table">Python <code>dict</code></td><td data-th="collisions">open addressing: probe other slots by a fixed sequence</td><td data-th="grows when">about 2/3 full</td><td data-th="checked">no</td></tr><tr><td data-th="table">C++ <code>unordered_map</code></td><td data-th="collisions">chain per bucket</td><td data-th="grows when">α &gt; <code>max_load_factor</code> (1.0)</td><td data-th="checked">no</td></tr><tr><td data-th="table">Go <code>map</code> (1.24 and later)</td><td data-th="collisions">Swiss table: groups of 8 slots, probe by group</td><td data-th="grows when">7/8 full</td><td data-th="checked">no</td></tr><tr><td data-th="table">Rust <code>HashMap</code></td><td data-th="collisions">Swiss table (hashbrown)</td><td data-th="grows when">7/8 full</td><td data-th="checked">no</td></tr></tbody></table><h2>What the figure leaves out</h2><table><thead><tr><th>topic</th><th>in Java</th></tr></thead><tbody><tr><td data-th="topic">remove</td><td data-th="in Java">unlinks the node from its chain. The table never shrinks.</td></tr><tr><td data-th="topic">same key again</td><td data-th="in Java">put replaces the value. The figure stores keys only.</td></tr><tr><td data-th="topic">bad hash codes</td><td data-th="in Java">many equal hashCode values make one long chain. Java then uses a tree.</td></tr><tr><td data-th="topic">first table</td><td data-th="in Java"><code>new HashMap&lt;&gt;()</code> starts at 16 buckets. The figure starts at 4.</td></tr></tbody></table><h2>Terms</h2><table><thead><tr><th>term</th><th>meaning</th></tr></thead><tbody><tr><td data-th="term">key</td><td data-th="meaning">the value you store and look up</td></tr><tr><td data-th="term">hashCode</td><td data-th="meaning">a 32-bit number computed from the key</td></tr><tr><td data-th="term">h</td><td data-th="meaning">hashCode with its high 16 bits mixed in by xor</td></tr><tr><td data-th="term">bucket</td><td data-th="meaning">one slot of the array, holds a chain</td></tr><tr><td data-th="term">n</td><td data-th="meaning">number of buckets, always a power of 2</td></tr><tr><td data-th="term">i</td><td data-th="meaning">bucket index, h mod n, the last log₂ n bits of h</td></tr><tr><td data-th="term">chain</td><td data-th="meaning">linked list of the nodes in one bucket</td></tr><tr><td data-th="term">collision</td><td data-th="meaning">two keys with the same index i</td></tr><tr><td data-th="term">load α</td><td data-th="meaning">keys per bucket, size / n</td></tr><tr><td data-th="term">resize</td><td data-th="meaning">copy all nodes to a new array of 2n buckets</td></tr></tbody></table></section></main><script type="module">function fmt(value, places = 1) {
+  if (value === -Infinity) return "−∞";
+  const text = value.toFixed(places);
+  return Number(text) === 0 ? (0).toFixed(places) : text.replace("-", "−");
+}
+function mark(root, i, selector = ".u-mark") {
+  root.querySelectorAll(`${selector}[data-r],${selector}[data-i]`).forEach((el) => el.toggleAttribute("data-on", Number(el.dataset.r ?? el.dataset.i) === i));
+}
+function setLive(values, root = document) {
+  for (const [name, v] of Object.entries(values))
+    root.querySelectorAll(`[data-live="${name}"]`).forEach((el) => (el.textContent = typeof v === "number" ? fmt(v, Number(el.dataset.places ?? (Number.isInteger(v) ? 0 : 1))) : v));
+}
+function plotAt(plotEl, vx, vy) {
+  const [x, y, w, h, x0, x1, y0, y1] = plotEl.dataset.scale.split(" ").map(Number);
+  return [x + ((vx - x0) / (x1 - x0)) * w, y + h - ((vy - y0) / (y1 - y0)) * h];
+}
+function runtime() {
+  const stage = document.querySelector(".u-stage");
+  const count = Number(stage.dataset.count);
+  const dwell = Number(stage.dataset.dwell);
+  const still = matchMedia("(prefers-reduced-motion: reduce)");
+  let scene = 0;
+  let visible = false;
+  let playing = false;
+  let held = false;
+  let next = 0;
+  const beats = [];
+  const total = (b) => (typeof b.count === "function" ? b.count() : b.count);
+  const go = (i, by = "user") => {
+    scene = Math.max(0, Math.min(count - 1, i));
+    stage.dataset.scene = String(scene);
+    stage.querySelectorAll("[data-go]").forEach((b) => (Number(b.dataset.go) === scene ? b.setAttribute("aria-current", "step") : b.removeAttribute("aria-current")));
+    stage.querySelectorAll("[data-ds]").forEach((el) => {
+      const d = JSON.parse(el.dataset.ds)[scene];
+      el.toggleAttribute("data-off", !d);
+      if (!d) return;
+      if (CSS.supports("d", 'path("M0 0")')) el.style.d = `path("${d}")`;
+      else el.setAttribute("d", d);
+    });
+    scope();
+    fit();
+    stage.dispatchEvent(new CustomEvent("unfold:scene", { detail: { scene, by } }));
+    if (by === "user") setPlaying(false);
+    held = false;
+    next = performance.now() + dwell;
+    for (const b of beats) {
+      b.n = 0;
+      b.at = performance.now() + b.wait - b.ms;
+      if (still.matches && b.scene === scene) b.fn(-1);
+    }
+    setBusy();
+  };
+  // data-busy is on the stage while a counted sweep of this scene still runs. The tour and shoot.mjs wait for it.
+  // A sweep is done one `ms` after its last call, so the last step has time to move. The tour then holds that
+  // last step for `hold` ms before the next scene, so the reader sees the result.
+  const hold = 1800;
+  const setBusy = (now = performance.now()) => {
+    const busy = !held && !still.matches && beats.some((b) => b.scene === scene && total(b) && (b.n < total(b) || now - b.at < b.ms));
+    if (busy === stage.hasAttribute("data-busy")) return;
+    stage.toggleAttribute("data-busy", busy);
+    if (!busy) next = Math.max(next, now + hold);
+  };
+  // The tour runs only after the reader presses Play, and stops at the last scene or at any input.
+  const playBtn = stage.querySelector(".u-play");
+  const setPlaying = (on) => {
+    playing = on;
+    playBtn.setAttribute("aria-pressed", String(on));
+    playBtn.firstChild.textContent = on ? "❚❚" : "▶";
+    playBtn.lastChild.textContent = on ? "Pause" : "Play";
+  };
+  playBtn.addEventListener("click", () => {
+    if (playing) return setPlaying(false);
+    if (scene === count - 1) go(0, "tour");
+    next = performance.now() + dwell;
+    setPlaying(true);
+  });
+  const tour = (now) => {
+    if (playing && visible && now > next && !stage.hasAttribute("data-busy")) scene === count - 1 ? setPlaying(false) : go(scene + 1, "tour");
+    for (const b of beats) {
+      if (b.scene === scene && visible && !held && !still.matches && now - b.at >= b.ms && !(total(b) && b.n >= total(b))) {
+        b.at = now;
+        b.fn(b.n++);
+      }
+    }
+    setBusy(now);
+    requestAnimationFrame(tour);
+  };
+  stage.querySelector(".u-steps").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-go]");
+    if (b) go(Number(b.dataset.go));
+  });
+  stage.addEventListener("keydown", (e) => {
+    const to = { ArrowRight: scene + 1, ArrowLeft: scene - 1, Home: 0, End: count - 1 }[e.key];
+    if (to === undefined) return;
+    e.preventDefault();
+    go(to);
+  });
+  // Time by hand: the step control and the "," and "." keys call the page's onTime(t). Its keys stay inside it.
+  const timer = stage.querySelector(".u-time");
+  let onTime = () => {};
+  const range = timer?.querySelector("input");
+  // onTime first: it may call go(), which releases the sweeps. pause() after it holds them again.
+  const byHand = (t) => {
+    onTime(Math.max(0, Math.min(Number(range.max), t)));
+    pause();
+  };
+  if (timer) {
+    range.addEventListener("input", () => byHand(Number(range.value)));
+    timer.addEventListener("click", (e) => {
+      const b = e.target.closest("[data-step]");
+      if (b) byHand(Number(range.value) + Number(b.dataset.step));
+    });
+    stage.addEventListener("keydown", (e) => {
+      const by = { ",": -1, ".": 1 }[e.key];
+      if (by === undefined) return;
+      e.preventDefault();
+      byHand(Number(range.value) + by);
+    });
+  }
+  // Keys typed in a control (a scrubber, a number field) stay in it: no scene or focus change.
+  stage.querySelectorAll(".u-controls :is(input,select,textarea)").forEach((el) => el.addEventListener("keydown", (e) => e.stopPropagation()));
+  // A scene-scoped control (stageHtml controlScenes, or any element in the controls with data-scenes) is dimmed
+  // in the other scenes, and an input there moves to the first scene that uses it.
+  const ownersOf = (el) => el.dataset.scenes.trim().split(/\s+/).map(Number);
+  function scope() {
+    stage.querySelectorAll(".u-controls [data-scenes]").forEach((el) => el.toggleAttribute("data-idle", !ownersOf(el).includes(scene)));
+  }
+  const toOwner = (e) => {
+    const el = e.target.closest(".u-controls [data-scenes]");
+    if (el && !ownersOf(el).includes(scene)) go(ownersOf(el)[0]);
+  };
+  // Capture phase: the move runs before the page's own handler, so a preset applied on scene entry
+  // does not overwrite what the reader just set.
+  const panel = stage.querySelector(".u-controls");
+  panel?.addEventListener("input", toOwner, true);
+  panel?.addEventListener("click", (e) => e.target.closest("button") && toOwner(e), true);
+  // timeAt(t, steps): show step t. Pass steps when the run's length changed (a live input made a longer trace).
+  const timeAt = (t, steps) => {
+    if (!timer) return;
+    if (steps) range.max = String(steps - 1);
+    range.value = String(t);
+    timer.querySelector("output").textContent = `${timer.dataset.label} ${t} / ${range.max}`;
+  };
+  // Narrow layout: below 560 px the drawing takes its second viewBox and the stage gets data-narrow.
+  // With one narrow height per scene (data-narrow-h), the viewBox follows the scene.
+  const svg = stage.querySelector("svg");
+  const wide = svg?.getAttribute("viewBox");
+  const heights = stage.dataset.narrowH?.split(" ");
+  function fit() {
+    if (!stage.dataset.narrowBox) return;
+    const box = stage.dataset.narrowBox.split(" ");
+    if (heights) box[3] = heights[scene] ?? box[3];
+    svg.setAttribute("viewBox", stage.hasAttribute("data-narrow") ? box.join(" ") : wide);
+  }
+  if (stage.dataset.narrowBox)
+    new ResizeObserver(([entry]) => {
+      const on = entry.contentRect.width < 560;
+      if (on === stage.hasAttribute("data-narrow")) return;
+      stage.toggleAttribute("data-narrow", on);
+      fit();
+      stage.dispatchEvent(new CustomEvent("unfold:layout", { detail: { narrow: on } }));
+    }).observe(stage);
+  scope();
+  new IntersectionObserver((entries) => (visible = entries[entries.length - 1].isIntersecting), { rootMargin: "120px 0px" }).observe(stage);
+  next = performance.now() + dwell;
+  requestAnimationFrame(tour);
+  // beat(scene, ms, fn, wait, count): call fn(0), fn(1), … every ms while that scene shows, starting `wait` ms after it opens.
+  // With count, it stops after fn(count - 1) and the stage loses data-busy. Without it, the sweep never ends (a loop).
+  // count may be a function, read on every frame, for a run whose length a live input changes.
+  // Under reduced motion fn(-1) is called once instead: show the resting state.
+  const beat = (sceneIndex, ms, fn, wait = 1000, count = 0) => {
+    // No setBusy() here: the next frame runs it, so a count function may read data the page sets up after this call.
+    beats.push({ scene: sceneIndex, ms, fn, wait, count, n: 0, at: performance.now() + wait - ms });
+  };
+  // pause(): the user took control. The tour stops, and the sweeps hold until the scene changes.
+  const pause = () => {
+    setPlaying(false);
+    held = true;
+    setBusy();
+  };
+  return { stage, go, beat, pause, scene: () => scene, onTime: (fn) => (onTime = fn), timeAt, narrow: () => stage.hasAttribute("data-narrow") };
+}
+const UNFOLD = runtime();
+
+const CAP0 = 4;
+const LOAD = 0.75;
+const MAX_KEYS = 12;
+const MAX_CAP = 16;
+const KEY_MAX_LEN = 5;
+const PRESET = ["cat","dog","bee","yak","owl","hen","emu"];
+const MAX_PUTS = 16;
+const Y0 = 30;
+const TH = 352;
+const CHIP = {"x":104,"w":50,"h":18,"pitch":62};
+const BITS = 27;
+const CH = {"x":34,"y":344,"w":274,"h":72};
+function hashCode(s) {
+  let h = 0;
+  for (let k = 0; k < s.length; k++) h = (Math.imul(31, h) + s.charCodeAt(k)) | 0;
+  return h;
+}
+function spread(h) {
+  return h ^ (h >>> 16);
+}
+function validKey(s) {
+  return typeof s === "string" && s.length >= 1 && s.length <= KEY_MAX_LEN && /^[a-z]+$/.test(s);
+}
+function hashRun(keys) {
+  let n = CAP0;
+  let table = Array.from({ length: n }, () => []);
+  let size = 0;
+  let moves = 0;
+  const copy = () => table.map((c) => c.slice());
+  const steps = [{ kind: "init", n, table: copy(), size, load: 0, moves }];
+  for (const key of keys) {
+    const h0 = hashCode(key);
+    const h = spread(h0);
+    const i = h & (n - 1);
+    const chain = table[i];
+    if (chain.includes(key)) {
+      steps.push({ kind: "dup", key, h0, h, i, n, pos: chain.indexOf(key), table: copy(), size, load: size / n, moves });
+      continue;
+    }
+    chain.push(key);
+    size++;
+    steps.push({ kind: "put", key, h0, h, i, n, pos: chain.length - 1, table: copy(), size, load: size / n, moves, full: size > LOAD * n });
+    if (size > LOAD * n) {
+      const old = n;
+      n = 2 * n;
+      const next = Array.from({ length: n }, () => []);
+      const moved = [];
+      // Java walks each old chain in order and splits it into a "lo" list (index i) and a "hi" list (index i + old).
+      table.forEach((c, from) =>
+        c.forEach((k) => {
+          const to = spread(hashCode(k)) & (n - 1);
+          next[to].push(k);
+          moved.push({ key: k, from, to });
+        }),
+      );
+      table = next;
+      moves += size;
+      steps.push({ kind: "resize", key, n, old, table: copy(), size, load: size / n, moves, moved });
+    }
+  }
+  return steps;
+}
+function sceneRanges(steps) {
+  const last = steps.length - 1;
+  const firstPut = steps.findIndex((s) => s.kind === "put");
+  const collide = steps.findIndex((s) => s.kind === "put" && s.pos > 0);
+  const resize = steps.findIndex((s) => s.kind === "resize");
+  return [[0, firstPut], [firstPut + 1, collide - 1], [collide, collide], [collide + 1, resize - 1], [resize, resize], [resize + 1, last]];
+}
+function lookup(table, key) {
+  const h = spread(hashCode(key));
+  const i = h & (table.length - 1);
+  const at = table[i].indexOf(key);
+  return { h, i, found: at >= 0, compares: at >= 0 ? at + 1 : table[i].length };
+}
+function codeLine(s) {
+  if (s.kind === "init") return -1;
+  if (s.kind === "dup") return 6;
+  if (s.kind === "resize") return 10;
+  if (s.full) return 9; // the put that passes 0.75: the check line runs, and the resize follows
+  return s.pos === 0 ? 4 : 8;
+}
+
+const root = UNFOLD.stage;
+const readout = document.querySelector("[data-readout]");
+const $ = (s) => root.querySelector(s);
+const all = (s) => [...root.querySelectorAll(s)];
+const rowEl = all(".el-row"), nodeEl = all(".el-node"), codeEl = $("#el-code"), chartEl = $("#el-chart");
+const field = $("#el-key");
+let keys = PRESET.slice(), run, ranges, ids, step = 0, focus = null, crossing = false, timer = 0, notice = "";
+const q = (s) => "\u201c" + s + "\u201d";
+function recompute() {
+  run = hashRun(keys);
+  ranges = sceneRanges(run);
+  ids = [...new Set(keys)];
+}
+const rowY = (k, n) => Y0 + (TH / n) * (k + 0.5);
+const putsAt = (t) => run.slice(1, t + 1).filter((s) => s.kind !== "resize").length;
+function where(table, key) {
+  for (let i = 0; i < table.length; i++) { const p = table[i].indexOf(key); if (p >= 0) return [i, p]; }
+  return null;
+}
+function bits(row, v, opts = {}) {
+  const top = Math.max(0, 31 - Math.clz32(v));
+  row.querySelectorAll(".el-bit").forEach((el) => {
+    const b = Number(el.dataset.b);
+    el.querySelector("text").textContent = (v >>> b) & 1;
+    el.toggleAttribute("data-blank", b > top && !(opts.idx > b));
+    el.toggleAttribute("data-off", !((v >>> b) & 1));
+    el.toggleAttribute("data-idx", b < (opts.idx ?? 0));
+    el.toggleAttribute("data-split", b === opts.split);
+    el.toggleAttribute("data-mix", b >= 16);
+  });
+}
+function show(t) {
+  step = Math.max(0, Math.min(run.length - 1, t));
+  const s = run[step], n = s.n, narrow = UNFOLD.narrow();
+  const sc = UNFOLD.scene();
+  const lookingUp = focus !== null;
+  const firstMoved = s.kind === "resize" ? (s.moved.find((x) => x.to !== x.from) ?? s.moved[0]).key : null;
+  const fk = focus ?? firstMoved ?? s.key ?? keys[0];
+  const f = lookup(s.table, fk);
+  const resize = s.kind === "resize";
+  const old = resize ? s.old : n;
+  const fromOf = new Map(resize ? s.moved.map((x) => [x.key, x.from]) : []);
+  // Buckets: n rows share the height. A row that is new after a resize slides out of its twin i - n.
+  rowEl.forEach((el, k) => {
+    const on = k < n;
+    el.style.transform = "translate(0px," + rowY(on ? k : k % n, n) + "px)";
+    el.style.opacity = on ? 1 : 0;
+    el.querySelector(".el-rb").textContent = k.toString(2).padStart(Math.log2(n), "0").slice(-Math.log2(n));
+    el.toggleAttribute("data-focus", on && f.i === k);
+    el.toggleAttribute("data-full", on && s.table[k].length > 0);
+    const note = el.querySelector(".el-note");
+    let text = "", kind = "";
+    const len = on ? s.table[k].length : 0;
+    if (lookingUp && f.i === k) {
+      text = f.found ? "found: " + f.compares + (f.compares > 1 ? " compares" : " compare") : len ? "absent: " + f.compares + (f.compares > 1 ? " compares" : " compare") : "empty: absent";
+      kind = "found";
+    } else if (!lookingUp && on && (s.kind === "put" || s.kind === "dup") && s.i === k) {
+      text = s.kind === "dup" ? "stored already" : s.pos > 0 ? "collision: chain of " + len : "was empty";
+      kind = s.kind === "put" && s.pos > 0 ? "chain" : "key";
+    } else if (!lookingUp && resize && on && len) {
+      const movers = s.table[k].filter((x) => fromOf.get(x) !== k);
+      text = movers.length ? "+" + old + ", from " + (k - old) : "stays";
+      kind = movers.length ? "split" : "";
+    }
+    note.textContent = text;
+    note.dataset.kind = kind;
+    const pitch = Math.min(CHIP.pitch, ((narrow ? 400 : 470) - CHIP.x - 70) / Math.max(1, len));
+    note.setAttribute("x", CHIP.x + Math.max(len, 0) * pitch + 2);
+  });
+  // Nodes: one per distinct key, placed in its bucket's chain. A key not stored yet fades in where it will go.
+  nodeEl.forEach((el, id) => {
+    const key = ids[id];
+    if (key === undefined) return (el.style.opacity = 0);
+    let at = where(s.table, key);
+    const later = !at;
+    if (later) {
+      const h = spread(hashCode(key)), i = h & (n - 1);
+      at = [i, s.table[i].length];
+    }
+    const [b, p] = at;
+    const len = s.table[b].length + (later ? 1 : 0);
+    const pitch = Math.min(CHIP.pitch, ((narrow ? 400 : 470) - CHIP.x - 70) / Math.max(1, len));
+    el.style.transform = "translate(" + (CHIP.x + p * pitch) + "px," + (rowY(b, n) - CHIP.h / 2) + "px)";
+    el.style.opacity = later ? 0 : 1;
+    el.querySelector(".u-chip text").textContent = key;
+    let hue = "";
+    if (!lookingUp && key === s.key && (s.kind === "put" || s.kind === "dup")) hue = s.pos > 0 && s.kind === "put" ? "red" : "blue";
+    if (!lookingUp && resize && fromOf.has(key) && fromOf.get(key) !== b) hue = "purple";
+    if (lookingUp && key === fk) hue = "blue";
+    if (hue) el.dataset.hue = hue; else el.removeAttribute("data-hue");
+    el.toggleAttribute("data-cmp", lookingUp && b === f.i && (f.found ? p < f.compares - 1 : true));
+    el.toggleAttribute("data-found", lookingUp && key === fk);
+  });
+  // The hash of the focus key, bit by bit. The index bits are the last log2(n) bits of h.
+  const h0 = hashCode(fk), h = spread(h0), lg = Math.log2(n);
+  $("#el-what").textContent = lookingUp ? "look up" : s.kind === "init" ? "next" : resize ? "move" : "put";
+  $("#el-kchip text").textContent = fk;
+  $("#el-hc").textContent = "hashCode = " + h0;
+  bits($(".el-b0"), h0);
+  bits($(".el-b1"), h0 >>> 16);
+  bits($(".el-b2"), h, { idx: lg, split: resize ? Math.log2(old) : undefined });
+  const iEl = $("#el-iline");
+  const was = resize ? h & (old - 1) : -1;
+  iEl.innerHTML = "i = " + h + " mod " + n + " = <tspan class='t-i'>" + f.i + "</tspan>" +
+    (resize ? (f.i === was ? " <tspan class='t-s'>stays</tspan>" : " = " + was + " <tspan class='t-s'>+ " + old + "</tspan>") : "");
+  // Load: the bar under the table, and the history in the chart.
+  const load = $(".el-load");
+  load.querySelector(".el-bar").setAttribute("width", Math.min(1, s.load) * (narrow ? 400 : 470));
+  load.toggleAttribute("data-over", s.load > LOAD);
+  load.querySelector(".el-load-t").textContent = "load \u03b1 = size / n = " + s.size + " / " + n + " = " + s.load.toFixed(2) + (s.load > LOAD ? " > 0.75: grow" : "");
+  $(".el-load .el-tick").setAttribute("d", "M" + (narrow ? 300 : 352.5) + " 8V26");
+  $(".el-load .el-tick-t").setAttribute("x", narrow ? 300 : 352.5);
+  load.querySelectorAll(".el-tick-t")[2].setAttribute("x", narrow ? 400 : 470);
+  const pts = run.slice(0, step + 1).map((r, j) => plotAt(chartEl, Math.min(MAX_PUTS, putsAt(j)), r.load));
+  $(".el-hist").setAttribute("points", pts.map((p) => p.join(",")).join(" "));
+  const [cx, cy] = pts[pts.length - 1];
+  $(".el-now").setAttribute("cx", cx);
+  $(".el-now").setAttribute("cy", cy);
+  const drops = run.slice(0, step + 1).map((r, j) => [r, j]).filter(([r]) => r.kind === "resize");
+  all(".el-drop").forEach((el, j) => {
+    const d = drops[j];
+    el.style.opacity = d ? 1 : 0;
+    if (!d) return;
+    const [x, y] = plotAt(chartEl, putsAt(d[1]), d[0].load);
+    const top = plotAt(chartEl, putsAt(d[1]), run[d[1] - 1].load)[1];
+    el.querySelector("path").setAttribute("d", "M" + x + " " + top + "V" + y);
+    const label = el.querySelector("text");
+    label.setAttribute("x", x + 5);
+    label.setAttribute("y", Math.max(top - 5, CH.y + 6));
+    label.textContent = "copy " + d[0].size;
+  });
+  mark(codeEl, lookingUp ? -1 : codeLine(s), ".u-line");
+  // The equation bar follows the same state.
+  const other = s.table[f.i].find((x) => x !== fk) ?? fk;
+  const puts = putsAt(step);
+  setLive({
+    h0, hs: h0 >>> 16, h, n, i: f.i, k: fk, kB: other,
+    size: s.size, load: s.load, cmp: s.load > LOAD ? ">" : "\u2264",
+    n2: 2 * old, i2: h & (2 * old - 1), copies: s.moves, puts, ratio: puts ? s.moves / puts : 0,
+  });
+  UNFOLD.timeAt(step, run.length);
+  const text = notice || say(s, f, fk);
+  if (readout.textContent !== text) readout.textContent = text;
+}
+function say(s, f, fk) {
+  const head = "step " + step + " \u00b7 ";
+  if (focus !== null) return "look up " + q(fk) + ": " + f.h + " mod " + s.n + " = " + f.i + ", " + (f.found ? "found after " : "absent after ") + f.compares + (f.compares === 1 ? " compare" : " compares");
+  if (s.kind === "init") return head + "empty table: " + s.n + " buckets, grows above 0.75 \u00d7 " + s.n + " = " + 0.75 * s.n + " keys";
+  if (s.kind === "resize") {
+    const mv = s.moved.filter((x) => x.to !== x.from).length;
+    return head + "resize " + s.old + " \u2192 " + s.n + ": copied " + s.size + " nodes, " + mv + " moved to i + " + s.old;
+  }
+  const base = head + "put " + q(s.key) + ": " + s.h + " mod " + s.n + " = " + s.i;
+  if (s.kind === "dup") return base + ", stored already, size stays " + s.size;
+  if (s.full) return head + "put " + q(s.key) + ": size " + s.size + " > 0.75 \u00d7 " + s.n + " = " + 0.75 * s.n + ", so resize next";
+  return base + (s.pos ? ", after " + q(s.table[s.i][s.pos - 1]) + ": collision" : ", bucket was empty");
+}
+function stepTo(t, keepFocus) {
+  if (!keepFocus) focus = null;
+  notice = "";
+  show(t);
+  const sc = UNFOLD.scene();
+  const [a, b] = ranges[sc];
+  if (step < a || step > b) {
+    crossing = true;
+    UNFOLD.go(ranges.findIndex((r) => step >= r[0] && step <= r[1]));
+    crossing = false;
+    show(step);
+  }
+}
+root.addEventListener("unfold:scene", (e) => {
+  if (crossing) return;
+  focus = null;
+  notice = "";
+  show(ranges[e.detail.scene][0]);
+});
+root.addEventListener("unfold:layout", () => show(step));
+recompute();
+for (let sc = 0; sc < 6; sc++)
+  UNFOLD.beat(sc, 1600, (j) => { const [a, b] = ranges[sc]; focus = null; show(j < 0 ? b : Math.min(a + j, b)); }, 900, () => ranges[sc][1] - ranges[sc][0] + 1);
+UNFOLD.onTime((t) => { clearTimeout(timer); stepTo(t); });
+// The verb: insert the reader's key into the current table. The model's own hashRun() runs again on all keys.
+const readKey = () => field.value.trim().toLowerCase();
+function insert() {
+  UNFOLD.pause();
+  clearTimeout(timer);
+  const key = readKey();
+  focus = null;
+  if (!validKey(key)) { notice = "a key here is 1 to " + KEY_MAX_LEN + " letters a to z"; return show(step); }
+  const size = run[run.length - 1].size;
+  const puts = putsAt(run.length - 1);
+  if (puts >= MAX_PUTS || (size >= MAX_KEYS && !keys.includes(key))) { notice = "this figure stops at " + MAX_KEYS + " keys: press reset"; return show(step); }
+  notice = "";
+  keys.push(key);
+  recompute();
+  let t = run.length - 1;
+  const grows = run[t].kind === "resize";
+  if (grows) t--;
+  stepTo(t);
+  UNFOLD.pause();
+  // A put that passes 0.75 shows first. The resize after it follows, so the reader sees both.
+  if (grows) timer = setTimeout(() => { stepTo(t + 1); UNFOLD.pause(); }, 1600);
+  field.select();
+}
+function find(key) {
+  UNFOLD.pause();
+  if (!validKey(key)) { notice = "a key here is 1 to " + KEY_MAX_LEN + " letters a to z"; return show(step); }
+  notice = "";
+  focus = key;
+  show(step);
+}
+$("#el-put").addEventListener("click", insert);
+$("#el-get").addEventListener("click", () => find(readKey()));
+field.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); insert(); } });
+field.addEventListener("input", () => { const v = field.value.toLowerCase().replace(/[^a-z]/g, ""); if (v !== field.value) field.value = v; });
+$("#el-reset").addEventListener("click", () => {
+  UNFOLD.pause();
+  clearTimeout(timer);
+  keys = PRESET.slice();
+  recompute();
+  focus = null;
+  notice = "";
+  stepTo(run.length - 1);
+  UNFOLD.pause();
+});
+// Click a key in the table to look it up. Click it again to clear the lookup.
+root.addEventListener("click", (e) => {
+  const node = e.target.closest(".el-node");
+  if (!node) return;
+  const key = ids[Number(node.dataset.id)];
+  if (focus === key) { focus = null; UNFOLD.pause(); return show(step); }
+  field.value = key;
+  find(key);
+});
+show(0);
+</script></body></html>

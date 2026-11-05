@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DNS Lookup Walk</title>
+<style>
+:root{
+  --bg:#f6f5f1; --card:#ffffff; --ink:#1d1f24; --muted:#5d6370; --line:#d9d6cc; --soft:#efede6;
+  --client:#5b6475; --resolver:#7b4fd6; --root:#d9622b; --tld:#1f9d6b; --auth:#2a6fdb;
+  --hit:#1f9d6b; --miss:#c2410c;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#131418; --card:#1c1e24; --ink:#e9e8e4; --muted:#9aa0ab; --line:#33363f; --soft:#25282f;
+    --client:#9aa3b5; --resolver:#a98af0; --root:#f08a55; --tld:#4cc995; --auth:#6aa0f5;
+    --hit:#4cc995; --miss:#f08a55;
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:1240px;margin:0 auto;padding:24px 16px 48px}
+h1{font-size:28px;line-height:1.2;margin:0 0 6px}
+.lede{color:var(--muted);margin:0 0 18px;max-width:820px}
+.bar{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:14px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.seg button{border:0;border-radius:0;background:transparent}
+.seg button[aria-pressed=true]{background:var(--ink);color:var(--bg)}
+button{font:inherit;font-size:14px;color:var(--ink);background:var(--soft);border:1px solid var(--line);border-radius:8px;padding:7px 12px;cursor:pointer}
+button:hover{border-color:var(--muted)}
+button:disabled{opacity:.4;cursor:default}
+button:focus-visible,input:focus-visible{outline:2px solid var(--resolver);outline-offset:2px}
+.elapsed{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:14px}
+.elapsed[hidden]{display:none}
+.elapsed input{width:170px;accent-color:var(--resolver)}
+.elapsed output{font-family:var(--mono);font-weight:600;min-width:92px}
+.presets{display:flex;gap:6px}
+.presets button{padding:4px 8px;font-size:13px}
+.nav{display:flex;gap:8px;margin-left:auto}
+.grid{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);gap:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px}
+svg{display:block;width:100%;height:auto}
+.node rect.box{fill:var(--card);stroke-width:2}
+.node text{fill:var(--ink)}
+.node .t1{font-weight:700;font-size:15px}
+.node .t2{font-family:var(--mono);font-size:12px;fill:var(--muted)}
+.node .tag{font-size:11px;font-weight:700;letter-spacing:.04em}
+.node.dim{opacity:.32}
+.link{fill:none;stroke-width:2}
+.pkt text{font-family:var(--mono);font-size:11px;font-weight:600}
+.stepno{font-size:13px;color:var(--muted);font-weight:600;letter-spacing:.03em;text-transform:uppercase}
+h2{font-size:20px;line-height:1.25;margin:4px 0 8px}
+.explain p{margin:0 0 8px}
+.note{font-size:14px;color:var(--muted);border-left:3px solid var(--line);padding-left:10px}
+pre{font-family:var(--mono);font-size:12.5px;line-height:1.5;background:var(--soft);border-radius:8px;padding:10px 12px;margin:10px 0 0;white-space:pre-wrap;word-break:break-word}
+pre .c{color:var(--muted)}
+h3{font-size:14px;margin:16px 0 6px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{text-align:left;padding:5px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+td{font-family:var(--mono);font-size:12.5px;overflow-wrap:anywhere}
+td:nth-child(4),td:nth-child(5){white-space:nowrap}
+th{font-weight:600;color:var(--muted);font-size:12px}
+tr.new td{background:color-mix(in srgb,var(--hit) 14%,transparent)}
+tr.exp td{color:var(--muted);text-decoration:line-through}
+tr.used td{background:color-mix(in srgb,var(--resolver) 14%,transparent)}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:0}
+.empty{color:var(--muted);font-size:14px;margin:4px 0}
+.timeline{margin-top:12px}
+.tl-row{display:flex;align-items:center;gap:10px;margin:6px 0;font-size:13px}
+.tl-row .lbl{width:118px;flex:none;color:var(--muted)}
+.tl-track{flex:1;height:18px;background:var(--soft);border-radius:5px;display:flex;overflow:hidden}
+.tl-track span{height:100%;border-right:1px solid var(--card)}
+.tl-row .ms{width:62px;flex:none;text-align:right;font-family:var(--mono);font-weight:600}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:13px;color:var(--muted);margin-top:8px}
+.badge{display:inline-block;font-size:12px;font-weight:700;padding:1px 8px;border-radius:99px;margin-left:6px;vertical-align:2px}
+.badge.hit{background:color-mix(in srgb,var(--hit) 20%,transparent);color:var(--hit)}
+.badge.miss{background:color-mix(in srgb,var(--miss) 20%,transparent);color:var(--miss)}
+.foot{margin-top:18px;font-size:14px;color:var(--muted);max-width:900px}
+.foot li{margin-bottom:4px}
+@media (max-width:860px){
+  .grid{grid-template-columns:1fr}
+  .nav{margin-left:0;width:100%}
+  .nav button{flex:1}
+  h1{font-size:23px}
+  .col-src{display:none}
+  .tl-row .lbl{width:84px}
+}
+</style>
+</head>
+<body>
+<main>
+  <h1>How a DNS lookup for <code>www.example.com</code> finds its answer</h1>
+  <p class="lede">Your laptop asks one <b style="color:var(--resolver)">recursive resolver</b>. The resolver then walks down the DNS tree: the <b style="color:var(--root)">root</b>, the <b style="color:var(--tld)">.com TLD</b>, and the <b style="color:var(--auth)">authoritative</b> server for example.com. Step through the first lookup. Then switch to a second lookup and drag the clock to see what the cache saves.</p>
+
+  <div class="bar" role="group" aria-label="Controls">
+    <div class="seg" role="group" aria-label="Which lookup">
+      <button id="mCold" aria-pressed="true">1st lookup: empty cache</button>
+      <button id="mWarm" aria-pressed="false">2nd lookup: cache filled</button>
+    </div>
+    <div class="elapsed" id="elapsedBox" hidden>
+      <label for="elapsed">Time since 1st lookup</label>
+      <input id="elapsed" type="range" min="0" max="1000" step="1" value="0">
+      <output id="elapsedOut" for="elapsed">10 s</output>
+      <span class="presets">
+        <button data-e="60">1 min</button>
+        <button data-e="7200">2 h</button>
+        <button data-e="108000">30 h</button>
+        <button data-e="259200">3 days</button>
+      </span>
+    </div>
+    <div class="nav">
+      <button id="prev" aria-label="Previous step">&larr; Back</button>
+      <button id="play">Play</button>
+      <button id="next" aria-label="Next step">Next &rarr;</button>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <svg id="fig" role="img" aria-label="Diagram of the DNS servers and the messages between them"></svg>
+      <div class="timeline" id="timeline"></div>
+    </div>
+    <div class="card" aria-live="polite">
+      <div class="stepno" id="stepno"></div>
+      <h2 id="title"></h2>
+      <div class="explain" id="explain"></div>
+      <pre id="msg"></pre>
+      <h3>Resolver cache</h3>
+      <div id="cache"></div>
+    </div>
+  </div>
+
+  <ul class="foot">
+    <li>The laptop sends a <b>recursive</b> query (flag <code>rd</code>: "please find the full answer for me"). The resolver sends <b>iterative</b> queries: each server answers with what it knows, or with a referral one level down.</li>
+    <li>TTL (time to live) is the number of seconds a record may stay in a cache. The values here are typical: 2 days for the .com delegation, 1 day for the example.com delegation, 1 hour for the address. Round-trip times are example values.</li>
+    <li>Real root and TLD referrals list 13 name servers each. This page shows one of them. Your browser and operating system also keep small caches of their own, in front of the resolver.</li>
+    <li>Keys: Left and Right arrows step back and forward.</li>
+  </ul>
+</main>
+
+<script>
+"use strict";
+// ---- model ---------------------------------------------------------------
+const SRV = {
+  client:   {name:"Your laptop",        host:"stub resolver",      ip:"192.168.1.20", color:"--client"},
+  resolver: {name:"Recursive resolver", host:"resolver.isp.net",   ip:"10.0.0.53",    color:"--resolver"},
+  root:     {name:"Root server",        host:"a.root-servers.net", ip:"198.41.0.4",   color:"--root"},
+  tld:      {name:".com TLD server",    host:"a.gtld-servers.net", ip:"192.5.6.30",   color:"--tld"},
+  auth:     {name:"example.com server", host:"a.iana-servers.net", ip:"199.43.135.53",color:"--auth"},
+};
+// Round-trip time in ms between the resolver (or the laptop) and each server.
+const RTT = {resolver:8, root:14, tld:26, auth:48};
+const REC = {
+  comNS:  {name:"com.",                type:"NS", value:"a.gtld-servers.net.", ttl:172800, src:"root"},
+  comA:   {name:"a.gtld-servers.net.", type:"A",  value:"192.5.6.30",          ttl:172800, src:"root"},
+  exNS:   {name:"example.com.",        type:"NS", value:"a.iana-servers.net.", ttl:86400,  src:"tld"},
+  exA:    {name:"a.iana-servers.net.", type:"A",  value:"199.43.135.53",       ttl:86400,  src:"tld"},
+  wwwA:   {name:"www.example.com.",    type:"A",  value:"93.184.215.14",       ttl:3600,   src:"auth"},
+};
+const ORDER = ["comNS","comA","exNS","exA","wwwA"];
+
+function fmtDur(s){
+  if (s < 60) return s + " s";
+  if (s < 3600) return Math.floor(s/60) + " min" + (s%60 ? " " + (s%60) + " s" : "");
+  if (s < 86400) { const h = Math.floor(s/3600), m = Math.floor((s%3600)/60); return h + " h" + (m ? " " + m + " min" : ""); }
+  const d = Math.floor(s/86400), h = Math.floor((s%86400)/3600); return d + (d>1?" days":" day") + (h ? " " + h + " h" : "");
+}
+const pad = (s, n) => s + " ".repeat(Math.max(1, n - s.length));
+function rr(key, ttl){ const r = REC[key]; return pad(r.name, 22) + pad(String(ttl), 7) + "IN " + pad(r.type, 3) + r.value; }
+const Q = ";; QUESTION SECTION:\n;www.example.com.        IN  A";
+
+// Build the list of steps for one lookup. elapsed = seconds since the 1st lookup (null = 1st lookup).
+function buildSteps(elapsed){
+  const warm = elapsed !== null, now = warm ? elapsed : 0;
+  // cache: key -> time it was stored
+  const cache = {};
+  if (warm) for (const k of ORDER) cache[k] = 0;
+  const valid = k => k in cache && now - cache[k] < REC[k].ttl;
+  const steps = [];
+  let t = 0; const legs = [];
+  const snap = (extra) => Object.assign({cache:{...cache}, t, legs:legs.slice(), now}, extra);
+  const leg = (srv) => { const d = RTT[srv]/2; t += d; legs.push({srv, ms:d}); };
+
+  // who will be contacted
+  let start; // 'hit' | 'auth' | 'tld' | 'root'
+  if (valid("wwwA")) start = "hit";
+  else if (valid("exNS") && valid("exA")) start = "auth";
+  else if (valid("comNS") && valid("comA")) start = "tld";
+  else start = "root";
+  const contacted = {hit:[], auth:["auth"], tld:["tld","auth"], root:["root","tld","auth"]}[start];
+
+  steps.push(snap({from:null, to:null, contacted,
+    title: warm ? "A second lookup, " + fmtDur(now) + " later" : "The question",
+    html: warm
+      ? "<p>The resolver already did this lookup " + fmtDur(now) + " ago and stored every record it got. Each record counts down its own TTL. The records that have not run out let the resolver skip part of the walk.</p><p>Press <b>Next</b> to send the query.</p>"
+      : "<p>You type <code>www.example.com</code> in the browser. The browser needs an IP address before it can open a connection.</p><p>The resolver's cache is empty, for example right after a restart. Press <b>Next</b> to start.</p>",
+    msg:""}));
+
+  leg("resolver");
+  steps.push(snap({from:"client", to:"resolver", label:"A? www.example.com", contacted,
+    title:"Laptop asks the resolver",
+    html:"<p>The stub resolver in your operating system sends one UDP packet to port 53 of its configured resolver. It asks for the <b>A record</b> (IPv4 address) of the name.</p><p>The <code>rd</code> flag means <i>recursion desired</i>: the laptop wants the final answer, not a referral.</p>",
+    msg:";; ->>HEADER<<- opcode: QUERY, id: 4711\n;; flags: rd\n" + Q}));
+
+  const cacheLines = ORDER.filter(k => k in cache).map(k => {
+    const left = REC[k].ttl - (now - cache[k]);
+    return (left > 0 ? "  valid    " : "  expired  ") + pad(REC[k].name + " " + REC[k].type, 25) + (left > 0 ? fmtDur(left) + " left" : "");
+  });
+  const hitText = {
+    hit:  "<p><b>Cache hit.</b> The A record for www.example.com still has time left. The resolver can answer at once, without contacting any other server.</p>",
+    auth: "<p><b>Partial hit.</b> The address record has expired, but the resolver still knows the name server for example.com and its IP address. It can skip the root and the .com server and go straight to the authoritative server.</p>",
+    tld:  "<p><b>Partial hit.</b> Only the .com delegation is still valid. The resolver skips the root and starts at the .com server.</p>",
+    root: warm
+      ? "<p><b>Cache miss.</b> Every record has expired. The resolver must walk the full tree again, from the root.</p>"
+      : "<p><b>Cache miss.</b> The cache is empty. The resolver only knows the root servers' addresses, from a built-in file called <i>root hints</i>. So it starts at the top of the tree.</p>",
+  }[start];
+  steps.push(snap({from:null, to:null, at:"resolver", contacted, check:start,
+    title:"Resolver checks its cache",
+    html: hitText + "<p class='note'>The resolver looks for the most specific record it has: the address itself, then the example.com servers, then the .com servers, then the root.</p>",
+    msg: ";; cache lookup at t = " + fmtDur(now) + "\n" + (cacheLines.length ? cacheLines.join("\n") : "  (empty)") + "\n  root hints: a.root-servers.net = 198.41.0.4  (built in)"}));
+
+  if (start === "root"){
+    leg("root");
+    steps.push(snap({from:"resolver", to:"root", label:"A? www.example.com", contacted,
+      title:"Resolver asks a root server",
+      html:"<p>The resolver sends the same question to a root server. It does not set <code>rd</code>: it will do the walk itself.</p><p class='note'>Many modern resolvers use <i>QNAME minimisation</i> (RFC 9156). They ask the root only about <code>com.</code>, so the root never sees the full name.</p>",
+      msg:";; ->>HEADER<<- opcode: QUERY, id: 1201\n;; flags: (none)\n" + Q}));
+    leg("root"); cache.comNS = now; cache.comA = now;
+    steps.push(snap({from:"root", to:"resolver", label:"go ask .com", contacted, added:["comNS","comA"],
+      title:"Root replies with a referral",
+      html:"<p>The root does not know www.example.com. It knows who is responsible for <code>com.</code>, so it sends a <b>referral</b>: the NS record in the AUTHORITY section, and the server's IP address in the ADDITIONAL section (the <i>glue</i> record).</p><p>There is no <code>aa</code> flag. This is not the final answer. The resolver stores both records for 2 days.</p>",
+      msg:";; flags: qr      ANSWER: 0, AUTHORITY: 13, ADDITIONAL: 13\n;; AUTHORITY SECTION:\n" + rr("comNS",172800) + "\n<span class=c>; ... 12 more NS records</span>\n;; ADDITIONAL SECTION:\n" + rr("comA",172800)}));
+  }
+  if (start === "root" || start === "tld"){
+    leg("tld");
+    steps.push(snap({from:"resolver", to:"tld", label:"A? www.example.com", contacted,
+      title: start === "tld" ? "Resolver goes straight to .com" : "Resolver asks the .com server",
+      html:"<p>The resolver now asks a .com TLD (top-level domain) server, at the address from the glue record.</p><p>The .com servers hold a delegation for every .com domain. They do not hold the domains' own records.</p>",
+      msg:";; ->>HEADER<<- opcode: QUERY, id: 3387\n;; flags: (none)\n" + Q}));
+    leg("tld"); cache.exNS = now; cache.exA = now;
+    steps.push(snap({from:"tld", to:"resolver", label:"go ask example.com", contacted, added:["exNS","exA"],
+      title:".com replies with a second referral",
+      html:"<p>Another referral, one level lower: the name server for <code>example.com.</code> and its IP address.</p><p>The resolver stores both records. With these it can skip the root and .com for the next day.</p>",
+      msg:";; flags: qr      ANSWER: 0, AUTHORITY: 2, ADDITIONAL: 2\n;; AUTHORITY SECTION:\n" + rr("exNS",86400) + "\n<span class=c>; ... 1 more NS record</span>\n;; ADDITIONAL SECTION:\n" + rr("exA",86400)}));
+  }
+  if (start !== "hit"){
+    leg("auth");
+    steps.push(snap({from:"resolver", to:"auth", label:"A? www.example.com", contacted,
+      title: start === "auth" ? "Resolver goes straight to example.com" : "Resolver asks the authoritative server",
+      html:"<p>The resolver asks the server that is <b>authoritative</b> for example.com. This server holds the zone file with the real records.</p>" + (start === "auth" ? "<p>The root and .com servers are not contacted. Their referrals are still in the cache.</p>" : ""),
+      msg:";; ->>HEADER<<- opcode: QUERY, id: 5590\n;; flags: (none)\n" + Q}));
+    leg("auth"); cache.wwwA = now;
+    steps.push(snap({from:"auth", to:"resolver", label:"93.184.215.14", contacted, added:["wwwA"],
+      title:"The authoritative answer",
+      html:"<p>This time the reply has an ANSWER section. The <code>aa</code> flag (<i>authoritative answer</i>) says it comes from the zone owner.</p><p>The TTL of 3600 means: any cache may keep this record for 1 hour.</p>",
+      msg:";; flags: qr aa   ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0\n;; ANSWER SECTION:\n" + rr("wwwA",3600)}));
+  }
+  leg("resolver");
+  const ttlLeft = REC.wwwA.ttl - (now - cache.wwwA);
+  const rounds = legs.length / 2;
+  steps.push(snap({from:"resolver", to:"client", label:"93.184.215.14", contacted, done:true, used: start === "hit" ? ["wwwA"] : [],
+    title:"Resolver answers the laptop",
+    html:"<p>The resolver returns the address. The <code>ra</code> flag means <i>recursion available</i>. Now the browser can open a TCP connection to 93.184.215.14.</p>"
+      + (start === "hit" ? "<p>Note the TTL: " + ttlLeft + ", not 3600. The resolver passes on the time that is <b>left</b>, so no cache keeps the record longer than the owner allowed.</p>" : "")
+      + "<p><b>" + rounds + " round trip" + (rounds>1?"s":"") + ", " + t + " ms</b> in total. " + (warm ? "The first lookup took " + FULL_MS + " ms." : "Now switch to <b>2nd lookup</b> to see the cache at work.") + "</p>",
+    msg:";; flags: qr rd ra   ANSWER: 1\n;; ANSWER SECTION:\n" + rr("wwwA", ttlLeft)}));
+  return steps;
+}
+const FULL_MS = (RTT.resolver + RTT.root + RTT.tld + RTT.auth);
+
+// self-check
+(function(){
+  const cold = buildSteps(null);
+  console.assert(cold.length === 10 && cold.at(-1).t === FULL_MS, "cold walk");
+  console.assert(buildSteps(60).length === 4 && buildSteps(60).at(-1).t === RTT.resolver, "hit");
+  console.assert(buildSteps(7200).length === 6 && buildSteps(7200).at(-1).t === RTT.resolver + RTT.auth, "auth only");
+  console.assert(buildSteps(108000).length === 8, "tld start");
+  console.assert(buildSteps(259200).length === 10, "full again");
+})();
+
+// ---- view ----------------------------------------------------------------
+const $ = id => document.getElementById(id);
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const state = {elapsed:null, steps:buildSteps(null), i:0, playing:null};
+const LAYOUT = {
+  wide:  {vb:[760,420], w:170, h:76, pos:{client:[90,210], resolver:[410,210], root:[668,72], tld:[668,210], auth:[668,348]}},
+  narrow:{vb:[360,470], w:112, h:76, pos:{client:[180,46], resolver:[180,200], root:[60,400], tld:[180,400], auth:[300,400]}},
+};
+const LINKS = [["client","resolver"],["resolver","root"],["resolver","tld"],["resolver","auth"]];
+let L = LAYOUT.wide, lastAnim = null;
+
+function edgePoint(a, b){ // point on box a's border toward b
+  const [ax,ay] = L.pos[a], [bx,by] = L.pos[b], dx = bx-ax, dy = by-ay;
+  const s = Math.min((L.w/2+4)/Math.abs(dx||1e-9), (L.h/2+4)/Math.abs(dy||1e-9));
+  return [ax+dx*s, ay+dy*s];
+}
+const NS = "http://www.w3.org/2000/svg";
+const el = (tag, attrs, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; };
+
+function drawFig(s){
+  const svg = $("fig"); svg.innerHTML = "";
+  svg.setAttribute("viewBox", "0 0 " + L.vb.join(" "));
+  const narrow = L === LAYOUT.narrow;
+  const usedLinks = new Set();
+  for (const st of state.steps.slice(1, state.i+1)) if (st.from) usedLinks.add([st.from,st.to].sort().join("-"));
+  // links
+  for (const [a,b] of LINKS){
+    const [x1,y1] = edgePoint(a,b), [x2,y2] = edgePoint(b,a);
+    const key = [a,b].sort().join("-"), used = usedLinks.has(key);
+    const cur = s.from && [s.from,s.to].sort().join("-") === key;
+    const color = css(SRV[b].color);
+    el("line", {x1,y1,x2,y2, class:"link", stroke: used ? color : css("--line"),
+      "stroke-width": cur ? 4 : used ? 2.5 : 2, "stroke-dasharray": used ? "" : "5 5"}, svg);
+  }
+  // nodes
+  const checkPassed = state.i >= 2;
+  for (const k in SRV){
+    const [x,y] = L.pos[k], n = SRV[k], color = css(n.color);
+    const isServer = k === "root" || k === "tld" || k === "auth";
+    const skipped = isServer && checkPassed && !s.contacted.includes(k);
+    const active = s.from === k || s.to === k || s.at === k;
+    const g = el("g", {class:"node" + (skipped ? " dim" : "")}, svg);
+    el("rect", {class:"box", x:x-L.w/2, y:y-L.h/2, width:L.w, height:L.h, rx:10, stroke:color, "stroke-width": active ? 4 : 2}, g);
+    el("rect", {x:x-L.w/2, y:y-L.h/2, width:8, height:L.h, rx:3, fill:color}, g);
+    const title = narrow ? {client:"Laptop", resolver:"Resolver", root:"Root", tld:".com TLD", auth:"example.com"}[k] : n.name;
+    el("text", {class:"t1", x:x+4, y:y-(narrow?10:12), "text-anchor":"middle", style: narrow ? "font-size:13px" : ""}, g).textContent = title;
+    if (!narrow) el("text", {class:"t2", x:x+4, y:y+8, "text-anchor":"middle"}, g).textContent = n.host;
+    el("text", {class:"t2", x:x+4, y:y+(narrow?10:26), "text-anchor":"middle"}, g).textContent = n.ip;
+    if (skipped){
+      el("text", {class:"tag", x:x+4, y:y+L.h/2+16, "text-anchor":"middle", fill:css("--hit")}, g).textContent = "SKIPPED: CACHED";
+    }
+    if (k === "resolver"){
+      const filled = Object.keys(s.cache).filter(c => REC[c].ttl - (s.now - s.cache[c]) > 0).length;
+      const tag = el("text", {class:"tag", x:x+4, y:y+L.h/2+18, "text-anchor":"middle", fill:color}, g);
+      tag.textContent = "cache: " + filled + " valid record" + (filled===1?"":"s");
+    }
+  }
+  // tree hint for wide layout
+  if (!narrow){
+    const t = el("text", {x:668, y:22, "text-anchor":"middle", "font-size":12, fill:css("--muted")}, svg);
+    t.textContent = "DNS tree: top level first";
+  }
+  // packet
+  if (s.from){
+    const [x1,y1] = edgePoint(s.from, s.to), [x2,y2] = edgePoint(s.to, s.from);
+    const color = css(SRV[s.from === "resolver" ? s.to : s.from].color);
+    const g = el("g", {class:"pkt"}, svg);
+    const label = s.label;
+    const w = label.length * 6.7 + 16;
+    el("rect", {x:-w/2, y:-13, width:w, height:26, rx:13, fill:color}, g);
+    el("text", {x:0, y:4, "text-anchor":"middle", fill:"#fff"}, g).textContent = label;
+    const place = f => {
+      // ease in-out, stop at 50% so the label sits on the middle of the link when done
+      const e = f < .5 ? 2*f*f : 1 - Math.pow(-2*f+2,2)/2, k = e*0.5;
+      g.setAttribute("transform", "translate(" + (x1+(x2-x1)*k) + "," + (y1+(y2-y1)*k) + ")");
+    };
+    // replay only when the step changes, not on a re-render of the same step
+    const key = state.elapsed + "/" + state.i;
+    if (reduced || key === lastAnim) place(1);
+    else {
+      const t0 = performance.now(), D = 650;
+      const tick = now => { const f = Math.min(1, (now-t0)/D); place(f); if (f < 1 && g.isConnected) requestAnimationFrame(tick); };
+      lastAnim = key; place(0); requestAnimationFrame(tick);
+    }
+  }
+}
+
+function drawCache(s){
+  const keys = ORDER.filter(k => k in s.cache);
+  if (!keys.length){ $("cache").innerHTML = "<p class='empty'>Empty. Only the built-in root hints are known.</p>"; return; }
+  let h = "<table><thead><tr><th>Name</th><th>Type</th><th>Value</th><th>TTL left</th><th class='col-src'>From</th></tr></thead><tbody>";
+  for (const k of keys){
+    const r = REC[k], left = r.ttl - (s.now - s.cache[k]);
+    const cls = (s.added||[]).includes(k) ? "new" : (s.used||[]).includes(k) ? "used" : left <= 0 ? "exp" : "";
+    h += "<tr class='" + cls + "'><td>" + r.name + "</td><td>" + r.type + "</td><td>" + r.value + "</td><td>" + (left > 0 ? fmtDur(left) : "expired") +
+      "</td><td class='col-src'><span class='dot' style='background:var(" + SRV[r.src].color + ")'></span>" + {root:"root",tld:".com",auth:"example.com"}[r.src] + "</td></tr>";
+  }
+  $("cache").innerHTML = h + "</tbody></table>";
+}
+
+function drawTimeline(s){
+  const max = FULL_MS;
+  const row = (lbl, legs, total, fade) => "<div class='tl-row'><span class='lbl'>" + lbl + "</span><div class='tl-track'>" +
+    legs.map(l => "<span style='width:" + (l.ms/max*100) + "%;background:var(" + SRV[l.srv].color + ");opacity:" + (fade?.45:1) + "'></span>").join("") +
+    "</div><span class='ms'>" + total + " ms</span></div>";
+  let h = "";
+  if (state.elapsed !== null){
+    const full = buildSteps(null).at(-1);
+    h += row("1st lookup", full.legs, full.t, true);
+  }
+  h += row(state.elapsed === null ? "This lookup" : "2nd lookup", s.legs, s.t, false);
+  h += "<div class='legend'>Time on the wire, by server: " + ["resolver","root","tld","auth"].map(k =>
+    "<span><span class='dot' style='background:var(" + SRV[k].color + ")'></span>" + {resolver:"laptop to resolver",root:"root",tld:".com",auth:"example.com"}[k] + " (" + RTT[k] + " ms RTT)</span>").join("") + "</div>";
+  $("timeline").innerHTML = h;
+}
+
+function render(){
+  const s = state.steps[state.i], n = state.steps.length - 1;
+  $("stepno").textContent = state.i === 0 ? "Start" : "Step " + state.i + " of " + n;
+  let title = s.title;
+  $("title").innerHTML = title + (s.check ? (s.check === "hit" ? "<span class='badge hit'>HIT</span>" : s.check === "root" ? "<span class='badge miss'>MISS</span>" : "<span class='badge hit'>PARTIAL HIT</span>") : "");
+  $("explain").innerHTML = s.html;
+  $("msg").innerHTML = s.msg; $("msg").hidden = !s.msg;
+  drawFig(s); drawCache(s); drawTimeline(s);
+  $("prev").disabled = state.i === 0;
+  $("next").disabled = state.i === n;
+}
+
+function setMode(elapsed){
+  state.elapsed = elapsed; state.steps = buildSteps(elapsed); state.i = 0;
+  $("mCold").setAttribute("aria-pressed", elapsed === null);
+  $("mWarm").setAttribute("aria-pressed", elapsed !== null);
+  $("elapsedBox").hidden = elapsed === null;
+  render();
+}
+function stop(){ if (state.playing){ clearInterval(state.playing); state.playing = null; $("play").textContent = "Play"; } }
+function go(d){ state.i = Math.max(0, Math.min(state.steps.length-1, state.i + d)); render(); }
+
+// slider: log scale, 10 s .. 3 days
+const EMIN = 10, EMAX = 259200;
+const toE = v => Math.round(EMIN * Math.pow(EMAX/EMIN, v/1000));
+const toV = e => Math.round(1000 * Math.log(e/EMIN) / Math.log(EMAX/EMIN));
+function setElapsed(e){ $("elapsed").value = toV(e); $("elapsedOut").textContent = fmtDur(e); setMode(e); }
+
+$("mCold").onclick = () => { stop(); setMode(null); };
+$("mWarm").onclick = () => { stop(); setElapsed(toE(+$("elapsed").value) ); };
+$("elapsed").oninput = e => { stop(); const v = toE(+e.target.value); $("elapsedOut").textContent = fmtDur(v); const keep = state.i; setMode(v); state.i = Math.min(keep, state.steps.length-1); render(); };
+document.querySelectorAll(".presets button").forEach(b => b.onclick = () => { stop(); setElapsed(+b.dataset.e); });
+$("prev").onclick = () => { stop(); go(-1); };
+$("next").onclick = () => { stop(); go(1); };
+$("play").onclick = () => {
+  if (state.playing) return stop();
+  if (state.i === state.steps.length-1) state.i = 0, render();
+  $("play").textContent = "Pause";
+  state.playing = setInterval(() => { if (state.i >= state.steps.length-1) return stop(); go(1); }, 2600);
+};
+document.addEventListener("keydown", e => {
+  if (e.target.tagName === "INPUT") return;
+  if (e.key === "ArrowRight"){ stop(); go(1); }
+  if (e.key === "ArrowLeft"){ stop(); go(-1); }
+});
+const mq = matchMedia("(max-width:560px)");
+const pickLayout = () => { L = mq.matches ? LAYOUT.narrow : LAYOUT.wide; render(); };
+mq.addEventListener("change", pickLayout);
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", render);
+pickLayout();
+</script>
+</body>
+</html>

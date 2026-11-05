@@ -1,0 +1,9 @@
+22:25:10.163502 IP 127.0.0.1.50612 > 127.0.0.1.8080: Flags [S], seq 1681612212, win 65495, options [mss 65495,sackOK,TS val 3896631543 ecr 0,nop,wscale 10], length 0
+22:25:10.163514 IP 127.0.0.1.8080 > 127.0.0.1.50612: Flags [S.], seq 2877419702, ack 1681612213, win 65483, options [mss 65495,sackOK,TS val 161816072 ecr 3896631543,nop,wscale 10], length 0
+22:25:10.163525 IP 127.0.0.1.50612 > 127.0.0.1.8080: Flags [.], ack 2877419703, win 64, options [nop,nop,TS val 3896631543 ecr 161816072], length 0
+22:25:10.363670 IP 127.0.0.1.50612 > 127.0.0.1.8080: Flags [P.], seq 1681612213:1681612218, ack 2877419703, win 64, options [nop,nop,TS val 3896631743 ecr 161816072], length 5: HTTP
+22:25:10.363679 IP 127.0.0.1.8080 > 127.0.0.1.50612: Flags [.], ack 1681612218, win 64, options [nop,nop,TS val 161816272 ecr 3896631743], length 0
+22:25:10.564047 IP 127.0.0.1.50612 > 127.0.0.1.8080: Flags [F.], seq 1681612218, ack 2877419703, win 64, options [nop,nop,TS val 3896631943 ecr 161816272], length 0
+22:25:10.604287 IP 127.0.0.1.8080 > 127.0.0.1.50612: Flags [.], ack 1681612219, win 64, options [nop,nop,TS val 161816513 ecr 3896631943], length 0
+22:25:10.864516 IP 127.0.0.1.8080 > 127.0.0.1.50612: Flags [F.], seq 2877419703, ack 1681612219, win 64, options [nop,nop,TS val 161816773 ecr 3896631943], length 0
+22:25:10.864546 IP 127.0.0.1.50612 > 127.0.0.1.8080: Flags [.], ack 2877419704, win 64, options [nop,nop,TS val 3896632244 ecr 161816773], length 0

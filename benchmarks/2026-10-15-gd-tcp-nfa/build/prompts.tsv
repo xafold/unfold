@@ -1,0 +1,3 @@
+gd	Make me an interactive explainer of gradient descent for my ML course notes, as a single HTML page. Use a simple 1-D loss so students can follow every number, and show what happens when the learning rate is too small, about right and too big.
+tcp	Build an interactive diagram of the TCP three-way handshake and connection teardown, with sequence and ack numbers, for a networking class.
+nfa	Explain how a regex like a(b|c)*d is matched by an NFA, stepping through the input "abcbd". Figure for docs.

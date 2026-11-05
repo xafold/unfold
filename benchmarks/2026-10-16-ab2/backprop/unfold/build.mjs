@@ -1,0 +1,542 @@
+import { writeFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { dirname, join } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import * as m from "./model.mjs";
+
+const u = await import(pathToFileURL(join(homedir(), ".claude/skills/unfold/kit/concept-kit.mjs")).href);
+const { iso } = u;
+const HERE = dirname(fileURLToPath(import.meta.url));
+const light = process.argv.includes("--light");
+// A course page: follow the reader's system theme. --light writes the light page for the checks.
+const theme = light ? "light" : "auto";
+
+const W = 820, H = 392; // wide viewBox
+const NW = 400, NH = 680; // narrow viewBox (phones): the graph runs top to bottom
+const N = 7;
+const HUE = { in: "ink", val: "blue", grad: "red", w: "gold", slope: "green", loss: "purple" };
+const f = m.F;
+const nf = (v) => (Math.abs(v * 10 - Math.round(v * 10)) < 1e-9 ? u.fmt(v, 1) : u.fmt(v, 3));
+const sub = { 1: "₁", 2: "₂" };
+
+// A subscript as a tspan: the math font's subscript digits render badly in SVG text.
+const si = (s, i) => `${s}<tspan class="bp-si" dy="4">${i}</tspan>`;
+// ---- The computation graph, drawn twice: wide (left to right) and narrow (top to bottom) ----
+const NODES = {
+  x1: { name: si("x", 1), note: "input", hue: "ink" },
+  x2: { name: si("x", 2), note: "input", hue: "ink" },
+  z1: { name: si("z", 1), note: `+b ${nf(m.P0.b[0])}`, hue: "blue" },
+  z2: { name: si("z", 2), note: `+b ${nf(m.P0.b[1])}`, hue: "blue" },
+  h1: { name: si("h", 1), note: "σ", hue: "blue" },
+  h2: { name: si("h", 2), note: "σ", hue: "blue" },
+  yh: { name: "ŷ", note: `+c ${nf(m.P0.c)}`, hue: "blue" },
+  L: { name: "L", note: "½(ŷ−y)²", hue: "purple" },
+  y: { name: "y", note: "target", hue: "ink" },
+};
+const value0 = { x1: f.x[0], x2: f.x[1], z1: f.z[0], z2: f.z[1], h1: f.h[0], h2: f.h[1], yh: f.yhat, L: f.L, y: f.y };
+const grad0 = { x1: f.gx[0], x2: f.gx[1], z1: f.gz[0], z2: f.gz[1], h1: f.gh[0], h2: f.gh[1], yh: f.gy, L: 1 };
+// [tail, head, top label, top hue, bottom label, bottom hue, key]
+const EDGES = [
+  ["x1", "z1", nf(m.P0.W[0][0]), "gold", nf(f.gW[0][0]), "red", "w11"],
+  ["x2", "z1", nf(m.P0.W[0][1]), "gold", nf(f.gW[0][1]), "red", "w12"],
+  ["x1", "z2", nf(m.P0.W[1][0]), "gold", nf(f.gW[1][0]), "red", "w21"],
+  ["x2", "z2", nf(m.P0.W[1][1]), "gold", nf(f.gW[1][1]), "red", "w22"],
+  ["z1", "h1", "σ", "", nf(f.s[0]), "green", "s1"],
+  ["z2", "h2", "σ", "", nf(f.s[1]), "green", "s2"],
+  ["h1", "yh", nf(m.P0.v[0]), "gold", nf(f.gv[0]), "red", "v1"],
+  ["h2", "yh", nf(m.P0.v[1]), "gold", nf(f.gv[1]), "red", "v2"],
+  ["yh", "L", "", "", "", "", "yl"],
+  ["y", "L", "", "", "", "", "tl"],
+];
+const T = { x: 0.32, z: 0.5, h: 0.5 }; // where on an edge its labels sit, by tail kind
+const WIDE = {
+  pos: { x1: [60, 90], x2: [60, 230], z1: [300, 90], z2: [300, 230], h1: [450, 90], h2: [450, 230], yh: [610, 160], L: [760, 160], y: [760, 62] },
+  // where the value (blue) and the gradient (red) sit around a node: [dx, dy, anchor]
+  val: (n) => (n === "L" ? [-36, -26, "end"] : [0, -30, "middle"]),
+  grad: () => [0, 33, "middle"],
+};
+const NARROW = {
+  pos: { x1: [110, 36], x2: [290, 36], z1: [110, 150], z2: [290, 150], h1: [110, 262], h2: [290, 262], yh: [200, 366], L: [200, 466], y: [330, 466] },
+  val: (n) => (/2$/.test(n) || n === "y" ? [38, -7, "start"] : [-38, -7, "end"]),
+  grad: (n) => (/2$/.test(n) ? [38, 10, "start"] : [-38, 10, "end"]),
+};
+const HW = 32, HH = 20;
+const clip = ([ax, ay], [bx, by]) => {
+  const dx = bx - ax, dy = by - ay;
+  const t = Math.min((HW + 2) / Math.abs(dx || 1e-9), (HH + 2) / Math.abs(dy || 1e-9));
+  return [ax + dx * t, ay + dy * t];
+};
+const text = (x, y, s, { cls, hue, anchor = "middle", n, extra = "" }) =>
+  `<text class="${cls}" x="${x.toFixed(1)}" y="${y.toFixed(1)}" style="text-anchor:${anchor}"${hue ? ` data-hue="${hue}"` : ""}${n ? ` data-n="${n}"` : ""}${extra}>${s}</text>`;
+
+function graph(L, cls) {
+  const P = L.pos;
+  const edges = EDGES.map(([a, b, top, topHue, bot, botHue, key]) => {
+    const A = clip(P[a], P[b]), B = clip(P[b], P[a]);
+    const t = a[0] === "x" && P[a][1] !== P[b][1] && P[a][0] !== P[b][0] ? 0.22 : T[a[0]] ?? 0.5;
+    const px = A[0] + (B[0] - A[0]) * t, py = A[1] + (B[1] - A[1]) * t;
+    const len = Math.hypot(B[0] - A[0], B[1] - A[1]);
+    let nx = -(B[1] - A[1]) / len, ny = (B[0] - A[0]) / len;
+    if (ny > 1e-9 || (Math.abs(ny) < 1e-9 && nx > 0)) (nx = -nx), (ny = -ny);
+    const side = (dx, dy) => (Math.abs(dx) > 0.6 ? (dx < 0 ? "end" : "start") : "middle");
+    const lab = (s, h, sgn, c) => (s ? `<g class="${c}" data-k="${key}">${text(px + nx * 9 * sgn, py + ny * 9 * sgn + (Math.abs(ny) > 0.6 ? (sgn > 0 ? -1 : 4) : 3.5), s, { cls: "bp-elab", hue: h, anchor: side(nx * sgn, ny * sgn) })}</g>` : "");
+    return `<g class="bp-edge" data-a="${a}" data-b="${b}">${u.arrow(A, B, { head: 5 })}${lab(top, topHue, 1, "bp-ew")}${lab(bot, botHue, -1, key[0] === "s" ? "bp-es" : "bp-eg")}</g>`;
+  });
+  const pulses = EDGES.filter(([a]) => a !== "y").flatMap(([a, b]) => {
+    const stage = { x: 0, z: 1, h: 2, y: 3 }[a[0]];
+    const A = clip(P[a], P[b]), B = clip(P[b], P[a]);
+    return [u.pulseSvg(A, B, { hue: "blue", begin: stage * 0.8, travel: 0.75, cycle: 7 }), u.pulseSvg(B, A, { hue: "red", begin: 3.6 + (3 - stage) * 0.8, travel: 0.75, cycle: 7 })];
+  });
+  const nodes = Object.entries(NODES).map(([n, { name, note, hue }]) => {
+    const [x, y] = P[n];
+    const [vx, vy, va] = L.val(n), [gx, gy, ga] = L.grad(n);
+    return (
+      `<g class="bp-node" data-n="${n}" data-hue="${hue}" transform="translate(${x} ${y})">` +
+      `<rect x="${-HW}" y="${-HH}" width="${HW * 2}" height="${HH * 2}" rx="9"/>` +
+      text(0, -2, name, { cls: "bp-name" }) +
+      text(0, 13, note, { cls: "bp-note", hue: note.startsWith("+") ? "gold" : "" }) +
+      `<g class="bp-v" data-n="${n}">${text(vx, vy, nf(value0[n]), { cls: "bp-num", anchor: va, hue: n === "L" ? "purple" : n[0] === "x" || n === "y" ? "ink" : "blue" })}</g>` +
+      (n === "y" ? "" : `<g class="bp-g" data-n="${n}">${text(gx, gy, nf(grad0[n]), { cls: "bp-num", anchor: ga, hue: "red" })}</g>`) +
+      `</g>`
+    );
+  });
+  // Drawn labels: the fan-out sum at the inputs.
+  const sums = ["x1", "x2"].map((n) => {
+    const [x, y] = P[n];
+    const [gx, gy, ga] = L.grad(n);
+    return `<g class="bp-sum">${text(x + gx, y + gy + 13, "adds 2 paths", { cls: "bp-tag", anchor: ga })}</g>`;
+  });
+  return `<g class="u-move ${cls}">${edges.join("")}<g class="bp-pulses">${pulses.join("")}</g>${nodes.join("")}${sums.join("")}</g>`;
+}
+
+// ---- Panels under the graph ----
+// Scene 3: the loss as a function of the error ŷ − y, with the tangent at the current point.
+const PL = { x: 0, y: 0, w: 240, h: 74, xr: [-2.2, 2.2], yr: [0, 2.4] };
+const lossPlot = u.plot({ ...PL, f: (e) => 0.5 * e * e, xTicks: [-2, -1, 0, 1, 2], yTicks: [1, 2], xName: "ŷ − y", yName: "L", hue: "purple", yHue: "purple" });
+const panelLoss = `<g class="u-move" id="pLoss">${lossPlot.svg}<path class="bp-tan" data-hue="red" d=""/><circle class="bp-pt" data-hue="purple" r="4"/>` +
+  `<g class="bp-ptlab">${text(0, 0, "", { cls: "bp-num", hue: "red", anchor: "start", extra: ' data-lab="slope"' })}</g></g>`;
+
+// Scene 4: σ with its slope at z_j, and the chain-rule product.
+const PS = { x: 0, y: 0, w: 220, h: 80, xr: [-4, 4], yr: [0, 1] };
+const sigPlot = u.plot({ ...PS, f: m.sigmoid, xTicks: [-4, -2, 0, 2, 4], yTicks: [0.5, 1], xName: "z", yName: "σ(z)", hue: "", xHue: "blue" });
+const chainRow = (() => {
+  const items = [["gh", "red", "∂L/∂h"], ["×"], ["s", "green", "σ′(z)"], ["="], ["gz", "red", "∂L/∂z"]];
+  let x = 0;
+  return items.map(([k, hue, label]) => {
+    if (!hue) { const s = text(x + 8, 18, k, { cls: "bp-op" }); x += 16; return s; }
+    const s = `<g data-chain="${k}">${u.chip(nf(0), x, 6, { w: 70, h: 24, rx: 6, hue })}${text(x + 35, 46, label, { cls: "bp-tag", extra: ` data-chainlab="${k}"` })}</g>`;
+    x += 78;
+    return s;
+  }).join("");
+})();
+const panelChain = `<g class="u-move" id="pChain">${sigPlot.svg}<path class="bp-tan" data-hue="green" d=""/><circle class="bp-pt" data-hue="blue" r="4"/>` +
+  `<g class="bp-ptlab">${text(0, 0, "", { cls: "bp-num", hue: "green", anchor: "start", extra: ' data-lab="slope"' })}</g>` +
+  `<g class="bp-sub" id="pChainRow">${chainRow}</g></g>`;
+
+// Scene 6: the weight gradients as outer products (falling layout).
+const CW = 50;
+const gridG = (id, values, hue, name) => u.cellGrid({ id, values, hue, cell: [CW, 20], places: 3, name, dims: false, max: 0.5 });
+const panelW =
+  `<g class="u-move" id="pW">` +
+  `<g transform="translate(70 0)">${gridG("gXt", [f.x], "ink", "xᵀ")}</g>` +
+  `<g transform="translate(0 40)">${gridG("gDz", f.gz.map((v) => [v]), "red", "")}</g>` +
+  text(-8, 64, "∂L/∂z", { cls: "bp-gname", anchor: "end", hue: "red" }) +
+  `<g transform="translate(70 40)">${gridG("gGW", f.gW, "red", "")}</g>` +
+  text(70, 98, "∂L/∂W", { cls: "bp-gname", anchor: "start", hue: "red" }) +
+  `<g class="bp-sub" id="pWv"><g transform="translate(320 0)">${gridG("gHt", [f.h], "blue", "hᵀ")}</g>` +
+  `<g transform="translate(250 40)">${gridG("gDy", [[f.gy]], "red", "")}</g>` +
+  text(242, 54, "∂L/∂ŷ", { cls: "bp-gname", anchor: "end", hue: "red" }) +
+  `<g transform="translate(320 40)">${gridG("gGv", [f.gv], "red", "")}</g>` +
+  text(320, 88, "∂L/∂v", { cls: "bp-gname", anchor: "start", hue: "red" }) + `</g></g>`;
+
+// Scene 7: every weight before and after one step, and the loss before and after.
+const UW = 36;
+const NAMES = [si("w", 11), si("w", 12), si("w", 21), si("w", 22), si("b", 1), si("b", 2), si("v", 1), si("v", 2), "c"];
+const flatP = (p) => [p.W[0][0], p.W[0][1], p.W[1][0], p.W[1][1], p.b[0], p.b[1], p.v[0], p.v[1], p.c];
+const rowG = (id, values, hue) => u.cellGrid({ id, values: [values], hue, cell: [UW, 20], places: 3, dims: false, max: 1 });
+const panelUpdate =
+  `<g class="u-move" id="pUp">` +
+  NAMES.map((s, i) => text(46 + i * UW + UW / 2, 4, s, { cls: "bp-colname", hue: i < 4 || i > 5 ? "gold" : "gold" })).join("") +
+  [["w", "gold", flatP(m.P0), "gOld"], ["∂L/∂w", "red", m.gradFlat(f), "gGr"], ["new w", "gold", flatP(m.S.q), "gNew"]]
+    .map(([label, hue, values, id], r) => text(40, 24 + r * 24, label, { cls: "bp-rowname", anchor: "end", hue }) + `<g transform="translate(46 ${14 + r * 24})">${rowG(id, values, hue)}</g>`)
+    .join("") +
+  `</g>`;
+const LMAX = 0.15;
+const panelBars = `<g class="u-move" id="pBars">${u.bars({ id: "lossBars", values: [f.L, m.S.after.L], labels: ["before", "after"], w: 54, h: 66, hue: "purple", max: LMAX, places: 3 })}${text(54, -8, "loss L", { cls: "bp-tag" })}</g>`;
+
+// The two passes as directions under the graph (scenes 1, 2 and 5).
+const dirBand =
+  `<g class="u-move" id="pDir"><g class="bp-dir" data-d="f">${u.arrow([60, 0], [760, 0], { hue: "blue", head: 7, width: 1.6 })}${text(410, -10, "forward pass: values, left to right", { cls: "bp-tag", hue: "blue" })}</g>` +
+  `<g class="bp-dir" data-d="b">${u.arrow([760, 34], [60, 34], { hue: "red", head: 7, width: 1.6 })}${text(410, 24, "backward pass: gradients, right to left, same edges", { cls: "bp-tag", hue: "red" })}</g></g>`;
+const svg = iso.figureSvg({
+  width: W,
+  height: H,
+  label: "Backpropagation on a network with 2 inputs, 2 sigmoid hidden units and 1 output, in seven scenes from the forward pass to one weight update.",
+  body: [graph(WIDE, "gWide"), graph(NARROW, "gNarrow"), dirBand, panelLoss, panelChain, panelW, panelUpdate, panelBars],
+});
+
+// ---- Places per scene. Scenes 3, 4, 6, 7 have a panel under the graph. ----
+const S = (map) => u.states(N, map);
+// placeCss throws when every state is null, so an empty map writes nothing (the other layout hides the group).
+const place = (sel, map) => (Object.keys(map).length ? u.placeCss(sel, S(map)) : "");
+const both = (sel, wide, narrow) => [place(sel, wide), Object.keys(narrow).length ? place(sel, narrow).replace(/\.u-stage\[data-scene/g, ".u-stage[data-narrow][data-scene") : `.u-stage[data-narrow] ${sel}{opacity:0;pointer-events:none}`];
+const gUp = { x: 0, y: -22 }, gMid = { x: 0, y: 8 };
+const nUp = { x: 0, y: 0 }, nMid = { x: 0, y: 70 };
+const css = [
+  ...both(".gWide", { 0: gMid, 1: gMid, 2: gUp, 3: gUp, 4: gMid, 5: gUp, 6: gUp }, {}),
+  ...both(".gNarrow", {}, { 0: nMid, 1: nMid, 2: nUp, 3: nUp, 4: nMid, 5: nUp, 6: nUp }),
+  ...both("#pLoss", { 2: { x: 250, y: 296 } }, { 2: { x: 70, y: 540 } }),
+  ...both("#pChain", { 3: { x: 110, y: 300 } }, { 3: { x: 110, y: 524 } }),
+  ...both("#pW", { 5: { x: 170, y: 286 } }, { 5: { x: 120, y: 534 } }),
+  ...both("#pUp", { 6: { x: 130, y: 288 } }, { 6: { x: 6, y: 530 } }),
+  ...both("#pDir", { 0: { x: 0, y: 330 }, 1: { x: 0, y: 330 }, 4: { x: 0, y: 330 } }, {}),
+  ".bp-dir{transition:opacity .5s}.u-stage[data-scene='1'] .bp-dir[data-d='b'],.u-stage[data-scene='4'] .bp-dir[data-d='f']{opacity:.15}",
+  ".bp-dir .bp-tag{fill:var(--hue);font-size:12px}",
+  ...both("#pBars", { 6: { x: 610, y: 304 } }, {}),
+  ".u-stage[data-narrow] .gWide,.u-stage:not([data-narrow]) .gNarrow{display:none}",
+  // Inside a panel, the second part stacks under the first on a phone.
+  ".bp-sub{transition:transform .5s var(--anatomy-ease)}",
+  "#pChainRow{transform:translate(290px,8px)}.u-stage[data-narrow] #pChainRow{transform:translate(-80px,108px)}",
+  // On a phone, scene 6 shows the W part only (the matrix the edges carry), and the panels keep their numbers.
+  ".u-stage[data-narrow] #pWv,.u-stage[data-narrow] .bp-sum,.u-stage[data-narrow] .gNarrow .bp-eg[data-k^='w']{display:none}",
+  "@container (max-width:520px){#pW .u-num,#pUp .u-num{display:inline}}",
+  // Graph look
+  ".bp-node rect{fill:var(--anatomy-card);stroke:var(--hue);stroke-width:1.1;transition:stroke-width .3s,fill .3s}",
+  ".bp-node[data-focus] rect{stroke-width:2.4}",
+  ".bp-node[data-cur] rect{fill:color-mix(in srgb,var(--hue) 18%,var(--anatomy-card))}",
+  ".bp-name{font:italic 600 16px 'Latin Modern Roman','STIX Two Text',var(--unfold-serif);fill:var(--hue)}",
+  ".bp-ctl{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px 12px}",
+  ".bp-si{font:500 10px var(--anatomy-mono);font-style:normal}",
+  ".bp-note{font:10px var(--anatomy-mono);fill:var(--hue,var(--anatomy-muted))}",
+  ".bp-num{font:600 12px var(--anatomy-mono);font-variant-numeric:tabular-nums;fill:var(--hue);dominant-baseline:central}",
+  ".bp-elab{font:500 11px var(--anatomy-mono);fill:var(--hue,var(--anatomy-muted))}",
+  ".bp-tag{font:10.5px var(--anatomy-mono);fill:var(--anatomy-muted)}",
+  ".bp-op{font:16px var(--anatomy-mono);fill:var(--anatomy-strong);text-anchor:middle;dominant-baseline:central}",
+  ".bp-gname{font:italic 600 14px 'Latin Modern Roman','STIX Two Text',var(--unfold-serif);fill:var(--hue)}",
+  "#pW .u-name{font-family:'Latin Modern Roman','STIX Two Text',var(--unfold-serif)}",
+  ".bp-colname{font:italic 600 12px 'Latin Modern Roman','STIX Two Text',var(--unfold-serif);fill:var(--hue)}",
+  ".bp-rowname{font:11px var(--anatomy-mono);fill:var(--hue);dominant-baseline:central}",
+  "#pChain .u-chip text,#pChain .u-chip rect{font-size:12px}",
+  ".bp-tan{stroke:var(--hue);stroke-width:2;fill:none;stroke-linecap:round}.bp-pt{fill:var(--hue)}",
+  ".bp-v,.bp-g,.bp-eg,.bp-es,.bp-sum{opacity:0;transition:opacity .45s var(--anatomy-ease)}",
+  ".bp-v[data-on],.bp-g[data-on]{opacity:1}",
+  ".bp-node[data-n^='x'] .bp-v,.bp-node[data-n='y'] .bp-v{opacity:1}",
+  ".u-stage:is([data-scene='5'],[data-scene='6']) .bp-eg{opacity:1}",
+  ".u-stage:is([data-scene='3'],[data-scene='4']) .bp-es{opacity:1}",
+  ".u-stage:is([data-scene='4'],[data-scene='5']) .bp-sum{opacity:1}",
+  ".bp-edge .u-arrow{transition:color .4s}",
+  ".bp-edge[data-f] .u-arrow{color:var(--unfold-blue)}",
+  ".bp-edge[data-g] .u-arrow{color:var(--unfold-red)}",
+  ".bp-edge[data-focus] .u-arrow{--w:2}",
+  ".u-stage:not([data-scene='0']) .bp-pulses{display:none}",
+  ".u-stage:not([data-scene='6']) .bp-eta{opacity:.4}",
+  "@container (max-width:520px){.bp-tag{font-size:12px}}",
+  // Entrances
+  u.revealCss(2, "#pLoss .bp-tan", { kind: "fade", delay: 700 }),
+  u.revealCss(3, "#pChain .bp-tan", { kind: "fade", delay: 600 }),
+  u.revealCss(3, "#pChainRow [data-chain]", { kind: "fade", delay: 900, stepR: 350 }),
+  u.revealCss(5, "#gXt,#gDz,#gHt,#gDy", { kind: "cells", delay: 300, stepR: 60 }),
+  u.revealCss(5, "#gGW,#gGv", { kind: "cells", delay: 900, stepR: 160, stepC: 80 }),
+  u.revealCss(6, "#gGr", { kind: "cells", delay: 300, stepC: 40 }),
+  u.revealCss(6, "#gNew", { kind: "cells", delay: 900, stepC: 60 }),
+  u.revealCss(6, "#lossBars .u-bar-fill", { kind: "grow", delay: 1300, stepC: 400, dur: 650 }),
+].join("\n");
+// ponytail: a <g> is used to set --r per chain item, so revealCss steps through them.
+const css2 = `#pChainRow [data-chain="gh"]{--r:0}#pChainRow [data-chain="s"]{--r:1}#pChainRow [data-chain="gz"]{--r:2}`;
+
+// ---- Math, coloured by identity ----
+const { mo } = u;
+const mi = (s, hue) => u.mi(s, hue);
+const d = (inner) => `<mfrac data-hue="red"><mrow><mo>∂</mo><mi>L</mi></mrow><mrow><mo>∂</mo>${inner}</mrow></mfrac>`;
+const yhat = (hue = "blue") => `<mover accent="true"><mi data-hue="${hue}">y</mi><mo>^</mo></mover>`;
+const sj = (s, j, hue) => `<msub>${mi(s, hue)}<mi>${j}</mi></msub>`;
+const sp = `<mspace width="1.2em"/>`;
+const scenes = [
+  {
+    name: "Network",
+    math: `${mi("L", "purple")}<mo>=</mo><mfrac><mn>1</mn><mn>2</mn></mfrac>${mo("(")}${yhat()}<mo>−</mo>${mi("y", "ink")}${mo(")")}<msup><mi></mi><mn>2</mn></msup>${sp}${yhat()}<mo>=</mo>${mi("v", "gold")}<mo>·</mo><mi>σ</mi>${mo("(")}${mi("W", "gold")}${mi("x", "ink")}<mo>+</mo>${mi("b", "gold")}${mo(")")}<mo>+</mo>${mi("c", "gold")}`,
+    say: `This network has 2 inputs, 2 sigmoid hidden units and 1 output. Backpropagation finds how the <b data-hue="purple">loss</b> changes when each <b data-hue="gold">weight</b> changes.`,
+  },
+  {
+    name: "Forward",
+    math: `${mi("z", "blue")}<mo>=</mo>${mi("W", "gold")}${mi("x", "ink")}<mo>+</mo>${mi("b", "gold")}${sp}${mi("h", "blue")}<mo>=</mo><mi>σ</mi>${mo("(")}${mi("z", "blue")}${mo(")")}${sp}${yhat()}<mo>=</mo>${mi("v", "gold")}<mo>·</mo>${mi("h", "blue")}<mo>+</mo>${mi("c", "gold")}`,
+    say: `The forward pass computes each <b data-hue="blue">value</b> from the nodes on its left. The graph keeps every value, because the backward pass needs them.`,
+  },
+  {
+    name: "Loss",
+    math: `${d(yhat(""))}<mo>=</mo>${yhat()}<mo>−</mo>${mi("y", "ink")}`,
+    say: `The <b data-hue="purple">loss</b> is half the squared error. Its slope at the output is the first <b data-hue="red">gradient</b>, and backpropagation starts there.`,
+  },
+  {
+    name: "Chain rule",
+    math: `${d(`<msub><mi>z</mi><mi>j</mi></msub>`)}<mo>=</mo>${d(`<msub><mi>h</mi><mi>j</mi></msub>`)}<mo>·</mo><msup><mi data-hue="green">σ</mi><mo data-hue="green">′</mo></msup>${mo("(")}${sj("z", "j", "blue")}${mo(")")}${sp}<msup><mi data-hue="green">σ</mi><mo data-hue="green">′</mo></msup>${mo("(")}${mi("z", "blue")}${mo(")")}<mo>=</mo>${mi("h", "blue")}${mo("(")}<mn>1</mn><mo>−</mo>${mi("h", "blue")}${mo(")")}`,
+    say: `A node multiplies the <b data-hue="red">gradient</b> that arrives from its right by its own <b data-hue="green">local slope</b>. This is the chain rule.`,
+  },
+  {
+    name: "Backward",
+    math: `${d(`<msub><mi>h</mi><mi>j</mi></msub>`)}<mo>=</mo>${d(yhat(""))}${sj("v", "j", "gold")}${sp}${d(`<msub><mi>x</mi><mi>k</mi></msub>`)}<mo>=</mo><munder><mo>∑</mo><mi>j</mi></munder>${d(`<msub><mi>z</mi><mi>j</mi></msub>`)}${sj("w", "jk", "gold")}`,
+    say: `The backward pass visits the nodes in reverse order, on the same edges. An input feeds two nodes, so it adds the two <b data-hue="red">gradients</b> that come back.`,
+  },
+  {
+    name: "Weights",
+    math: `${d(`<msub><mi>w</mi><mi>jk</mi></msub>`)}<mo>=</mo>${sj("x", "k", "ink")}${d(`<msub><mi>z</mi><mi>j</mi></msub>`)}${sp}${d(`<mi>W</mi>`)}<mo>=</mo>${d(`<mi>z</mi>`)}<msup>${mi("x", "ink")}<mi>T</mi></msup>`,
+    say: `The <b data-hue="red">gradient</b> of a <b data-hue="gold">weight</b> is the value at its tail times the gradient at its head. One backward pass gives all 9 gradients.`,
+  },
+  {
+    name: "Update",
+    math: `${mi("w", "gold")}<mo>←</mo>${mi("w", "gold")}<mo>−</mo><mi>η</mi>${d(`<mi>w</mi>`)}`,
+    say: `Gradient descent moves each <b data-hue="gold">weight</b> a small step against its <b data-hue="red">gradient</b>. A small enough step lowers the <b data-hue="purple">loss</b>.`,
+  },
+];
+
+const key = u.keyHtml([
+  { hue: "ink", label: "input x, target y" },
+  { hue: "blue", label: "value (forward)" },
+  { hue: "red", label: "gradient ∂L/∂·" },
+  { hue: "gold", label: "weight, bias" },
+  { hue: "green", label: "local slope σ′" },
+  { hue: "purple", label: "loss L" },
+]);
+
+const num = (k, label, min, max, v) => `<label${k === "eta" ? ' class="bp-eta"' : ""}>${label}<input type="number" min="${min}" max="${max}" step="0.1" value="${v}" data-in="${k}" aria-label="${label}"></label>`;
+const controls =
+  `<div class="bp-ctl"><button type="button" data-j="0" aria-pressed="true">h₁</button><button type="button" data-j="1" aria-pressed="false">h₂</button>` +
+  num("x0", "x₁", -2, 2, m.X0[0]) + num("x1", "x₂", -2, 2, m.X0[1]) + num("y", "y", -2, 2, m.Y0) + num("eta", "η", 0.1, 1, m.ETA0) +
+  `<button type="button" data-reset>preset</button></div>`;
+const STEPS = 15; // 0: inputs only, 1-6: forward, 7-14: backward
+const stage = u.stageHtml({
+  scenes,
+  svg,
+  label: "Backpropagation explainer. Left and right arrows change the scene. Up and down arrows pick hidden unit 1 or 2. Comma and period step through the passes.",
+  css: css + css2,
+  key,
+  dwell: 7500,
+  time: { steps: STEPS, scenes: [1, 4], label: "step" },
+  controls,
+  narrow: [NW, NH],
+});
+
+// ---- Page script: every number from the model's own net() and step() ----
+const live = `
+${u.modelScript([m.r3, m.sigmoid, m.net, m.step, m.gradFlat], { P0: m.P0, X0: m.X0, Y0: m.Y0, ETA0: m.ETA0, PL, PS, LMAX })}
+const root = UNFOLD.stage;
+const readout = document.querySelector("[data-readout]");
+const M = { x: [...X0], y: Y0, eta: ETA0 };
+const FWD = ["z1", "z2", "h1", "h2", "yh", "L"];
+const BWD = ["L", "yh", "h1", "h2", "z1", "z2", "x1", "x2"];
+const SUB = ["\\u2081", "\\u2082"];
+const nf = (v) => (Math.abs(v * 10 - Math.round(v * 10)) < 1e-9 ? fmt(v, 1) : fmt(v, 3));
+const p = (v) => (v < 0 ? "(" + nf(v) + ")" : nf(v));
+const flatP = (p) => [p.W[0][0], p.W[0][1], p.W[1][0], p.W[1][1], p.b[0], p.b[1], p.v[0], p.v[1], p.c];
+let j = 0, t = 0;
+function recompute() {
+  M.f = net(P0, M.x, M.y);
+  M.s = step(P0, M.f, M.eta);
+  const f = M.f;
+  const val = { x1: f.x[0], x2: f.x[1], z1: f.z[0], z2: f.z[1], h1: f.h[0], h2: f.h[1], yh: f.yhat, L: f.L, y: f.y };
+  const grad = { x1: f.gx[0], x2: f.gx[1], z1: f.gz[0], z2: f.gz[1], h1: f.gh[0], h2: f.gh[1], yh: f.gy, L: 1 };
+  root.querySelectorAll(".bp-v").forEach((g) => (g.firstChild.textContent = nf(val[g.dataset.n])));
+  root.querySelectorAll(".bp-g").forEach((g) => (g.firstChild.textContent = nf(grad[g.dataset.n])));
+  const eg = { w11: f.gW[0][0], w12: f.gW[0][1], w21: f.gW[1][0], w22: f.gW[1][1], v1: f.gv[0], v2: f.gv[1], s1: f.s[0], s2: f.s[1] };
+  root.querySelectorAll(".bp-eg,.bp-es").forEach((g) => (g.firstChild.textContent = nf(eg[g.dataset.k])));
+  const $ = (id) => root.querySelector("#" + id);
+  setGrid($("gXt"), [f.x], 0.5); setGrid($("gDz"), f.gz.map((v) => [v]), 0.5); setGrid($("gGW"), f.gW, 0.5);
+  setGrid($("gHt"), [f.h], 0.5); setGrid($("gDy"), [[f.gy]], 0.5); setGrid($("gGv"), [f.gv], 0.5);
+  setGrid($("gOld"), [flatP(P0)], 1); setGrid($("gGr"), [gradFlat(f)], 1); setGrid($("gNew"), [flatP(M.s.q)], 1);
+  const bars = $("lossBars");
+  bars.dataset.max = String(Math.max(LMAX, f.L, M.s.after.L));
+  setBars(bars, [f.L, M.s.after.L]);
+  placePoint($("pLoss"), PL, f.yhat - f.y, f.L, f.gy, "slope at the point " + nf(f.gy));
+  focus();
+}
+// A point on a plot, with its tangent (slope k) and a label.
+function placePoint(panel, R, px, py, k, label) {
+  const sx = (v) => R.x + ((v - R.xr[0]) / (R.xr[1] - R.xr[0])) * R.w;
+  const sy = (v) => R.y + R.h - ((Math.min(R.yr[1], Math.max(R.yr[0], v)) - R.yr[0]) / (R.yr[1] - R.yr[0])) * R.h;
+  const cx = Math.max(R.xr[0], Math.min(R.xr[1], px));
+  const pt = panel.querySelector(".bp-pt");
+  pt.setAttribute("cx", sx(cx)); pt.setAttribute("cy", sy(py));
+  const dx = 0.9 / Math.sqrt(1 + k * k);
+  panel.querySelector(".bp-tan").setAttribute("d", "M" + sx(cx - dx) + " " + sy(py - k * dx) + "L" + sx(cx + dx) + " " + sy(py + k * dx));
+  const lab = panel.querySelector("[data-lab]");
+  // The loss label sits right of the plot: beside the point it would cross the steep curve.
+  const right = R === PL;
+  lab.setAttribute("x", right ? R.x + R.w + 40 : sx(cx) + (k < 0 ? -12 : 12)); lab.setAttribute("y", right ? R.y + R.h / 2 : sy(py) - 14);
+  lab.style.textAnchor = right || k > 0 ? "start" : "end";
+  lab.textContent = label;
+}
+function focus() {
+  const f = M.f;
+  root.querySelectorAll(".bp-node").forEach((n) => n.toggleAttribute("data-focus", n.dataset.n === "h" + (j + 1) || n.dataset.n === "z" + (j + 1)));
+  root.querySelectorAll(".bp-edge").forEach((e) => e.toggleAttribute("data-focus", [e.dataset.a, e.dataset.b].includes("z" + (j + 1)) && e.dataset.b !== "h" + (2 - j)));
+  root.querySelectorAll("[data-j]").forEach((b) => b.setAttribute("aria-pressed", String(+b.dataset.j === j)));
+  placePoint(root.querySelector("#pChain"), PS, f.z[j], f.h[j], f.s[j], "slope " + nf(f.s[j]));
+  const chain = { gh: f.gh[j], s: f.s[j], gz: f.gz[j] };
+  root.querySelectorAll("[data-chain]").forEach((g) => (g.querySelector(".u-chip text").textContent = nf(chain[g.dataset.chain])));
+  const labs = { gh: "∂L/∂h" + SUB[j], s: "σ′(z" + SUB[j] + ")", gz: "∂L/∂z" + SUB[j] };
+  root.querySelectorAll("[data-chainlab]").forEach((el) => (el.textContent = labs[el.dataset.chainlab]));
+  mark(root.querySelector("#gDz"), j); mark(root.querySelector("#gGW"), j);
+  show();
+}
+// Which values and gradients are on screen, from the scene and the step.
+function show() {
+  const s = UNFOLD.scene();
+  const vOn = (n) => s >= 2 || (s === 1 && FWD.indexOf(n) < t);
+  const gOn = (n) => {
+    if (s < 2) return false;
+    if (s === 2) return n === "L" || n === "yh";
+    if (s === 3) return ["L", "yh", "h1", "h2", "z" + (j + 1)].includes(n);
+    if (s === 4) return BWD.indexOf(n) <= t - 7;
+    return true;
+  };
+  const cur = s === 1 ? FWD[t - 1] : s === 4 ? BWD[t - 7] : null;
+  root.querySelectorAll(".bp-v").forEach((g) => g.toggleAttribute("data-on", vOn(g.dataset.n)));
+  root.querySelectorAll(".bp-g").forEach((g) => g.toggleAttribute("data-on", gOn(g.dataset.n)));
+  root.querySelectorAll(".bp-node").forEach((n) => n.toggleAttribute("data-cur", n.dataset.n === cur));
+  root.querySelectorAll(".bp-edge").forEach((e) => {
+    e.toggleAttribute("data-f", s === 1 && vOn(e.dataset.b) && e.dataset.a !== "y");
+    e.toggleAttribute("data-g", s >= 2 && gOn(e.dataset.a));
+  });
+  say(s, cur);
+}
+function say(s, cur) {
+  const f = M.f, J = SUB[j];
+  const k = cur ? +cur.slice(-1) - 1 : 0, K = SUB[k];
+  let text = "";
+  if (s === 0) text = "2 inputs · 2 hidden units (sigmoid) · 1 output · 9 weights";
+  if (s === 1) {
+    if (!cur) text = "inputs x = [" + nf(f.x[0]) + ", " + nf(f.x[1]) + "], target y = " + nf(f.y);
+    else if (cur[0] === "z") text = "z" + K + " = " + nf(P0.W[k][0]) + "×" + p(f.x[0]) + " + " + nf(P0.W[k][1]) + "×" + p(f.x[1]) + " + " + nf(P0.b[k]) + " = " + nf(f.z[k]);
+    else if (cur[0] === "h") text = "h" + K + " = σ(" + nf(f.z[k]) + ") = " + nf(f.h[k]);
+    else if (cur === "yh") text = "ŷ = " + nf(P0.v[0]) + "×" + p(f.h[0]) + " + " + nf(P0.v[1]) + "×" + p(f.h[1]) + " + " + nf(P0.c) + " = " + nf(f.yhat);
+    else text = "L = ½(" + nf(f.yhat) + " − " + p(f.y) + ")² = " + nf(f.L);
+  }
+  if (s === 2) text = "∂L/∂ŷ = ŷ − y = " + nf(f.yhat) + " − " + p(f.y) + " = " + nf(f.gy);
+  if (s === 3) text = "∂L/∂z" + J + " = " + nf(f.gh[j]) + " × " + p(f.h[j]) + " × (1 − " + nf(f.h[j]) + ") = " + nf(f.gz[j]);
+  if (s === 4) {
+    if (!cur) text = "backward pass: right to left, from L";
+    else if (cur === "L") text = "∂L/∂L = 1";
+    else if (cur === "yh") text = "∂L/∂ŷ = " + nf(f.yhat) + " − " + p(f.y) + " = " + nf(f.gy);
+    else if (cur[0] === "h") text = "∂L/∂h" + K + " = " + nf(f.gy) + " × " + p(P0.v[k]) + " = " + nf(f.gh[k]);
+    else if (cur[0] === "z") text = "∂L/∂z" + K + " = " + nf(f.gh[k]) + " × " + p(f.s[k]) + " = " + nf(f.gz[k]);
+    else text = "∂L/∂x" + K + " = " + nf(f.gz[0]) + "×" + p(P0.W[0][k]) + " + " + nf(f.gz[1]) + "×" + p(P0.W[1][k]) + " = " + nf(f.gx[k]);
+  }
+  if (s === 5) text = "∂L/∂w" + J + "₁ = x₁ × ∂L/∂z" + J + " = " + nf(f.x[0]) + " × " + p(f.gz[j]) + " = " + nf(f.gW[j][0]);
+  if (s === 6) text = "η = " + nf(M.eta) + " · loss " + nf(f.L) + " → " + nf(M.s.after.L);
+  if (readout.textContent !== text) readout.textContent = text;
+}
+const setT = (v) => { t = v; UNFOLD.timeAt(t); show(); };
+UNFOLD.beat(1, 900, (n) => setT(n < 0 ? 6 : n + 1), 700, 6);
+UNFOLD.beat(4, 900, (n) => setT(n < 0 ? 14 : n + 7), 700, 8);
+UNFOLD.onTime((v) => {
+  const want = v <= 6 ? 1 : 4;
+  if (UNFOLD.scene() !== want) UNFOLD.go(want);
+  setT(v);
+});
+root.addEventListener("unfold:scene", (e) => setT({ 0: 0, 1: 0, 2: 7, 3: 9, 4: 6 }[e.detail.scene] ?? 14));
+root.addEventListener("keydown", (e) => {
+  const to = { ArrowUp: 0, ArrowDown: 1 }[e.key];
+  if (to === undefined) return;
+  e.preventDefault();
+  UNFOLD.pause();
+  j = to;
+  focus();
+});
+const ctl = root.querySelector(".u-controls");
+ctl.addEventListener("click", (e) => {
+  const b = e.target.closest("[data-j],[data-reset]");
+  if (!b) return;
+  UNFOLD.pause();
+  if (b.dataset.j !== undefined) { j = +b.dataset.j; focus(); return; }
+  M.x = [...X0]; M.y = Y0; M.eta = ETA0;
+  ctl.querySelectorAll("[data-in]").forEach((el) => (el.value = String({ x0: X0[0], x1: X0[1], y: Y0, eta: ETA0 }[el.dataset.in])));
+  recompute();
+});
+ctl.addEventListener("input", (e) => {
+  const el = e.target.closest("[data-in]");
+  const v = el && el.value !== "" ? Number(el.value) : NaN;
+  if (!Number.isFinite(v)) return;
+  UNFOLD.pause();
+  const k = el.dataset.in;
+  const clamp = (lo, hi) => Math.round(Math.max(lo, Math.min(hi, v)) * 10) / 10;
+  if (k === "eta") { M.eta = clamp(0.1, 1); if (UNFOLD.scene() !== 6) UNFOLD.go(6); }
+  else if (k === "y") M.y = clamp(-2, 2);
+  else M.x[+k.slice(1)] = clamp(-2, 2);
+  recompute();
+});
+ctl.addEventListener("change", (e) => {
+  const el = e.target.closest("[data-in]");
+  if (el) el.value = String({ x0: M.x[0], x1: M.x[1], y: M.y, eta: M.eta }[el.dataset.in]);
+});
+root.addEventListener("unfold:layout", () => focus());
+recompute();
+`;
+
+const g = m.gradFlat(f);
+const TC = m.torchCheck();
+const notes = u.notesHtml([
+  {
+    title: "Check: backpropagation against two other methods",
+    html: `<p>Finite differences move one weight by ±10⁻⁶ and measure the change in the loss. PyTorch 2.10 autograd computes the same gradients from the same network.</p>`,
+    table: {
+      head: ["weight", "backprop (page, 3 places)", "finite difference", "PyTorch autograd"],
+      rows: m.NAMES.map((n, i) => [`<code>${n}</code>`, nf(g[i]), u.fmt(m.NUM[i], 4), TC ? u.fmt(TC.grads[i], 4) : "not run"]),
+    },
+  },
+  {
+    title: "Each node's rule",
+    table: {
+      head: ["node", "forward", "backward (gradient sent to the left)"],
+      rows: [
+        ["z = Wx + b", "weighted sum", "∂L/∂w = x · ∂L/∂z, and ∂L/∂x = Σ w · ∂L/∂z"],
+        ["h = σ(z)", "sigmoid", "∂L/∂z = ∂L/∂h · h(1 − h)"],
+        ["ŷ = v·h + c", "weighted sum", "∂L/∂v = h · ∂L/∂ŷ, and ∂L/∂h = v · ∂L/∂ŷ"],
+        ["L = ½(ŷ − y)²", "squared error", "∂L/∂ŷ = ŷ − y"],
+      ],
+    },
+  },
+  {
+    title: "What the figure leaves out",
+    table: {
+      head: ["topic", "in a real network"],
+      rows: [
+        ["many examples", "The gradient is the average over a batch of examples."],
+        ["many layers", "The same two rules repeat, layer by layer, from the output back."],
+        ["other activations", "ReLU has slope 1 or 0. tanh has slope 1 − h²."],
+        ["vanishing gradients", "σ′ is at most 0.25, so a product over many sigmoid layers becomes small."],
+        ["matrix form", "∂L/∂W = δ xᵀ per layer, where δ is ∂L/∂z for the whole layer."],
+      ],
+    },
+  },
+  {
+    title: "Terms",
+    table: {
+      head: ["term", "meaning"],
+      rows: [
+        ["forward pass", "computes every value from the inputs to the loss"],
+        ["backward pass", "computes every gradient from the loss back to the inputs"],
+        ["gradient ∂L/∂w", "how much L changes per small change of w"],
+        ["local slope", "the derivative of one node's output with respect to its input"],
+        ["chain rule", "gradient at a node = gradient from the right × local slope"],
+        ["learning rate η", "the size of the gradient-descent step"],
+      ],
+    },
+  },
+]);
+
+const body =
+  iso.plateHtml({
+    fig: "Fig 1",
+    title: "Backpropagation",
+    hint: "← → scene · ↑ ↓ unit · , . step",
+    readout: "2 inputs · 2 hidden units (sigmoid) · 1 output · 9 weights",
+    caption:
+      "A 2-2-1 network with sigmoid hidden units and squared-error loss, trained on one example. We chose the weights, inputs and target by hand so the numbers stay readable. The page rounds every value to 3 places, and each step uses the rounded values before it, so each line adds up by hand. The gradients match finite differences and PyTorch 2.10 autograd within 0.002 (checked on 2026-10-16). The fields change x, y and η, and the page runs the same code again.",
+    body: stage,
+  }) + notes;
+
+const artifact = process.argv.indexOf("--artifact");
+const file = artifact > 0 ? process.argv[artifact + 1] : join(HERE, light ? "page-light.html" : "page.html");
+const html = artifact > 0 ? u.artifactHtml({ title: "Backpropagation", body, script: live }) : u.pageHtml({ title: "Backpropagation", theme, body, script: live });
+writeFileSync(file, html);
+console.log("wrote", file);

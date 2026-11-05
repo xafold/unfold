@@ -1,0 +1,851 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Binary search</title><style>
+.iso{
+  --anatomy-page:#0b0b0b;--anatomy-card:#131313;--anatomy-text:#a3a3a3;--anatomy-strong:#e6e6e6;--anatomy-muted:#6e6e6e;
+  --anatomy-paper:#131313;--anatomy-face:#1b1b1b;--anatomy-top:#1c1c1c;
+  --anatomy-shade-0:#0f0f0f;--anatomy-shade-1:#121212;--anatomy-shade-2:#151515;--anatomy-shade-3:#181818;
+  --anatomy-lit-top:#262626;--anatomy-lit-shade:#1d1d1d;
+  --anatomy-hi:#d4d4d4;--anatomy-mid:#6a6a6a;--anatomy-lo:#3e3e3e;--anatomy-faint:#2a2a2a;--anatomy-lit:#ffffff;
+  --anatomy-halo:#050505;--anatomy-halo-opacity:.9;--anatomy-dot:#e6e6e6;
+  --anatomy-red:#ff6b6b;--anatomy-green:#6be0a0;--anatomy-blue:#6b9bff;
+  --anatomy-weight:.6px;--anatomy-ease:cubic-bezier(.32,.72,0,1);
+  --anatomy-mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --anatomy-lift:inset 0 1px 0 0 #ffffff0a,inset 0 0 0 1px #ffffff06,0 0 0 1px #00000026,0 1px 1px -.5px #00000014,0 3px 3px -1.5px #00000014,0 6px 6px -3px #00000014,0 12px 12px -6px #00000014;
+}
+.iso[data-theme="light"]{
+  --anatomy-page:#f2f2ef;--anatomy-card:#fbfbfa;--anatomy-text:#57575a;--anatomy-strong:#18181a;--anatomy-muted:#8c8c90;
+  --anatomy-paper:#fbfbfa;--anatomy-face:#ffffff;--anatomy-top:#ffffff;
+  --anatomy-shade-0:#dcdcd9;--anatomy-shade-1:#e5e5e2;--anatomy-shade-2:#ededea;--anatomy-shade-3:#f4f4f1;
+  --anatomy-lit-top:#ffffff;--anatomy-lit-shade:#eeeeeb;
+  --anatomy-hi:#26262a;--anatomy-mid:#8a8a8f;--anatomy-lo:#b4b4b8;--anatomy-faint:#d4d4d6;--anatomy-lit:#000000;
+  --anatomy-halo:#8a8a80;--anatomy-halo-opacity:.32;--anatomy-dot:#3a3a3e;
+  --anatomy-red:#e5484d;--anatomy-green:#30a46c;--anatomy-blue:#3e63dd;
+  --anatomy-lift:inset 0 1px 0 0 #ffffff,0 0 0 1px #0000000f,0 1px 1px -.5px #0000000a,0 3px 3px -1.5px #0000000a,0 6px 6px -3px #0000000a,0 12px 12px -6px #0000000a;
+}
+.iso-svg{display:block;width:100%;height:auto;overflow:visible}
+.iso-svg path,.iso-svg circle{vector-effect:non-scaling-stroke}
+.iso-fill{fill:var(--anatomy-paper);stroke:none}
+.iso-solid[data-lit]>.iso-fill{fill:var(--anatomy-face)}
+.iso-shade,.iso-top{stroke:none}
+.iso-shade[data-shade="0"]{fill:var(--anatomy-shade-0)}
+.iso-shade[data-shade="1"]{fill:var(--anatomy-shade-1)}
+.iso-shade[data-shade="2"]{fill:var(--anatomy-shade-2)}
+.iso-shade[data-shade="3"]{fill:var(--anatomy-shade-3)}
+.iso-top{fill:var(--anatomy-top)}
+.iso-solid[data-lit]>.iso-top{fill:var(--anatomy-lit-top)}
+.iso-solid[data-lit]>.iso-shade{fill:var(--anatomy-lit-shade)}
+.iso-solid[data-seamless]>.iso-shade,.iso-solid[data-seamless]>.iso-top{stroke-width:.4;stroke-linejoin:round}
+.iso-solid[data-seamless]>.iso-shade[data-shade="0"]{stroke:var(--anatomy-shade-0)}
+.iso-solid[data-seamless]>.iso-shade[data-shade="1"]{stroke:var(--anatomy-shade-1)}
+.iso-solid[data-seamless]>.iso-shade[data-shade="2"]{stroke:var(--anatomy-shade-2)}
+.iso-solid[data-seamless]>.iso-shade[data-shade="3"]{stroke:var(--anatomy-shade-3)}
+.iso-solid[data-seamless]>.iso-top{stroke:var(--anatomy-top)}
+.iso-solid[data-seamless][data-lit]>.iso-top{stroke:var(--anatomy-lit-top)}
+.iso-solid[data-seamless][data-lit]>.iso-shade{stroke:var(--anatomy-lit-shade)}
+.iso-solid[data-lit]>.iso-edge{stroke:var(--anatomy-lit)}
+.iso-halo{fill:var(--anatomy-halo);stroke:none;filter:blur(9px);opacity:var(--anatomy-halo-opacity);transform:translateY(3px)}
+.iso-line{fill:none;stroke:var(--anatomy-lo);stroke-width:var(--anatomy-weight);stroke-linecap:round;stroke-linejoin:round}
+.iso-line[data-tone="hi"]{stroke:var(--anatomy-hi)}
+.iso-line[data-tone="mid"]{stroke:var(--anatomy-mid)}
+.iso-line[data-tone="lo"]{stroke:var(--anatomy-lo)}
+.iso-line[data-tone="faint"]{stroke:var(--anatomy-faint)}
+.iso-line[data-tone="lit"]{stroke:var(--anatomy-lit)}
+.iso-line[data-tone="red"]{stroke:var(--anatomy-red)}
+.iso-line[data-tone="green"]{stroke:var(--anatomy-green)}
+.iso-line[data-tone="blue"]{stroke:var(--anatomy-blue)}
+.iso-line[data-dotted]{stroke-dasharray:.01 3.5;stroke-width:1}
+.iso-line[data-dashed]{stroke-dasharray:3 3}
+.iso-line[data-flow]{stroke-dasharray:2 6}
+.iso-wire-end{fill:var(--anatomy-paper);stroke:var(--anatomy-lo);stroke-width:var(--anatomy-weight)}
+.iso-wire[data-tone="hi"] .iso-wire-end{stroke:var(--anatomy-hi)}
+.iso-wire[data-tone="mid"] .iso-wire-end{stroke:var(--anatomy-mid)}
+.iso-wire[data-tone="faint"] .iso-wire-end{stroke:var(--anatomy-faint)}
+.iso-wire[data-tone="lit"] .iso-wire-end{stroke:var(--anatomy-lit)}
+.iso-dots circle{fill:var(--anatomy-dot);stroke:none;opacity:.32}
+.iso-dots[data-tone="hi"] circle{opacity:.85}
+.iso-dots[data-tone="mid"] circle{opacity:.45}
+.iso-dots[data-tone="lo"] circle{opacity:.22}
+.iso-dots[data-tone="faint"] circle{opacity:.12}
+.iso-face-text{fill:var(--anatomy-mid);font-family:var(--anatomy-mono);letter-spacing:.04em}
+.iso-face-text[data-tone="hi"]{fill:var(--anatomy-hi)}
+.iso-face-text[data-tone="lo"]{fill:var(--anatomy-lo)}
+.iso-face-text[data-tone="faint"]{fill:var(--anatomy-faint)}
+.tb-body{fill:var(--anatomy-shade-2);stroke:none}
+.tb-shine{fill:var(--anatomy-top);stroke:none}
+.tb-shade{fill:var(--anatomy-shade-0);stroke:none}
+.tb-ring{fill:none;stroke:var(--anatomy-lo);stroke-width:.45;stroke-linecap:butt;stroke-linejoin:round}
+.tb-ring[data-tone="mid"]{stroke:var(--anatomy-mid)}
+.tb-ring[data-tone="faint"]{stroke:var(--anatomy-faint)}
+.tb-ring[data-tone="hi"]{stroke:var(--anatomy-hi)}
+@keyframes iso-flow{to{stroke-dashoffset:-32}}
+@keyframes iso-pulse{0%,100%{opacity:.18}12%{opacity:1}40%{opacity:.18}}
+.iso-line[data-flow]{animation:iso-flow 1600ms linear infinite}
+.iso-dots circle[data-pulse]{animation:iso-pulse 1600ms steps(1,end) infinite;animation-delay:var(--pulse-at,0ms)}
+.iso-figure{margin:32px 0 36px}
+.iso-plate{position:relative;padding:52px 24px;border-radius:0;background:var(--anatomy-card);box-shadow:0 0 0 1px var(--anatomy-mid);--anatomy-paper:var(--anatomy-card)}
+.iso-plate-corners{position:absolute;inset:18px 20px;pointer-events:none}
+.iso-plate-corner{position:absolute;color:var(--anatomy-muted);font-family:var(--anatomy-mono);font-size:10.5px;line-height:1;letter-spacing:.04em;white-space:nowrap}
+.iso-plate-corner[data-corner="fig"]{top:0;left:0;color:var(--anatomy-text)}
+.iso-plate-corner[data-corner="title"]{top:0;right:0;text-transform:uppercase;letter-spacing:.1em}
+.iso-plate-corner[data-corner="hint"]{bottom:0;left:0;text-transform:uppercase;letter-spacing:.1em}
+.iso-plate-corner[data-corner="readout"]{right:0;bottom:0;color:var(--anatomy-text);font-variant-numeric:tabular-nums}
+.iso-plate .iso-svg{margin:0 auto}
+.iso-legend{display:grid;gap:8px;margin-top:12px;color:var(--anatomy-muted);font-size:13px;line-height:1.55}
+.iso-keys{display:flex;flex-wrap:wrap;gap:6px 18px}
+.iso-key{display:inline-flex;align-items:center;gap:7px}
+.iso-swatch{width:16px;height:10px;flex:none;overflow:visible}
+.iso-swatch path{fill:none;stroke:var(--anatomy-hi);stroke-width:1;vector-effect:non-scaling-stroke;stroke-linejoin:round;stroke-linecap:round}
+.iso-swatch[data-mark="raised"] path,.iso-swatch[data-mark="flat"] path{stroke:var(--anatomy-mid)}
+.iso-swatch[data-mark="lit"] path{stroke:var(--anatomy-lit)}
+.iso-swatch[data-mark="dim"] path{stroke:var(--anatomy-lo)}
+.iso-swatch[data-mark="dotted"] path{stroke-dasharray:.01 3;stroke-width:1.4}
+.iso-swatch[data-mark="dashed"] path{stroke-dasharray:3 2.5}
+.iso-swatch[data-mark="red"] path{stroke:var(--anatomy-red)}
+.iso-swatch[data-mark="green"] path{stroke:var(--anatomy-green)}
+.iso-swatch[data-mark="blue"] path{stroke:var(--anatomy-blue)}
+.iso-swatch-crease{stroke:var(--anatomy-lo)!important}
+@media (max-width:560px){.iso-plate{padding:48px 12px 70px}.iso-plate-corner[data-corner="hint"]{bottom:18px}}
+@media (prefers-reduced-motion:reduce){.iso-line[data-flow],.iso-dots circle[data-pulse]{animation:none}}
+
+*{box-sizing:border-box}
+html{color-scheme:dark}
+body[data-theme="light"]{color-scheme:light}
+body{margin:0;background:var(--anatomy-page);color:var(--anatomy-text);font:14px/1.6 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+.iso-page{width:min(900px,100% - 32px);margin:64px auto 96px}
+</style></head><body class="iso" data-theme="auto"><main class="iso-page"><style>
+.iso{--unfold-blue:#58c4dd;--unfold-yellow:#f4d345;--unfold-red:#fc6255;--unfold-green:#83c167;--unfold-teal:#5cd0b3;--unfold-purple:#b48ad1;--unfold-gold:#f0ac5f;--unfold-on-hot:#0b0b0b;--unfold-serif:"Latin Modern Math","STIX Two Math","Cambria Math",math,serif}
+.iso[data-theme="light"]{--unfold-blue:#1f78a4;--unfold-yellow:#a67c00;--unfold-red:#cf3b2e;--unfold-green:#3e8a2a;--unfold-teal:#16866b;--unfold-purple:#7a4fa3;--unfold-gold:#b8661a;--unfold-on-hot:#ffffff}
+[data-hue="blue"]{--hue:var(--unfold-blue)}[data-hue="yellow"]{--hue:var(--unfold-yellow)}[data-hue="red"]{--hue:var(--unfold-red)}[data-hue="green"]{--hue:var(--unfold-green)}[data-hue="teal"]{--hue:var(--unfold-teal)}[data-hue="purple"]{--hue:var(--unfold-purple)}[data-hue="gold"]{--hue:var(--unfold-gold)}[data-hue="ink"]{--hue:var(--anatomy-hi)}
+.u-key{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 16px;margin-top:10px;color:var(--anatomy-muted);font-size:12px}
+.u-key>span{display:inline-flex;align-items:center;gap:6px}
+.u-key i{width:10px;height:10px;border-radius:2px;background:var(--hue)}
+.u-key i.u-hollow{background:none;box-shadow:inset 0 0 0 1.2px var(--anatomy-mid)}
+.u-key i.u-solid{background:var(--anatomy-mid)}
+.u-stage{position:relative;outline:none;container-type:inline-size;--u-fade:.5s;--u-fade-at:.22s}
+.u-stage:focus-visible{outline:1px solid var(--anatomy-faint);outline-offset:8px}
+.u-stage .iso-svg{overflow:visible}
+.u-eq,.u-say{display:grid;align-items:center}
+.u-eq>.u-at,.u-say>.u-at{grid-area:1/1;opacity:0;visibility:hidden;transition:opacity .2s var(--anatomy-ease),visibility 0s .2s;margin:0}
+.u-eq{min-height:44px;margin-bottom:8px;overflow-x:auto;overflow-y:hidden}
+.u-eq math{font-family:var(--unfold-serif);font-size:20px;color:var(--anatomy-strong)}
+.u-eq [data-hue]{color:var(--hue)}
+.u-say{min-height:48px;margin-top:6px;color:var(--anatomy-text);font-size:14px;line-height:1.55;text-align:center}
+.u-say>.u-at{max-width:62ch;justify-self:center}
+.u-say b{color:var(--anatomy-strong);font-weight:500}
+.u-say [data-hue]{color:var(--hue)}
+.u-steps{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin-top:14px}
+.u-steps button{display:inline-flex;align-items:center;gap:6px;padding:5px 10px 5px 6px;border:0;border-radius:999px;background:transparent;color:var(--anatomy-muted);font:11px/1 var(--anatomy-mono);letter-spacing:.04em;cursor:pointer;box-shadow:0 0 0 1px var(--anatomy-faint);transition:color .2s,box-shadow .2s}
+.u-steps button span{display:inline-grid;place-items:center;width:16px;height:16px;border-radius:50%;background:var(--anatomy-faint);color:var(--anatomy-text);font-size:10px}
+.u-steps button:hover{color:var(--anatomy-text)}
+.u-steps button[aria-current]{color:var(--anatomy-strong);box-shadow:0 0 0 1px var(--anatomy-mid)}
+.u-steps button[aria-current] span{background:var(--anatomy-strong);color:var(--anatomy-card)}
+.u-steps .u-play{margin-right:6px}.u-steps .u-play[aria-pressed="true"]{color:var(--anatomy-strong);box-shadow:0 0 0 1px var(--anatomy-mid)}
+.u-move{transition:transform .9s var(--anatomy-ease),opacity var(--u-fade) var(--anatomy-ease) var(--u-fade-at)}
+.u-grid text,.u-chip text,.u-bars text,.u-arrow text{dominant-baseline:central;text-anchor:middle}
+.u-cell{transform:translate(var(--x),var(--y));transition:transform .9s var(--anatomy-ease) calc(var(--i) * 18ms)}
+.u-cell-bg{fill:var(--hue);fill-opacity:var(--a);stroke:none;transition:fill-opacity .35s}
+.u-cell[data-neg]>.u-cell-bg,.u-cell-bg[data-neg]{fill-opacity:calc(var(--a) * .18);stroke:var(--hue);stroke-opacity:var(--a);stroke-width:1.2}
+.u-cell[data-masked]>.u-cell-bg,.u-cell-bg[data-masked]{fill:none;stroke:var(--anatomy-faint);stroke-width:.8;stroke-dasharray:2 2}
+.u-num{font:500 10px var(--anatomy-mono);font-variant-numeric:tabular-nums;fill:var(--anatomy-strong)}
+.u-cell[data-hot] .u-num{fill:var(--unfold-on-hot)}
+.u-cell[data-masked] .u-num{fill:var(--anatomy-lo)}
+.u-name{font:italic 600 17px var(--unfold-serif);fill:var(--hue);dominant-baseline:auto!important;text-anchor:start!important}
+.u-dims{font:400 10px var(--anatomy-mono);font-style:normal;fill:var(--anatomy-muted)}
+.u-T,.u-dims-T{display:none}
+.u-mark{fill:none;stroke:var(--anatomy-strong);stroke-width:1.2;opacity:0;transition:opacity .3s}
+.u-mark[data-on]{opacity:.9}
+.u-chip rect{fill:var(--anatomy-card);stroke:var(--anatomy-mid);stroke-width:.8;transition:stroke .25s,fill .25s}
+.u-chip text{font:500 11px var(--anatomy-mono);fill:var(--anatomy-text);transition:fill .25s}
+.u-chip[data-hue] rect{stroke:var(--hue)}
+.u-chip[data-hue] text{fill:var(--hue)}
+.u-cell[data-later],.u-mark[data-later]{opacity:0!important;transition:opacity .3s}
+.u-plot-axis{stroke:var(--anatomy-mid);stroke-width:.9;fill:none}
+.u-plot-grid{stroke:var(--anatomy-faint);stroke-width:.6;fill:none}
+.u-tick-label{font:10px var(--anatomy-mono);fill:var(--anatomy-muted)}
+.u-plot-name{font:italic 600 15px var(--unfold-serif);fill:var(--hue,var(--anatomy-text))}
+.u-curve{fill:none;stroke:var(--hue,var(--anatomy-hi));stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.u-chip[data-on] rect{fill:var(--anatomy-strong);stroke:var(--anatomy-strong)}
+.u-chip[data-on] text{fill:var(--anatomy-card)}
+.u-chip[data-i]{cursor:pointer}
+.u-arrow{--w:1.1;color:var(--anatomy-mid)}
+.u-arrow[data-hue]{color:var(--hue)}
+.u-arrow-line{fill:none;stroke:currentColor;stroke-width:var(--w);stroke-linecap:round;transition:stroke-width .4s,opacity .4s}
+.u-arrow-head{fill:currentColor}
+.u-bar-fill{fill:var(--hue);transform-box:fill-box;transform-origin:50% 100%;transform:scaleY(var(--v));transition:transform .6s var(--anatomy-ease)}
+.u-bar-value{font:500 10px var(--anatomy-mono);fill:var(--anatomy-strong);transition:y .6s var(--anatomy-ease)}
+.u-bar-label{font:11px var(--anatomy-mono);fill:var(--anatomy-muted)}
+.u-axis{stroke:var(--anatomy-mid);stroke-width:.8;fill:none}
+.u-link{fill:none;stroke:var(--hue,var(--anatomy-mid));stroke-width:1.1;stroke-linecap:round;transition:d .9s var(--anatomy-ease),opacity .5s var(--anatomy-ease),stroke .3s}
+.u-link[data-off]{opacity:0}
+.u-eq>.u-at{text-align:center}
+.u-eq .u-rule{font:500 14px/1.5 var(--anatomy-mono);color:var(--anatomy-strong);letter-spacing:.01em}
+.u-lane-bg{fill:var(--anatomy-faint);fill-opacity:.18;stroke:var(--anatomy-faint);stroke-width:.6}
+.u-lane-name{font:11px var(--anatomy-mono);fill:var(--hue,var(--anatomy-muted));text-anchor:end;dominant-baseline:central}
+.u-tick{stroke:var(--anatomy-faint);stroke-width:.6}
+.u-tick-label{font:9px var(--anatomy-mono);fill:var(--anatomy-muted);text-anchor:middle;dominant-baseline:central}
+.u-now{stroke:var(--anatomy-strong);stroke-width:1.2;transition:transform .5s var(--anatomy-ease)}
+.u-span-bar{fill:var(--hue,var(--anatomy-mid));fill-opacity:.9;transform-box:fill-box;transform-origin:0 50%;transform:scaleX(var(--v,1));transition:transform .5s var(--anatomy-ease)}
+.u-span-label{opacity:0;transition:opacity .3s}
+.u-span[data-labeled] .u-span-label{opacity:1}
+.u-span-label text{font:500 10px var(--anatomy-mono);fill:var(--unfold-on-hot);dominant-baseline:central}
+.u-face .u-cell-bg{stroke-width:.5}
+.u-cell-bg{transform-box:fill-box;transform-origin:50% 50%}
+.u-cell[data-hl]>.u-cell-bg{stroke:var(--anatomy-strong);stroke-opacity:1;stroke-width:1.6;animation:u-ping .5s var(--anatomy-ease)}
+.u-pulse{fill:var(--hue,var(--anatomy-strong));filter:drop-shadow(0 0 3px var(--hue,var(--anatomy-strong)))}
+.u-rise{transform-box:fill-box}
+@keyframes u-pop{from{opacity:0;transform:scale(.4)}}
+@keyframes u-fade{from{opacity:0}}
+@keyframes u-rise{from{opacity:0;transform:translateY(-14px)}}
+@keyframes u-grow{from{transform:scaleY(0)}}
+@keyframes u-draw{from{stroke-dasharray:1;stroke-dashoffset:1}to{stroke-dasharray:1;stroke-dashoffset:0}}
+@keyframes u-ping{from{stroke-width:4;stroke-opacity:0}}
+.u-floor-text{font-family:var(--unfold-serif);font-style:italic;font-weight:600;fill:var(--hue,var(--anatomy-text))}
+.u-floor-label{font-family:var(--anatomy-mono);fill:var(--anatomy-muted)}
+.u-guide{fill:none;stroke:var(--anatomy-lo);stroke-width:.8;stroke-dasharray:2 3}
+.u-controls{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px 18px;margin-top:10px}
+.u-controls button{border:0;border-radius:999px;background:transparent;color:var(--anatomy-muted);font:11px/1 var(--anatomy-mono);letter-spacing:.04em;padding:6px 10px;cursor:pointer;box-shadow:0 0 0 1px var(--anatomy-faint);transition:color .2s,box-shadow .2s}
+.u-controls button:hover{color:var(--anatomy-text)}
+.u-controls button[aria-pressed="true"]{color:var(--anatomy-strong);box-shadow:0 0 0 1px var(--anatomy-mid)}
+.u-time{display:flex;align-items:center;gap:8px;flex:1 1 260px;max-width:440px;transition:opacity .4s}
+.u-time button{width:28px;height:28px;padding:0;font-size:15px}
+.u-time input{flex:1;min-width:80px;accent-color:var(--anatomy-hi)}
+.u-ctl{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px 12px;transition:opacity .4s}
+.u-controls [data-scenes]{transition:opacity .4s}.u-controls [data-idle]{opacity:.4}
+.u-sub{font-size:72%}
+.u-line rect{fill:var(--hue,var(--anatomy-hi));fill-opacity:0;transition:fill-opacity .25s}
+.u-line[data-on] rect{fill-opacity:.18}
+.u-line-num{font:10px var(--anatomy-mono);fill:var(--anatomy-lo);text-anchor:end;dominant-baseline:central}
+.u-line-text{font:11.5px var(--anatomy-mono);fill:var(--anatomy-text);dominant-baseline:central;white-space:pre}
+.u-line[data-on] .u-line-text{fill:var(--anatomy-strong)}
+.u-controls label{display:inline-flex;align-items:center;gap:6px;color:var(--anatomy-muted);font:11px var(--anatomy-mono)}
+.u-controls :is(input[type=number],input[type=text]){width:calc(5ch + 28px);padding:4px 6px;border:0;border-radius:6px;background:transparent;color:var(--anatomy-text);font:12px var(--anatomy-mono);font-variant-numeric:tabular-nums;box-shadow:0 0 0 1px var(--anatomy-faint)}
+.u-controls input[type=range]{accent-color:var(--anatomy-hi)}
+.u-controls select{max-width:100%;padding:4px 22px 4px 8px;border:0;border-radius:6px;background:var(--anatomy-card);color:var(--anatomy-text);font:11px var(--anatomy-mono);box-shadow:0 0 0 1px var(--anatomy-faint);cursor:pointer}
+.iso-plate-corner[data-corner="readout"]{max-width:62%;white-space:normal;text-align:right;line-height:1.4}
+.u-time output{font:11px var(--anatomy-mono);color:var(--anatomy-muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.u-notes{margin-top:56px;color:var(--anatomy-text);font-size:14px;line-height:1.65}
+.u-notes h2{margin:36px 0 10px;font:500 13px var(--anatomy-mono);letter-spacing:.04em;color:var(--anatomy-strong)}
+.u-notes p,.u-notes ul{margin:0 0 12px;max-width:72ch}
+.u-notes li{margin-bottom:6px}
+.u-notes b{color:var(--anatomy-strong);font-weight:500}
+.u-notes code{font:12.5px var(--anatomy-mono);color:var(--anatomy-strong)}
+.u-notes table{width:100%;border-collapse:collapse;font-size:13px;line-height:1.5}
+.u-notes th,.u-notes td{padding:7px 10px 7px 0;border-bottom:1px solid var(--anatomy-faint);text-align:left;vertical-align:top}
+.u-notes th{color:var(--anatomy-muted);font:500 11.5px var(--anatomy-mono);letter-spacing:.03em}
+.u-notes svg{display:block;width:100%;max-width:640px;height:auto;margin:6px 0 14px;overflow:visible}
+.u-notes td:first-child{color:var(--anatomy-strong);white-space:nowrap}
+@media (max-width:560px){.u-notes thead{display:none}.u-notes tr{display:block;padding:8px 0;border-bottom:1px solid var(--anatomy-faint)}.u-notes td{display:block;padding:2px 0;border:0}.u-notes td[data-th]:not(:first-child)::before{content:attr(data-th) ": ";color:var(--anatomy-muted)}}
+@container (max-width:520px){:not([data-keep])>.u-cell .u-num,:not([data-keep])>.u-bar .u-bar-value{display:none}.u-eq math{font-size:14px}.u-steps button{font-size:0;gap:0;padding:4px}.u-controls{gap:8px;flex-direction:column;align-items:stretch}.u-ctl{gap:6px 8px}.u-time{flex:none;max-width:none}.u-controls label{gap:4px}}
+@media (max-width:560px){.iso-plate-corner[data-corner="readout"]{left:0;max-width:none;white-space:normal;text-align:right;line-height:1.4}.iso-plate-corner[data-corner="hint"]{display:none}}
+@media (prefers-reduced-motion:reduce){.u-stage *{transition:none!important;animation:none!important}.u-pulse{display:none}}
+@media (prefers-color-scheme:light){html{color-scheme:light}.iso[data-theme="auto"]{
+  --anatomy-page:#f2f2ef;--anatomy-card:#fbfbfa;--anatomy-text:#57575a;--anatomy-strong:#18181a;--anatomy-muted:#8c8c90;
+  --anatomy-paper:#fbfbfa;--anatomy-face:#ffffff;--anatomy-top:#ffffff;
+  --anatomy-shade-0:#dcdcd9;--anatomy-shade-1:#e5e5e2;--anatomy-shade-2:#ededea;--anatomy-shade-3:#f4f4f1;
+  --anatomy-lit-top:#ffffff;--anatomy-lit-shade:#eeeeeb;
+  --anatomy-hi:#26262a;--anatomy-mid:#8a8a8f;--anatomy-lo:#b4b4b8;--anatomy-faint:#d4d4d6;--anatomy-lit:#000000;
+  --anatomy-halo:#8a8a80;--anatomy-halo-opacity:.32;--anatomy-dot:#3a3a3e;
+  --anatomy-red:#e5484d;--anatomy-green:#30a46c;--anatomy-blue:#3e63dd;
+  --anatomy-lift:inset 0 1px 0 0 #ffffff,0 0 0 1px #0000000f,0 1px 1px -.5px #0000000a,0 3px 3px -1.5px #0000000a,0 6px 6px -3px #0000000a,0 12px 12px -6px #0000000a;
+;--unfold-blue:#1f78a4;--unfold-yellow:#a67c00;--unfold-red:#cf3b2e;--unfold-green:#3e8a2a;--unfold-teal:#16866b;--unfold-purple:#7a4fa3;--unfold-gold:#b8661a;--unfold-on-hot:#ffffff}}</style><figure class="iso-figure"><div class="iso-plate"><div class="iso-plate-corners" aria-hidden="true"><span class="iso-plate-corner" data-corner="fig">Fig 1</span><span class="iso-plate-corner" data-corner="title">Binary search</span><span class="iso-plate-corner" data-corner="hint">click a cell to search for it</span><span class="iso-plate-corner" data-corner="readout" data-readout>step 0 · lo = 0, hi = 15: 16 cells may hold t = 50</span></div><style>.u-stage[data-scene="0"] .u-at[data-at="0"]{opacity:1;visibility:visible;transition:opacity .4s var(--anatomy-ease) .2s,visibility 0s .2s}
+.u-stage[data-scene="0"] .u-grid[data-t~="0"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="0"] .u-grid[data-t~="0"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="0"] .u-grid[data-t~="0"] .u-dims:not(.u-dims-T),.u-stage[data-scene="0"] .u-grid[data-t~="0"] .u-mark{display:none}
+.u-stage[data-scene="1"] .u-at[data-at="1"]{opacity:1;visibility:visible;transition:opacity .4s var(--anatomy-ease) .2s,visibility 0s .2s}
+.u-stage[data-scene="1"] .u-grid[data-t~="1"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="1"] .u-grid[data-t~="1"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="1"] .u-grid[data-t~="1"] .u-dims:not(.u-dims-T),.u-stage[data-scene="1"] .u-grid[data-t~="1"] .u-mark{display:none}
+.u-stage[data-scene="2"] .u-at[data-at="2"]{opacity:1;visibility:visible;transition:opacity .4s var(--anatomy-ease) .2s,visibility 0s .2s}
+.u-stage[data-scene="2"] .u-grid[data-t~="2"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="2"] .u-grid[data-t~="2"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="2"] .u-grid[data-t~="2"] .u-dims:not(.u-dims-T),.u-stage[data-scene="2"] .u-grid[data-t~="2"] .u-mark{display:none}
+.u-stage[data-scene="3"] .u-at[data-at="3"]{opacity:1;visibility:visible;transition:opacity .4s var(--anatomy-ease) .2s,visibility 0s .2s}
+.u-stage[data-scene="3"] .u-grid[data-t~="3"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="3"] .u-grid[data-t~="3"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="3"] .u-grid[data-t~="3"] .u-dims:not(.u-dims-T),.u-stage[data-scene="3"] .u-grid[data-t~="3"] .u-mark{display:none}
+.u-stage[data-scene="4"] .u-at[data-at="4"]{opacity:1;visibility:visible;transition:opacity .4s var(--anatomy-ease) .2s,visibility 0s .2s}
+.u-stage[data-scene="4"] .u-grid[data-t~="4"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="4"] .u-grid[data-t~="4"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="4"] .u-grid[data-t~="4"] .u-dims:not(.u-dims-T),.u-stage[data-scene="4"] .u-grid[data-t~="4"] .u-mark{display:none}
+.u-stage[data-scene="5"] .u-at[data-at="5"]{opacity:1;visibility:visible;transition:opacity .4s var(--anatomy-ease) .2s,visibility 0s .2s}
+.u-stage[data-scene="5"] .u-grid[data-t~="5"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="5"] .u-grid[data-t~="5"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="5"] .u-grid[data-t~="5"] .u-dims:not(.u-dims-T),.u-stage[data-scene="5"] .u-grid[data-t~="5"] .u-mark{display:none}.u-stage:not(:is([data-scene="0"],[data-scene="1"],[data-scene="2"],[data-scene="3"])) .u-time{opacity:.4}.u-stage[data-scene="0"] #el-links{transform:translate(0px,0px) scale(1);opacity:0;pointer-events:none;--u-fade:.22s;--u-fade-at:0s}
+.u-stage[data-scene="1"] #el-links{transform:translate(0px,0px) scale(1);opacity:0;pointer-events:none;--u-fade:.22s;--u-fade-at:0s}
+.u-stage[data-scene="2"] #el-links{transform:translate(0px,0px) scale(1);opacity:0;pointer-events:none;--u-fade:.22s;--u-fade-at:0s}
+.u-stage[data-scene="3"] #el-links{transform:translate(0px,0px) scale(1);opacity:0;pointer-events:none;--u-fade:.22s;--u-fade-at:0s}
+.u-stage[data-scene="4"] #el-links{transform:translate(0px,0px) scale(1);opacity:1;pointer-events:auto;--u-fade:.5s;--u-fade-at:.22s}
+.u-stage[data-scene="5"] #el-links{transform:translate(0px,0px) scale(1);opacity:0;pointer-events:none;--u-fade:.22s;--u-fade-at:0s}
+.u-stage[data-scene="0"] #el-tcols{transform:translate(0px,0px) scale(1);opacity:0;pointer-events:none;--u-fade:.22s;--u-fade-at:0s}
+.u-stage[data-scene="1"] #el-tcols{transform:translate(0px,0px) scale(1);opacity:0;pointer-events:none;--u-fade:.22s;--u-fade-at:0s}
+.u-stage[data-scene="2"] #el-tcols{transform:translate(0px,0px) scale(1);opacity:0;pointer-events:none;--u-fade:.22s;--u-fade-at:0s}
+.u-stage[data-scene="3"] #el-tcols{transform:translate(0px,0px) scale(1);opacity:0;pointer-events:none;--u-fade:.22s;--u-fade-at:0s}
+.u-stage[data-scene="4"] #el-tcols{transform:translate(0px,0px) scale(1);opacity:1;pointer-events:auto;--u-fade:.5s;--u-fade-at:.22s}
+.u-stage[data-scene="5"] #el-tcols{transform:translate(0px,0px) scale(1);opacity:0;pointer-events:none;--u-fade:.22s;--u-fade-at:0s}
+.u-stage[data-scene="0"] #el-ladder{transform:translate(0px,0px) scale(1);opacity:1;pointer-events:auto;--u-fade:.5s;--u-fade-at:.22s}
+.u-stage[data-scene="1"] #el-ladder{transform:translate(0px,0px) scale(1);opacity:1;pointer-events:auto;--u-fade:.5s;--u-fade-at:.22s}
+.u-stage[data-scene="2"] #el-ladder{transform:translate(0px,0px) scale(1);opacity:1;pointer-events:auto;--u-fade:.5s;--u-fade-at:.22s}
+.u-stage[data-scene="3"] #el-ladder{transform:translate(0px,0px) scale(1);opacity:1;pointer-events:auto;--u-fade:.5s;--u-fade-at:.22s}
+.u-stage[data-scene="4"] #el-ladder{transform:translate(0px,0px) scale(1);opacity:0;pointer-events:none;--u-fade:.22s;--u-fade-at:0s}
+.u-stage[data-scene="5"] #el-ladder{transform:translate(0px,0px) scale(1);opacity:0;pointer-events:none;--u-fade:.22s;--u-fade-at:0s}
+.u-stage[data-scene="0"] #el-budget{transform:translate(0px,0px) scale(1);opacity:1;pointer-events:auto;--u-fade:.5s;--u-fade-at:.22s}
+.u-stage[data-scene="1"] #el-budget{transform:translate(0px,0px) scale(1);opacity:1;pointer-events:auto;--u-fade:.5s;--u-fade-at:.22s}
+.u-stage[data-scene="2"] #el-budget{transform:translate(0px,0px) scale(1);opacity:1;pointer-events:auto;--u-fade:.5s;--u-fade-at:.22s}
+.u-stage[data-scene="3"] #el-budget{transform:translate(0px,0px) scale(1);opacity:1;pointer-events:auto;--u-fade:.5s;--u-fade-at:.22s}
+.u-stage[data-scene="4"] #el-budget{transform:translate(0px,0px) scale(1);opacity:0;pointer-events:none;--u-fade:.22s;--u-fade-at:0s}
+.u-stage[data-scene="5"] #el-budget{transform:translate(0px,0px) scale(1);opacity:0;pointer-events:none;--u-fade:.22s;--u-fade-at:0s}
+.u-stage[data-scene="0"] #el-bracket{transform:translate(0px,0px) scale(1);opacity:1;pointer-events:auto;--u-fade:.5s;--u-fade-at:.22s}
+.u-stage[data-scene="1"] #el-bracket{transform:translate(0px,0px) scale(1);opacity:1;pointer-events:auto;--u-fade:.5s;--u-fade-at:.22s}
+.u-stage[data-scene="2"] #el-bracket{transform:translate(0px,0px) scale(1);opacity:1;pointer-events:auto;--u-fade:.5s;--u-fade-at:.22s}
+.u-stage[data-scene="3"] #el-bracket{transform:translate(0px,0px) scale(1);opacity:1;pointer-events:auto;--u-fade:.5s;--u-fade-at:.22s}
+.u-stage[data-scene="4"] #el-bracket{transform:translate(0px,0px) scale(1);opacity:0;pointer-events:none;--u-fade:.22s;--u-fade-at:0s}
+.u-stage[data-scene="5"] #el-bracket{transform:translate(0px,0px) scale(1);opacity:0;pointer-events:none;--u-fade:.22s;--u-fade-at:0s}
+.u-stage[data-scene="0"] #el-cutg{transform:translate(0px,0px) scale(1);opacity:1;pointer-events:auto;--u-fade:.5s;--u-fade-at:.22s}
+.u-stage[data-scene="1"] #el-cutg{transform:translate(0px,0px) scale(1);opacity:1;pointer-events:auto;--u-fade:.5s;--u-fade-at:.22s}
+.u-stage[data-scene="2"] #el-cutg{transform:translate(0px,0px) scale(1);opacity:1;pointer-events:auto;--u-fade:.5s;--u-fade-at:.22s}
+.u-stage[data-scene="3"] #el-cutg{transform:translate(0px,0px) scale(1);opacity:1;pointer-events:auto;--u-fade:.5s;--u-fade-at:.22s}
+.u-stage[data-scene="4"] #el-cutg{transform:translate(0px,0px) scale(1);opacity:0;pointer-events:none;--u-fade:.22s;--u-fade-at:0s}
+.u-stage[data-scene="5"] #el-cutg{transform:translate(0px,0px) scale(1);opacity:0;pointer-events:none;--u-fade:.22s;--u-fade-at:0s}
+.u-stage[data-scene="0"] #el-midg{transform:translate(0px,0px) scale(1);opacity:1;pointer-events:auto;--u-fade:.5s;--u-fade-at:.22s}
+.u-stage[data-scene="1"] #el-midg{transform:translate(0px,0px) scale(1);opacity:1;pointer-events:auto;--u-fade:.5s;--u-fade-at:.22s}
+.u-stage[data-scene="2"] #el-midg{transform:translate(0px,0px) scale(1);opacity:1;pointer-events:auto;--u-fade:.5s;--u-fade-at:.22s}
+.u-stage[data-scene="3"] #el-midg{transform:translate(0px,0px) scale(1);opacity:1;pointer-events:auto;--u-fade:.5s;--u-fade-at:.22s}
+.u-stage[data-scene="4"] #el-midg{transform:translate(0px,0px) scale(1);opacity:0;pointer-events:none;--u-fade:.22s;--u-fade-at:0s}
+.u-stage[data-scene="5"] #el-midg{transform:translate(0px,0px) scale(1);opacity:0;pointer-events:none;--u-fade:.22s;--u-fade-at:0s}
+.u-stage[data-scene="0"] #el-arr{transform:translate(0px,0px) scale(1);opacity:1;pointer-events:auto;--u-fade:.5s;--u-fade-at:.22s}
+.u-stage[data-scene="1"] #el-arr{transform:translate(0px,0px) scale(1);opacity:1;pointer-events:auto;--u-fade:.5s;--u-fade-at:.22s}
+.u-stage[data-scene="2"] #el-arr{transform:translate(0px,0px) scale(1);opacity:1;pointer-events:auto;--u-fade:.5s;--u-fade-at:.22s}
+.u-stage[data-scene="3"] #el-arr{transform:translate(0px,0px) scale(1);opacity:1;pointer-events:auto;--u-fade:.5s;--u-fade-at:.22s}
+.u-stage[data-scene="4"] #el-arr{transform:translate(0px,0px) scale(1);opacity:1;pointer-events:auto;--u-fade:.5s;--u-fade-at:.22s}
+.u-stage[data-scene="5"] #el-arr{transform:translate(0px,0px) scale(1);opacity:0;pointer-events:none;--u-fade:.22s;--u-fade-at:0s}
+.u-stage[data-scene="0"] #el-right{transform:translate(0px,0px) scale(1);opacity:1;pointer-events:auto;--u-fade:.5s;--u-fade-at:.22s}
+.u-stage[data-scene="1"] #el-right{transform:translate(0px,0px) scale(1);opacity:1;pointer-events:auto;--u-fade:.5s;--u-fade-at:.22s}
+.u-stage[data-scene="2"] #el-right{transform:translate(0px,0px) scale(1);opacity:1;pointer-events:auto;--u-fade:.5s;--u-fade-at:.22s}
+.u-stage[data-scene="3"] #el-right{transform:translate(0px,0px) scale(1);opacity:1;pointer-events:auto;--u-fade:.5s;--u-fade-at:.22s}
+.u-stage[data-scene="4"] #el-right{transform:translate(0px,0px) scale(1);opacity:0;pointer-events:none;--u-fade:.22s;--u-fade-at:0s}
+.u-stage[data-scene="5"] #el-right{transform:translate(0px,0px) scale(1);opacity:0;pointer-events:none;--u-fade:.22s;--u-fade-at:0s}
+.u-stage[data-scene="0"] #el-scale{transform:translate(0px,0px) scale(1);opacity:0;pointer-events:none;--u-fade:.22s;--u-fade-at:0s}
+.u-stage[data-scene="1"] #el-scale{transform:translate(0px,0px) scale(1);opacity:0;pointer-events:none;--u-fade:.22s;--u-fade-at:0s}
+.u-stage[data-scene="2"] #el-scale{transform:translate(0px,0px) scale(1);opacity:0;pointer-events:none;--u-fade:.22s;--u-fade-at:0s}
+.u-stage[data-scene="3"] #el-scale{transform:translate(0px,0px) scale(1);opacity:0;pointer-events:none;--u-fade:.22s;--u-fade-at:0s}
+.u-stage[data-scene="4"] #el-scale{transform:translate(0px,0px) scale(1);opacity:0;pointer-events:none;--u-fade:.22s;--u-fade-at:0s}
+.u-stage[data-scene="5"] #el-scale{transform:translate(0px,0px) scale(1);opacity:1;pointer-events:auto;--u-fade:.5s;--u-fade-at:.22s}
+#el-links,#el-tcols,#el-ladder,#el-budget,#el-bracket,#el-cutg,#el-midg,#el-arr,#el-right,#el-scale{transition:opacity var(--u-fade) var(--anatomy-ease) var(--u-fade-at)}
+.u-stage[data-scene="4"] #el-links{--u-fade:.5s;--u-fade-at:.75s}
+.el-R{transform:translate(560px,0)}
+.el-L,.el-R,.el-S1,.el-S2{transition:transform .5s var(--anatomy-ease)}
+.el-cell{transform:translate(var(--x),52px);transition:transform .9s var(--anatomy-ease) calc(var(--d) * 70ms);cursor:pointer}
+.u-stage[data-scene="4"] .el-cell{transform:translate(var(--x),calc(52px + var(--d) * 56px))}
+.el-box{fill:color-mix(in srgb,var(--unfold-blue) 14%,var(--anatomy-card));stroke:var(--unfold-blue);stroke-width:1.2;transition:fill .3s,stroke .3s,stroke-width .3s,opacity .3s}
+.el-v{font:600 14px var(--anatomy-mono);fill:var(--anatomy-strong);text-anchor:middle;dominant-baseline:central;font-variant-numeric:tabular-nums;transition:fill .3s}
+.el-ix{font:10px var(--anatomy-mono);fill:var(--anatomy-muted);text-anchor:middle;dominant-baseline:central}
+.el-cell:hover .el-box{stroke-width:2.2}
+.el-cell[data-out] .el-box,.el-cell[data-cut] .el-box{fill:var(--anatomy-card);stroke:var(--anatomy-faint)}
+.el-cell[data-out] .el-v{fill:var(--anatomy-lo)}
+.el-cell[data-cut] .el-v{fill:var(--anatomy-muted)}
+.el-strike{stroke:var(--unfold-red);stroke-width:1.6;stroke-linecap:round;opacity:0;transition:opacity .3s}
+.el-cell[data-cut] .el-strike{opacity:1}
+.el-cell[data-mid] .el-box{fill:color-mix(in srgb,var(--unfold-yellow) 26%,var(--anatomy-card));stroke:var(--unfold-yellow);stroke-width:2.6}
+.el-cell[data-found] .el-box{fill:color-mix(in srgb,var(--unfold-green) 34%,var(--anatomy-card));stroke:var(--unfold-green);stroke-width:2.6}
+.u-stage[data-scene="4"] .el-box{fill:var(--anatomy-card);stroke:var(--anatomy-mid);stroke-width:1}
+.u-stage[data-scene="4"] .el-cell[data-path] .el-box{fill:color-mix(in srgb,var(--unfold-yellow) 22%,var(--anatomy-card));stroke:var(--unfold-yellow);stroke-width:2.4}
+.u-stage[data-scene="4"] .el-cell[data-found] .el-box{fill:color-mix(in srgb,var(--unfold-green) 34%,var(--anatomy-card));stroke:var(--unfold-green);stroke-width:2.6}
+.el-ord{opacity:0;transition:opacity .3s}.el-cell[data-path] .el-ord{opacity:1}
+.el-ord text{font:600 11px var(--anatomy-mono);fill:var(--unfold-yellow);text-anchor:middle;dominant-baseline:central}
+.el-link{stroke:var(--anatomy-lo);stroke-width:1.1;fill:none;transition:stroke .3s,stroke-width .3s}
+.el-link[data-path]{stroke:var(--unfold-yellow);stroke-width:2.4}
+.el-th{font:500 10.5px var(--anatomy-mono);fill:var(--anatomy-muted);text-anchor:middle;dominant-baseline:central}
+.el-th-l{text-anchor:start}.el-th-r{text-anchor:end}
+.el-trow text{font:500 12px var(--anatomy-mono);fill:var(--anatomy-text);text-anchor:middle;dominant-baseline:central}
+.el-trow:first-of-type text{fill:var(--anatomy-text)}
+.el-midp,.el-cutl{transition:transform .5s var(--anatomy-ease)}
+.el-mlabel,.el-cutl>g,.el-tri,.el-cutline{opacity:0;transition:opacity .25s}
+.el-midp[data-on] :is(.el-mlabel,.el-tri),.el-cutl[data-on] :is(g,.el-cutline){opacity:1}
+.el-midp text,.el-cutl text{font:600 12px var(--anatomy-mono);text-anchor:middle;dominant-baseline:central}
+.el-midp text{fill:var(--unfold-yellow)}.el-tri{fill:var(--unfold-yellow)}
+.el-midp[data-end] text{fill:var(--unfold-green)}.el-midp[data-end] .el-tri{fill:var(--unfold-green)}
+.el-cutl text{fill:var(--unfold-red)}.el-cutline{stroke:var(--unfold-red);stroke-width:1.2}
+.el-br{fill:none;stroke:var(--unfold-blue);stroke-width:1.6;transition:d .5s var(--anatomy-ease)}
+.el-lo text,.el-hi text{font:600 10.5px var(--anatomy-mono);fill:var(--unfold-blue);dominant-baseline:central;transition:x .5s var(--anatomy-ease)}
+.el-row{opacity:0;transition:opacity .35s}.el-row[data-on]{opacity:1}
+.el-row text{font:500 12px var(--anatomy-mono);text-anchor:middle;dominant-baseline:central;font-variant-numeric:tabular-nums}
+.el-rc{fill:var(--unfold-blue)}.el-rm{fill:var(--anatomy-muted)}
+.el-rbar{fill:var(--unfold-blue);fill-opacity:.22;stroke:var(--unfold-blue);stroke-opacity:.5;stroke-width:.8;transition:x .4s var(--anatomy-ease),width .4s var(--anatomy-ease)}
+.el-row[data-now] .el-rbar{fill-opacity:.38;stroke-opacity:1}
+.el-rzero{stroke:var(--unfold-blue);stroke-width:1.4;stroke-dasharray:2 2;opacity:0}.el-row[data-zero] .el-rzero{opacity:1}
+.el-rdot{fill:var(--unfold-yellow);opacity:0;transition:opacity .3s}.el-row[data-mid] .el-rdot{opacity:1}
+.el-slot{fill:none;stroke:var(--anatomy-faint);stroke-width:1;transition:fill .3s,stroke .3s}
+.el-slot[data-on]{fill:color-mix(in srgb,var(--unfold-yellow) 45%,var(--anatomy-card));stroke:var(--unfold-yellow)}
+.el-budt{font:500 12px var(--anatomy-mono);fill:var(--anatomy-text);dominant-baseline:central}
+.u-stage[data-narrow] .el-budt{font-size:15px}
+.el-res text{font:500 12px var(--anatomy-mono);fill:var(--anatomy-text)}
+.el-res[data-done] text{fill:var(--unfold-green)}
+.el-stairs{fill:none;stroke:var(--unfold-yellow);stroke-width:2;stroke-linejoin:round}
+.el-linear{fill:none;stroke:var(--anatomy-mid);stroke-width:1.4;stroke-dasharray:4 3}
+.el-lin-l text{font:11px var(--anatomy-mono);fill:var(--anatomy-muted)}
+#el-plot .u-tick-label[text-anchor="middle"]{display:none}
+.el-xl{font:10px var(--anatomy-mono);fill:var(--anatomy-muted);text-anchor:middle;dominant-baseline:central}
+.el-xname{font:11px var(--anatomy-mono);fill:var(--anatomy-muted);text-anchor:middle}
+.el-pt{transition:transform .25s var(--anatomy-ease)}.el-pt circle{fill:var(--unfold-yellow);stroke:var(--anatomy-card);stroke-width:1.5}
+.el-pt-l text{font:600 12px var(--anatomy-mono);fill:var(--unfold-yellow);text-anchor:end}
+.el-tr text{font:500 12px var(--anatomy-mono);fill:var(--anatomy-text);text-anchor:end;dominant-baseline:central;font-variant-numeric:tabular-nums}
+.el-tr .el-tp,.el-th-p{fill:var(--unfold-yellow)}
+.el-you text{fill:var(--anatomy-strong);font-weight:600}
+.el-rule{stroke:var(--anatomy-faint);stroke-width:.8}
+#el-tchip text{font-size:12px;font-weight:600}
+.u-ctl input[type=number]{width:56px}
+.u-ctl input[type=range]{width:150px}
+.u-ctl output{font:11px var(--anatomy-mono);color:var(--anatomy-muted);min-width:11ch}
+.u-stage[data-narrow] .el-L{transform:translate(1px,6px) scale(.74)}
+.u-stage[data-narrow] .el-R{transform:translate(14px,260px)}
+.u-stage[data-narrow] .el-v{font-size:17px}.u-stage[data-narrow] .el-ix{font-size:12.5px}
+.u-stage[data-narrow] :is(.el-row text,.el-trow text){font-size:14px}.u-stage[data-narrow] .el-th{font-size:13px}
+.u-stage[data-narrow] :is(.el-midp text,.el-cutl text){font-size:15px}.u-stage[data-narrow] :is(.el-lo,.el-hi) text{font-size:13px}
+.u-stage[data-narrow] .el-ord text{font-size:14px}
+.u-stage[data-narrow] .u-line rect{width:372px}.u-stage[data-narrow] .u-line-text{font-size:12.5px}.u-stage[data-narrow] .u-line-num{font-size:11px}
+.u-stage[data-narrow] .el-S1{transform:translate(-34px,0) scale(.92)}
+.u-stage[data-narrow] .el-S2{transform:translate(-496px,286px)}
+.u-stage[data-narrow] :is(.el-xl,.u-tick-label){font-size:12.5px}.u-stage[data-narrow] :is(.el-xname,.el-lin-l text){font-size:13px}
+.u-stage[data-narrow] .el-pt-l text{font-size:14px}</style><div class="u-stage" tabindex="0" role="group" aria-roledescription="explainer" aria-label="Binary search explainer. Click a cell to search for its value, or type a target. Left and right arrows change the scene. Comma and period step through the run. Up and down arrows change the target by one." data-scene="0" data-count="6" data-dwell="7000" data-narrow-box="0 0 400 548" data-narrow-h="548 548 548 548 262 526"><div class="u-eq" aria-live="polite"><div class="u-at" data-at="0"><math display="block"><mi data-hue="blue">lo</mi><mo>=</mo><mn>0</mn><mspace width="1.2em"/><mi data-hue="blue">hi</mi><mo>=</mo><mi>n</mi><mo>−</mo><mn>1</mn><mo>=</mo><mn>15</mn></math></div><div class="u-at" data-at="1"><math display="block"><mi data-hue="yellow">mid</mi><mo>=</mo><mrow><mo>⌊</mo><mfrac><mrow><mi data-hue="blue">lo</mi><mo>+</mo><mi data-hue="blue">hi</mi></mrow><mrow><mn>2</mn></mrow></mfrac><mo>⌋</mo></mrow><mo>=</mo><mrow><mo>⌊</mo><mfrac><mrow><mn>0</mn><mo>+</mo><mn>15</mn></mrow><mrow><mn>2</mn></mrow></mfrac><mo>⌋</mo></mrow><mo>=</mo><mn>7</mn></math></div><div class="u-at" data-at="2"><math display="block"><mtable><mtr><mtd><mi>a</mi><mo stretchy="false">[</mo><mi data-hue="yellow">mid</mi><mo stretchy="false">]</mo><mo>&lt;</mo><mi data-hue="green">t</mi><mo>⇒</mo><mi data-hue="blue">lo</mi><mo>=</mo><mi data-hue="yellow">mid</mi><mo>+</mo><mn>1</mn></mtd></mtr><mtr><mtd><mi>a</mi><mo stretchy="false">[</mo><mi data-hue="yellow">mid</mi><mo stretchy="false">]</mo><mo>&gt;</mo><mi data-hue="green">t</mi><mo>⇒</mo><mi data-hue="blue">hi</mi><mo>=</mo><mi data-hue="yellow">mid</mi><mo>−</mo><mn>1</mn></mtd></mtr></mtable></math></div><div class="u-at" data-at="3"><math display="block"><mi data-hue="blue">hi</mi><mo>−</mo><mi data-hue="blue">lo</mi><mo>+</mo><mn>1</mn><mo>≤</mo><mrow><mo>⌊</mo><mfrac><mrow><mi>n</mi></mrow><mrow><msup><mn>2</mn><mi>k</mi></msup></mrow></mfrac><mo>⌋</mo></mrow><mspace width=".6em"/><mtext>after</mtext><mspace width=".3em"/><mi>k</mi><mspace width=".3em"/><mtext>probes</mtext></math></div><div class="u-at" data-at="4"><math display="block"><mtext>probes</mtext><mo>≤</mo><mrow><mo>⌊</mo><msub><mi>log</mi><mn>2</mn></msub><mspace width=".15em"/><mi>n</mi><mo>⌋</mo></mrow><mo>+</mo><mn>1</mn><mo>=</mo><mrow><mo>⌊</mo><msub><mi>log</mi><mn>2</mn></msub><mspace width=".15em"/><mn>16</mn><mo>⌋</mo></mrow><mo>+</mo><mn>1</mn><mo>=</mo><mn>5</mn></math></div><div class="u-at" data-at="5"><math display="block"><mi>n</mi><mo>=</mo><mn data-live="n" data-places="1">1,000,000,000</mn><mspace width="1.2em"/><mrow><mo>⌊</mo><msub><mi>log</mi><mn>2</mn></msub><mspace width=".15em"/><mi>n</mi><mo>⌋</mo></mrow><mo>+</mo><mn>1</mn><mo>=</mo><mn data-live="fl" data-places="0">29</mn><mo>+</mo><mn>1</mn><mo>=</mo><mn data-hue="yellow" data-live="p" data-places="0">30</mn></math></div></div><svg xmlns="http://www.w3.org/2000/svg" class="iso-svg" viewBox="0 0 820 330" role="img" aria-label="Binary search on a sorted array of 16 numbers: the range from lo to hi, the probe at mid, the ladder of ranges, the Python code, the probe tree and a chart of probes against n."><g class="el-L"><g id="el-links"><path class="el-link" data-i="0" d="M105 196L86 219"/><path class="el-link" data-i="1" d="M161 140L114 163"/><path class="el-link" data-i="2" d="M123 196L142 219"/><path class="el-link" data-i="3" d="M273 84L170 107"/><path class="el-link" data-i="4" d="M217 196L198 219"/><path class="el-link" data-i="5" d="M179 140L226 163"/><path class="el-link" data-i="6" d="M235 196L254 219"/><path class="el-link" data-i="8" d="M329 196L310 219"/><path class="el-link" data-i="9" d="M385 140L338 163"/><path class="el-link" data-i="10" d="M347 196L366 219"/><path class="el-link" data-i="11" d="M291 84L394 107"/><path class="el-link" data-i="12" d="M441 196L422 219"/><path class="el-link" data-i="13" d="M403 140L450 163"/><path class="el-link" data-i="14" d="M459 196L478 219"/><path class="el-link" data-i="15" d="M487 252L506 275"/></g><g id="el-tcols"><text class="el-th" x="12" y="38">probe</text><text class="el-th" x="54" y="38">finds</text><g class="el-trow" data-d="0"><text x="12" y="68">1</text><text x="54" y="68">1</text></g><g class="el-trow" data-d="1"><text x="12" y="124">2</text><text x="54" y="124">2</text></g><g class="el-trow" data-d="2"><text x="12" y="180">3</text><text x="54" y="180">4</text></g><g class="el-trow" data-d="3"><text x="12" y="236">4</text><text x="54" y="236">8</text></g><g class="el-trow" data-d="4"><text x="12" y="292">5</text><text x="54" y="292">1</text></g></g><g id="el-ladder"><text class="el-th" x="14" y="138">left</text><text class="el-th" x="52" y="138">16/2<tspan dy="-4" font-size="8">k</tspan></text><text class="el-th el-th-r" x="520" y="138">range after k probes</text><g class="el-row" data-k="0" transform="translate(0 150)"><text class="el-rc" x="14" y="7">16</text><text class="el-rm" x="52" y="7">≤ 16</text><rect class="el-rbar" x="72" y="0" width="448" height="14" rx="3"/><path class="el-rzero" d="M72 -2V16"/><circle class="el-rdot" cx="282" cy="7" r="4"/></g><g class="el-row" data-k="1" transform="translate(0 176)"><text class="el-rc" x="14" y="7">16</text><text class="el-rm" x="52" y="7">≤ 8</text><rect class="el-rbar" x="72" y="0" width="448" height="14" rx="3"/><path class="el-rzero" d="M72 -2V16"/><circle class="el-rdot" cx="282" cy="7" r="4"/></g><g class="el-row" data-k="2" transform="translate(0 202)"><text class="el-rc" x="14" y="7">16</text><text class="el-rm" x="52" y="7">≤ 4</text><rect class="el-rbar" x="72" y="0" width="448" height="14" rx="3"/><path class="el-rzero" d="M72 -2V16"/><circle class="el-rdot" cx="282" cy="7" r="4"/></g><g class="el-row" data-k="3" transform="translate(0 228)"><text class="el-rc" x="14" y="7">16</text><text class="el-rm" x="52" y="7">≤ 2</text><rect class="el-rbar" x="72" y="0" width="448" height="14" rx="3"/><path class="el-rzero" d="M72 -2V16"/><circle class="el-rdot" cx="282" cy="7" r="4"/></g><g class="el-row" data-k="4" transform="translate(0 254)"><text class="el-rc" x="14" y="7">16</text><text class="el-rm" x="52" y="7">≤ 1</text><rect class="el-rbar" x="72" y="0" width="448" height="14" rx="3"/><path class="el-rzero" d="M72 -2V16"/><circle class="el-rdot" cx="282" cy="7" r="4"/></g><g class="el-row" data-k="5" transform="translate(0 280)"><text class="el-rc" x="14" y="7">16</text><text class="el-rm" x="52" y="7">≤ 0</text><rect class="el-rbar" x="72" y="0" width="448" height="14" rx="3"/><path class="el-rzero" d="M72 -2V16"/><circle class="el-rdot" cx="282" cy="7" r="4"/></g></g><g id="el-budget"><text class="el-th el-th-l" x="0" y="314">probes</text><rect class="el-slot" data-k="0" x="72" y="306" width="18" height="16" rx="3"/><rect class="el-slot" data-k="1" x="96" y="306" width="18" height="16" rx="3"/><rect class="el-slot" data-k="2" x="120" y="306" width="18" height="16" rx="3"/><rect class="el-slot" data-k="3" x="144" y="306" width="18" height="16" rx="3"/><rect class="el-slot" data-k="4" x="168" y="306" width="18" height="16" rx="3"/><text id="el-budt" class="el-budt" x="200" y="314">0 of at most 5</text></g><g id="el-bracket"><path id="el-br" class="el-br" d="M72 104V109H520V104"/><g class="el-lo"><text id="el-lo" x="68" y="109" text-anchor="end">lo</text></g><g class="el-hi"><text id="el-hi" x="524" y="109" text-anchor="start">hi</text></g></g><g id="el-cutg"><g id="el-cutl" class="el-cutl" style="transform:translate(170px,0)"><g><text y="34">all &lt; 50</text></g><path class="el-cutline" d="M-50 44H50"/></g></g><g id="el-midg"><g id="el-midp" class="el-midp" style="transform:translate(282px,0)"><g class="el-mlabel"><text y="34">35 &lt; 50</text></g><path class="el-tri" d="M-5 42H5L0 49Z"/></g></g><g id="el-arr"><g class="el-cell" data-i="0" style="--x:72px;--d:3"><rect class="el-box" x="1" y="0" width="26" height="32" rx="4"/><path class="el-strike" d="M4 23L24 9"/><text class="el-v" x="14" y="16">3</text><text class="el-ix" x="14" y="44">0</text><g class="el-ord"><text x="-6" y="16">1</text></g></g><g class="el-cell" data-i="1" style="--x:100px;--d:2"><rect class="el-box" x="1" y="0" width="26" height="32" rx="4"/><path class="el-strike" d="M4 23L24 9"/><text class="el-v" x="14" y="16">8</text><text class="el-ix" x="14" y="44">1</text><g class="el-ord"><text x="-6" y="16">1</text></g></g><g class="el-cell" data-i="2" style="--x:128px;--d:3"><rect class="el-box" x="1" y="0" width="26" height="32" rx="4"/><path class="el-strike" d="M4 23L24 9"/><text class="el-v" x="14" y="16">12</text><text class="el-ix" x="14" y="44">2</text><g class="el-ord"><text x="-6" y="16">1</text></g></g><g class="el-cell" data-i="3" style="--x:156px;--d:1"><rect class="el-box" x="1" y="0" width="26" height="32" rx="4"/><path class="el-strike" d="M4 23L24 9"/><text class="el-v" x="14" y="16">17</text><text class="el-ix" x="14" y="44">3</text><g class="el-ord"><text x="-6" y="16">1</text></g></g><g class="el-cell" data-i="4" style="--x:184px;--d:3"><rect class="el-box" x="1" y="0" width="26" height="32" rx="4"/><path class="el-strike" d="M4 23L24 9"/><text class="el-v" x="14" y="16">21</text><text class="el-ix" x="14" y="44">4</text><g class="el-ord"><text x="-6" y="16">1</text></g></g><g class="el-cell" data-i="5" style="--x:212px;--d:2"><rect class="el-box" x="1" y="0" width="26" height="32" rx="4"/><path class="el-strike" d="M4 23L24 9"/><text class="el-v" x="14" y="16">26</text><text class="el-ix" x="14" y="44">5</text><g class="el-ord"><text x="-6" y="16">1</text></g></g><g class="el-cell" data-i="6" style="--x:240px;--d:3"><rect class="el-box" x="1" y="0" width="26" height="32" rx="4"/><path class="el-strike" d="M4 23L24 9"/><text class="el-v" x="14" y="16">30</text><text class="el-ix" x="14" y="44">6</text><g class="el-ord"><text x="-6" y="16">1</text></g></g><g class="el-cell" data-i="7" style="--x:268px;--d:0"><rect class="el-box" x="1" y="0" width="26" height="32" rx="4"/><path class="el-strike" d="M4 23L24 9"/><text class="el-v" x="14" y="16">35</text><text class="el-ix" x="14" y="44">7</text><g class="el-ord"><text x="-6" y="16">1</text></g></g><g class="el-cell" data-i="8" style="--x:296px;--d:3"><rect class="el-box" x="1" y="0" width="26" height="32" rx="4"/><path class="el-strike" d="M4 23L24 9"/><text class="el-v" x="14" y="16">41</text><text class="el-ix" x="14" y="44">8</text><g class="el-ord"><text x="-6" y="16">1</text></g></g><g class="el-cell" data-i="9" style="--x:324px;--d:2"><rect class="el-box" x="1" y="0" width="26" height="32" rx="4"/><path class="el-strike" d="M4 23L24 9"/><text class="el-v" x="14" y="16">44</text><text class="el-ix" x="14" y="44">9</text><g class="el-ord"><text x="-6" y="16">1</text></g></g><g class="el-cell" data-i="10" style="--x:352px;--d:3"><rect class="el-box" x="1" y="0" width="26" height="32" rx="4"/><path class="el-strike" d="M4 23L24 9"/><text class="el-v" x="14" y="16">50</text><text class="el-ix" x="14" y="44">10</text><g class="el-ord"><text x="-6" y="16">1</text></g></g><g class="el-cell" data-i="11" style="--x:380px;--d:1"><rect class="el-box" x="1" y="0" width="26" height="32" rx="4"/><path class="el-strike" d="M4 23L24 9"/><text class="el-v" x="14" y="16">57</text><text class="el-ix" x="14" y="44">11</text><g class="el-ord"><text x="-6" y="16">1</text></g></g><g class="el-cell" data-i="12" style="--x:408px;--d:3"><rect class="el-box" x="1" y="0" width="26" height="32" rx="4"/><path class="el-strike" d="M4 23L24 9"/><text class="el-v" x="14" y="16">63</text><text class="el-ix" x="14" y="44">12</text><g class="el-ord"><text x="-6" y="16">1</text></g></g><g class="el-cell" data-i="13" style="--x:436px;--d:2"><rect class="el-box" x="1" y="0" width="26" height="32" rx="4"/><path class="el-strike" d="M4 23L24 9"/><text class="el-v" x="14" y="16">68</text><text class="el-ix" x="14" y="44">13</text><g class="el-ord"><text x="-6" y="16">1</text></g></g><g class="el-cell" data-i="14" style="--x:464px;--d:3"><rect class="el-box" x="1" y="0" width="26" height="32" rx="4"/><path class="el-strike" d="M4 23L24 9"/><text class="el-v" x="14" y="16">74</text><text class="el-ix" x="14" y="44">14</text><g class="el-ord"><text x="-6" y="16">1</text></g></g><g class="el-cell" data-i="15" style="--x:492px;--d:4"><rect class="el-box" x="1" y="0" width="26" height="32" rx="4"/><path class="el-strike" d="M4 23L24 9"/><text class="el-v" x="14" y="16">79</text><text class="el-ix" x="14" y="44">15</text><g class="el-ord"><text x="-6" y="16">1</text></g></g></g></g><g class="el-R"><g id="el-right"><text class="el-th el-th-l" x="0" y="21">target</text><g class="u-chip " id="el-tchip" data-hue="green" transform="translate(50 10)"><rect width="70" height="22" rx="6"/><text x="35" y="11">t = 50</text></g><g class="u-code" id="el-code" data-hue="yellow" transform="translate(0 44)"><g class="u-line" data-i="0" transform="translate(0 0)"><rect width="256" height="19" rx="3"/><text class="u-line-num" x="16" y="9.5">1</text><text class="u-line-text" x="26" y="9.5">def search(a, t):</text></g><g class="u-line" data-i="1" transform="translate(0 19)"><rect width="256" height="19" rx="3"/><text class="u-line-num" x="16" y="9.5">2</text><text class="u-line-text" x="26" y="9.5">    lo, hi = 0, len(a) - 1</text></g><g class="u-line" data-i="2" transform="translate(0 38)"><rect width="256" height="19" rx="3"/><text class="u-line-num" x="16" y="9.5">3</text><text class="u-line-text" x="26" y="9.5">    while lo &lt;= hi:</text></g><g class="u-line" data-i="3" transform="translate(0 57)"><rect width="256" height="19" rx="3"/><text class="u-line-num" x="16" y="9.5">4</text><text class="u-line-text" x="26" y="9.5">        mid = (lo + hi) // 2</text></g><g class="u-line" data-i="4" transform="translate(0 76)"><rect width="256" height="19" rx="3"/><text class="u-line-num" x="16" y="9.5">5</text><text class="u-line-text" x="26" y="9.5">        if a[mid] == t:</text></g><g class="u-line" data-i="5" transform="translate(0 95)"><rect width="256" height="19" rx="3"/><text class="u-line-num" x="16" y="9.5">6</text><text class="u-line-text" x="26" y="9.5">            return mid</text></g><g class="u-line" data-i="6" transform="translate(0 114)"><rect width="256" height="19" rx="3"/><text class="u-line-num" x="16" y="9.5">7</text><text class="u-line-text" x="26" y="9.5">        if a[mid] &lt; t:</text></g><g class="u-line" data-i="7" transform="translate(0 133)"><rect width="256" height="19" rx="3"/><text class="u-line-num" x="16" y="9.5">8</text><text class="u-line-text" x="26" y="9.5">            lo = mid + 1</text></g><g class="u-line" data-i="8" transform="translate(0 152)"><rect width="256" height="19" rx="3"/><text class="u-line-num" x="16" y="9.5">9</text><text class="u-line-text" x="26" y="9.5">        else:</text></g><g class="u-line" data-i="9" transform="translate(0 171)"><rect width="256" height="19" rx="3"/><text class="u-line-num" x="16" y="9.5">10</text><text class="u-line-text" x="26" y="9.5">            hi = mid - 1</text></g><g class="u-line" data-i="10" transform="translate(0 190)"><rect width="256" height="19" rx="3"/><text class="u-line-num" x="16" y="9.5">11</text><text class="u-line-text" x="26" y="9.5">    return -1</text></g></g><g class="el-res"><text id="el-res" x="8" y="275">search(a, 50) → …</text></g></g></g><g id="el-scale"><g class="el-S1"><g class="el-plotbox"><g class="u-plot" id="el-plot" data-scale="60 30 380 250 0 9 0 32"><path class="u-plot-grid" d="M60 30V280M102.2 30V280M144.4 30V280M186.7 30V280M228.9 30V280M271.1 30V280M313.3 30V280M355.6 30V280M397.8 30V280M440 30V280M60 280H440M60 201.9H440M60 123.8H440M60 45.6H440"/><path class="u-plot-axis" d="M60 280H440M60 30V280M60 280v4M102.2 280v4M144.4 280v4M186.7 280v4M228.9 280v4M271.1 280v4M313.3 280v4M355.6 280v4M397.8 280v4M440 280v4M60 280h-4M60 201.9h-4M60 123.8h-4M60 45.6h-4"/><text class="u-tick-label" x="60" y="295" text-anchor="middle">0</text><text class="u-tick-label" x="102.2" y="295" text-anchor="middle">1</text><text class="u-tick-label" x="144.4" y="295" text-anchor="middle">2</text><text class="u-tick-label" x="186.7" y="295" text-anchor="middle">3</text><text class="u-tick-label" x="228.9" y="295" text-anchor="middle">4</text><text class="u-tick-label" x="271.1" y="295" text-anchor="middle">5</text><text class="u-tick-label" x="313.3" y="295" text-anchor="middle">6</text><text class="u-tick-label" x="355.6" y="295" text-anchor="middle">7</text><text class="u-tick-label" x="397.8" y="295" text-anchor="middle">8</text><text class="u-tick-label" x="440" y="295" text-anchor="middle">9</text><text class="u-tick-label" x="53" y="283.5" text-anchor="end">0</text><text class="u-tick-label" x="53" y="205.4" text-anchor="end">10</text><text class="u-tick-label" x="53" y="127.3" text-anchor="end">20</text><text class="u-tick-label" x="53" y="49.1" text-anchor="end">30</text><text class="u-plot-name" data-hue="yellow" x="60" y="22" text-anchor="middle">probes</text></g><path class="el-stairs" d="M60 272.2H72.7V264.4H85.4V256.6H98.1V248.8H110.8V240.9H123.6V233.1H136.3V225.3H149V217.5H161.7V209.7H174.4V201.9H187.1V194.1H199.8V186.3H212.5V178.4H225.2V170.6H237.9V162.8H250.7V155H263.4V147.2H276.1V139.4H288.8V131.6H301.5V123.8H314.2V115.9H326.9V108.1H339.6V100.3H352.3V92.5H365V84.7H377.8V76.9H390.5V69.1H403.2V61.3H415.9V53.4H428.6V45.6H440"/><path class="el-linear" d="M60 272.2L62.1 271.2L64.2 270.2L66.4 269L68.5 267.6L70.6 266.1L72.7 264.4L74.8 262.5L76.9 260.3L79.1 257.9L81.2 255.2L83.3 252.2L85.4 248.8L87.5 244.9L89.7 240.6L91.8 235.8L93.9 230.4L96 224.3L98.1 217.5L100.2 209.8L102.4 201.3L104.5 191.6L106.6 180.8L108.7 168.6L110.8 155L113 139.7L115.1 122.5L117.2 103.2L119.3 81.6L121.4 57.3L123.6 30"/><g class="el-lin-l"><text x="131.6" y="40">linear scan: n compares</text></g><text class="el-xl" x="60" y="295">1</text><text class="el-xl" x="102.2" y="295">10</text><text class="el-xl" x="144.4" y="295">100</text><text class="el-xl" x="186.7" y="295">10³</text><text class="el-xl" x="228.9" y="295">10⁴</text><text class="el-xl" x="271.1" y="295">10⁵</text><text class="el-xl" x="313.3" y="295">10⁶</text><text class="el-xl" x="355.6" y="295">10⁷</text><text class="el-xl" x="397.8" y="295">10⁸</text><text class="el-xl" x="440" y="295">10⁹</text><text class="el-xname" x="250" y="314">n, sorted values (log scale)</text><g id="el-pt" class="el-pt" style="transform:translate(440px,45.6px)"><circle r="5"/><g class="el-pt-l"><text x="-10" y="-12">30 probes</text></g></g></g></g><g class="el-S2"><g class="el-tablebox" transform="translate(0 40)"><text class="el-th el-th-r" x="610" y="0">n</text><text class="el-th el-th-r el-th-p" x="700" y="0">probes</text><text class="el-th el-th-r" x="812" y="0">linear scan</text><path class="el-rule" d="M508 10H816"/><g class="el-tr" transform="translate(0 30)"><text x="610">16</text><text class="el-tp" x="700">5</text><text x="812">16</text></g><g class="el-tr" transform="translate(0 56)"><text x="610">1,000</text><text class="el-tp" x="700">10</text><text x="812">1,000</text></g><g class="el-tr" transform="translate(0 82)"><text x="610">1,000,000</text><text class="el-tp" x="700">20</text><text x="812">1,000,000</text></g><g class="el-tr" transform="translate(0 108)"><text x="610">1,000,000,000</text><text class="el-tp" x="700">30</text><text x="812">1,000,000,000</text></g><path class="el-rule" d="M508 122H816"/><g class="el-tr el-you" transform="translate(0 140)"><text id="el-yn" x="610">1,000,000,000</text><text id="el-yp" class="el-tp" x="700">30</text><text id="el-yl" x="812">1,000,000,000</text></g><text class="el-th el-th-r" x="812" y="170">worst case, probes counted</text></g></g></g></svg><div class="u-controls"><div class="u-ctl"><label>target t <input type="number" id="el-t" min="0" max="99" step="1" value="50"></label><button type="button" id="el-new">new numbers</button><button type="button" id="el-reset">reset</button><label data-scenes="5">n <input type="range" id="el-n" min="0" max="9" step="0.05" value="9"><output id="el-nout">1,000,000,000</output></label></div><div class="u-time" data-label="step"><button type="button" data-step="-1" aria-label="Previous step">‹</button><input type="range" min="0" max="8" value="0" aria-label="step"><button type="button" data-step="1" aria-label="Next step">›</button><output>step 0 / 8</output></div></div><div class="u-say" aria-live="polite"><p class="u-at" data-at="0">Binary search looks for a <b data-hue="green">target t</b> in a sorted array. The <b data-hue="blue">range</b> from lo to hi holds t, if t is in the array.</p><p class="u-at" data-at="1">Each step <b data-hue="yellow">probes</b> the middle cell of the range. One comparison with t tells which half can still hold t.</p><p class="u-at" data-at="2">The array is sorted, so every cell past mid on that side is <b data-hue="red">ruled out</b> too. The range keeps at most half of its cells.</p><p class="u-at" data-at="3">The loop repeats until a[mid] = t or the range is empty. Each row of the ladder is the range after one more probe.</p><p class="u-at" data-at="4">Each probe goes one level down a tree, and 16 cells fill 5 levels. So no search needs more than 5 probes.</p><p class="u-at" data-at="5">Doubling n adds one level to the tree, so one more probe. A billion sorted values need at most 30 probes.</p></div><nav class="u-steps" aria-label="Scenes"><button type="button" class="u-play" aria-pressed="false"><span>▶</span>Play</button><button type="button" data-go="0" aria-current="step"><span>1</span>Sorted</button><button type="button" data-go="1"><span>2</span>Probe</button><button type="button" data-go="2"><span>3</span>Halve</button><button type="button" data-go="3"><span>4</span>Repeat</button><button type="button" data-go="4"><span>5</span>Tree</button><button type="button" data-go="5"><span>6</span>Scale</button></nav><div class="u-key"><span data-hue="blue"><i></i>range [lo, hi]</span><span data-hue="yellow"><i></i>probe at mid</span><span data-hue="green"><i></i>target t, found</span><span data-hue="red"><i></i>just ruled out</span></div></div></div><figcaption class="iso-legend"><span class="iso-caption">16 distinct values chosen by hand, and t = 50 chosen so the run cuts both ways. The code panel is Python. On 2026-10-16 python3 ran its exact lines for every target from 0 to 99, and bisect gave the same answers. The worst case was measured for every size up to 600, and on a 10⁹-cell array whose values are computed on demand.</span></figcaption></figure><section class="u-notes"><h2>Worst case by size</h2><p>Each count is measured: the search ran on the worst target and counted its probes.</p><table><thead><tr><th>n</th><th>binary search</th><th>linear scan</th><th>⌊log₂ n⌋ + 1</th></tr></thead><tbody><tr><td data-th="n">16</td><td data-th="binary search">5</td><td data-th="linear scan">16</td><td data-th="⌊log₂ n⌋ + 1">4 + 1 = 5</td></tr><tr><td data-th="n">1,000</td><td data-th="binary search">10</td><td data-th="linear scan">1,000</td><td data-th="⌊log₂ n⌋ + 1">9 + 1 = 10</td></tr><tr><td data-th="n">1,000,000</td><td data-th="binary search">20</td><td data-th="linear scan">1,000,000</td><td data-th="⌊log₂ n⌋ + 1">19 + 1 = 20</td></tr><tr><td data-th="n">1,000,000,000</td><td data-th="binary search">30</td><td data-th="linear scan">1,000,000,000</td><td data-th="⌊log₂ n⌋ + 1">29 + 1 = 30</td></tr></tbody></table><h2>Mistakes that break it</h2><table><thead><tr><th>mistake</th><th>what happens</th></tr></thead><tbody><tr><td data-th="mistake"><code>lo = mid</code> in place of <code>mid + 1</code></td><td data-th="what happens">the range can stop shrinking, and the loop never ends</td></tr><tr><td data-th="mistake"><code>while lo &lt; hi</code> with <code>hi = mid - 1</code></td><td data-th="what happens">the last candidate is never probed</td></tr><tr><td data-th="mistake"><code>(lo + hi) / 2</code> in 32-bit ints</td><td data-th="what happens">overflow above 2³⁰ cells, use <code>lo + (hi - lo) / 2</code></td></tr><tr><td data-th="mistake">array not sorted</td><td data-th="what happens">a cut can rule out t, and the search returns −1</td></tr></tbody></table><h2>Variants you will meet</h2><table><thead><tr><th>variant</th><th>returns</th></tr></thead><tbody><tr><td data-th="variant"><code>bisect_left(a, t)</code> (Python)</td><td data-th="returns">the first index with a[i] ≥ t, so duplicates give the first copy</td></tr><tr><td data-th="variant"><code>std::lower_bound</code> (C++)</td><td data-th="returns">the same index, as an iterator</td></tr><tr><td data-th="variant"><code>Arrays.binarySearch</code> (Java)</td><td data-th="returns">the index, or −(insert point) − 1 when t is missing</td></tr><tr><td data-th="variant">search on the answer</td><td data-th="returns">the first x where a yes/no test turns true</td></tr></tbody></table><h2>Terms</h2><table><thead><tr><th>term</th><th>meaning</th></tr></thead><tbody><tr><td data-th="term">target t</td><td data-th="meaning">the value the search looks for</td></tr><tr><td data-th="term">range [lo, hi]</td><td data-th="meaning">the cells that can still hold t</td></tr><tr><td data-th="term">probe</td><td data-th="meaning">one comparison of a[mid] with t</td></tr><tr><td data-th="term">mid</td><td data-th="meaning">the middle index, ⌊(lo + hi) / 2⌋</td></tr><tr><td data-th="term">ruled out</td><td data-th="meaning">cells that cannot hold t, because the array is sorted</td></tr><tr><td data-th="term">⌊x⌋</td><td data-th="meaning">x rounded down to a whole number</td></tr></tbody></table></section></main><script type="module">function fmt(value, places = 1) {
+  if (value === -Infinity) return "−∞";
+  const text = value.toFixed(places);
+  return Number(text) === 0 ? (0).toFixed(places) : text.replace("-", "−");
+}
+function mark(root, i, selector = ".u-mark") {
+  root.querySelectorAll(`${selector}[data-r],${selector}[data-i]`).forEach((el) => el.toggleAttribute("data-on", Number(el.dataset.r ?? el.dataset.i) === i));
+}
+function setLive(values, root = document) {
+  for (const [name, v] of Object.entries(values))
+    root.querySelectorAll(`[data-live="${name}"]`).forEach((el) => (el.textContent = typeof v === "number" ? fmt(v, Number(el.dataset.places ?? (Number.isInteger(v) ? 0 : 1))) : v));
+}
+function plotAt(plotEl, vx, vy) {
+  const [x, y, w, h, x0, x1, y0, y1] = plotEl.dataset.scale.split(" ").map(Number);
+  return [x + ((vx - x0) / (x1 - x0)) * w, y + h - ((vy - y0) / (y1 - y0)) * h];
+}
+function runtime() {
+  const stage = document.querySelector(".u-stage");
+  const count = Number(stage.dataset.count);
+  const dwell = Number(stage.dataset.dwell);
+  const still = matchMedia("(prefers-reduced-motion: reduce)");
+  let scene = 0;
+  let visible = false;
+  let playing = false;
+  let held = false;
+  let next = 0;
+  const beats = [];
+  const total = (b) => (typeof b.count === "function" ? b.count() : b.count);
+  const go = (i, by = "user") => {
+    scene = Math.max(0, Math.min(count - 1, i));
+    stage.dataset.scene = String(scene);
+    stage.querySelectorAll("[data-go]").forEach((b) => (Number(b.dataset.go) === scene ? b.setAttribute("aria-current", "step") : b.removeAttribute("aria-current")));
+    stage.querySelectorAll("[data-ds]").forEach((el) => {
+      const d = JSON.parse(el.dataset.ds)[scene];
+      el.toggleAttribute("data-off", !d);
+      if (!d) return;
+      if (CSS.supports("d", 'path("M0 0")')) el.style.d = `path("${d}")`;
+      else el.setAttribute("d", d);
+    });
+    scope();
+    fit();
+    stage.dispatchEvent(new CustomEvent("unfold:scene", { detail: { scene, by } }));
+    if (by === "user") setPlaying(false);
+    held = false;
+    next = performance.now() + dwell;
+    for (const b of beats) {
+      b.n = 0;
+      b.at = performance.now() + b.wait - b.ms;
+      if (still.matches && b.scene === scene) b.fn(-1);
+    }
+    setBusy();
+  };
+  // data-busy is on the stage while a counted sweep of this scene still runs. The tour and shoot.mjs wait for it.
+  // A sweep is done one `ms` after its last call, so the last step has time to move. The tour then holds that
+  // last step for `hold` ms before the next scene, so the reader sees the result.
+  const hold = 1800;
+  const setBusy = (now = performance.now()) => {
+    const busy = !held && !still.matches && beats.some((b) => b.scene === scene && total(b) && (b.n < total(b) || now - b.at < b.ms));
+    if (busy === stage.hasAttribute("data-busy")) return;
+    stage.toggleAttribute("data-busy", busy);
+    if (!busy) next = Math.max(next, now + hold);
+  };
+  // The tour runs only after the reader presses Play, and stops at the last scene or at any input.
+  const playBtn = stage.querySelector(".u-play");
+  const setPlaying = (on) => {
+    playing = on;
+    playBtn.setAttribute("aria-pressed", String(on));
+    playBtn.firstChild.textContent = on ? "❚❚" : "▶";
+    playBtn.lastChild.textContent = on ? "Pause" : "Play";
+  };
+  playBtn.addEventListener("click", () => {
+    if (playing) return setPlaying(false);
+    if (scene === count - 1) go(0, "tour");
+    next = performance.now() + dwell;
+    setPlaying(true);
+  });
+  const tour = (now) => {
+    if (playing && visible && now > next && !stage.hasAttribute("data-busy")) scene === count - 1 ? setPlaying(false) : go(scene + 1, "tour");
+    for (const b of beats) {
+      if (b.scene === scene && visible && !held && !still.matches && now - b.at >= b.ms && !(total(b) && b.n >= total(b))) {
+        b.at = now;
+        b.fn(b.n++);
+      }
+    }
+    setBusy(now);
+    requestAnimationFrame(tour);
+  };
+  stage.querySelector(".u-steps").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-go]");
+    if (b) go(Number(b.dataset.go));
+  });
+  stage.addEventListener("keydown", (e) => {
+    const to = { ArrowRight: scene + 1, ArrowLeft: scene - 1, Home: 0, End: count - 1 }[e.key];
+    if (to === undefined) return;
+    e.preventDefault();
+    go(to);
+  });
+  // Time by hand: the step control and the "," and "." keys call the page's onTime(t). Its keys stay inside it.
+  const timer = stage.querySelector(".u-time");
+  let onTime = () => {};
+  const range = timer?.querySelector("input");
+  // onTime first: it may call go(), which releases the sweeps. pause() after it holds them again.
+  const byHand = (t) => {
+    onTime(Math.max(0, Math.min(Number(range.max), t)));
+    pause();
+  };
+  if (timer) {
+    range.addEventListener("input", () => byHand(Number(range.value)));
+    timer.addEventListener("click", (e) => {
+      const b = e.target.closest("[data-step]");
+      if (b) byHand(Number(range.value) + Number(b.dataset.step));
+    });
+    stage.addEventListener("keydown", (e) => {
+      const by = { ",": -1, ".": 1 }[e.key];
+      if (by === undefined) return;
+      e.preventDefault();
+      byHand(Number(range.value) + by);
+    });
+  }
+  // Keys typed in a control (a scrubber, a number field) stay in it: no scene or focus change.
+  stage.querySelectorAll(".u-controls :is(input,select,textarea)").forEach((el) => el.addEventListener("keydown", (e) => e.stopPropagation()));
+  // A scene-scoped control (stageHtml controlScenes, or any element in the controls with data-scenes) is dimmed
+  // in the other scenes, and an input there moves to the first scene that uses it.
+  const ownersOf = (el) => el.dataset.scenes.trim().split(/\s+/).map(Number);
+  function scope() {
+    stage.querySelectorAll(".u-controls [data-scenes]").forEach((el) => el.toggleAttribute("data-idle", !ownersOf(el).includes(scene)));
+  }
+  const toOwner = (e) => {
+    const el = e.target.closest(".u-controls [data-scenes]");
+    if (el && !ownersOf(el).includes(scene)) go(ownersOf(el)[0]);
+  };
+  // Capture phase: the move runs before the page's own handler, so a preset applied on scene entry
+  // does not overwrite what the reader just set.
+  const panel = stage.querySelector(".u-controls");
+  panel?.addEventListener("input", toOwner, true);
+  panel?.addEventListener("click", (e) => e.target.closest("button") && toOwner(e), true);
+  // timeAt(t, steps): show step t. Pass steps when the run's length changed (a live input made a longer trace).
+  const timeAt = (t, steps) => {
+    if (!timer) return;
+    if (steps) range.max = String(steps - 1);
+    range.value = String(t);
+    timer.querySelector("output").textContent = `${timer.dataset.label} ${t} / ${range.max}`;
+  };
+  // Narrow layout: below 560 px the drawing takes its second viewBox and the stage gets data-narrow.
+  // With one narrow height per scene (data-narrow-h), the viewBox follows the scene.
+  const svg = stage.querySelector("svg");
+  const wide = svg?.getAttribute("viewBox");
+  const heights = stage.dataset.narrowH?.split(" ");
+  function fit() {
+    if (!stage.dataset.narrowBox) return;
+    const box = stage.dataset.narrowBox.split(" ");
+    if (heights) box[3] = heights[scene] ?? box[3];
+    svg.setAttribute("viewBox", stage.hasAttribute("data-narrow") ? box.join(" ") : wide);
+  }
+  if (stage.dataset.narrowBox)
+    new ResizeObserver(([entry]) => {
+      const on = entry.contentRect.width < 560;
+      if (on === stage.hasAttribute("data-narrow")) return;
+      stage.toggleAttribute("data-narrow", on);
+      fit();
+      stage.dispatchEvent(new CustomEvent("unfold:layout", { detail: { narrow: on } }));
+    }).observe(stage);
+  scope();
+  new IntersectionObserver((entries) => (visible = entries[entries.length - 1].isIntersecting), { rootMargin: "120px 0px" }).observe(stage);
+  next = performance.now() + dwell;
+  requestAnimationFrame(tour);
+  // beat(scene, ms, fn, wait, count): call fn(0), fn(1), … every ms while that scene shows, starting `wait` ms after it opens.
+  // With count, it stops after fn(count - 1) and the stage loses data-busy. Without it, the sweep never ends (a loop).
+  // count may be a function, read on every frame, for a run whose length a live input changes.
+  // Under reduced motion fn(-1) is called once instead: show the resting state.
+  const beat = (sceneIndex, ms, fn, wait = 1000, count = 0) => {
+    // No setBusy() here: the next frame runs it, so a count function may read data the page sets up after this call.
+    beats.push({ scene: sceneIndex, ms, fn, wait, count, n: 0, at: performance.now() + wait - ms });
+  };
+  // pause(): the user took control. The tour stops, and the sweeps hold until the scene changes.
+  const pause = () => {
+    setPlaying(false);
+    held = true;
+    setBusy();
+  };
+  return { stage, go, beat, pause, scene: () => scene, onTime: (fn) => (onTime = fn), timeAt, narrow: () => stage.hasAttribute("data-narrow") };
+}
+const UNFOLD = runtime();
+
+const N = 16;
+const A0 = [3,8,12,17,21,26,30,35,41,44,50,57,63,68,74,79];
+const T0 = 50;
+const T_MIN = 0;
+const T_MAX = 99;
+const DEPTH = [3,2,3,1,3,2,3,0,3,2,3,1,3,2,3,4];
+const PARENT = [1,3,1,7,5,3,5,-1,9,11,9,7,13,11,13,14];
+function search(a, t) {
+  let lo = 0;
+  let hi = a.length - 1;
+  let probes = 0;
+  const steps = [{ kind: "init", lo, hi, mid: -1, probes, line: 1 }];
+  while (lo <= hi) {
+    const mid = Math.floor((lo + hi) / 2);
+    const v = a[mid];
+    probes++;
+    const rel = v === t ? "=" : v < t ? "<" : ">";
+    steps.push({ kind: "probe", lo, hi, mid, v, rel, probes, line: 3 });
+    if (rel === "=") {
+      steps.push({ kind: "found", lo, hi, mid, v, rel, probes, line: 5 });
+      return steps;
+    }
+    // The cut keeps the old range too, so the page can label the ruled-out part.
+    const from = [lo, hi];
+    if (rel === "<") lo = mid + 1;
+    else hi = mid - 1;
+    steps.push({ kind: "cut", lo, hi, mid, v, rel, from, probes, line: rel === "<" ? 7 : 9 });
+  }
+  steps.push({ kind: "empty", lo, hi, mid: -1, probes, line: 10 });
+  return steps;
+}
+function answer(steps) {
+  const last = steps[steps.length - 1];
+  return last.kind === "found" ? last.mid : -1;
+}
+function ladder(steps, s) {
+  const rows = [];
+  for (const x of steps.slice(0, s + 1)) {
+    if (x.kind === "init" || x.kind === "cut") rows.push({ lo: x.lo, hi: x.hi, mid: -1, size: Math.max(0, x.hi - x.lo + 1) });
+    if (x.kind === "probe") rows[rows.length - 1].mid = x.mid;
+  }
+  return rows;
+}
+function maxProbes(n) {
+  let k = 0;
+  for (let c = n; c > 0; c = Math.floor(c / 2)) k++;
+  return k;
+}
+function sceneRanges(steps) {
+  const last = steps.length - 1;
+  const c = (i) => Math.min(i, last);
+  return [[0, 0], [c(1), c(1)], [c(2), c(2)], [c(3), last], [last, last], [last, last]];
+}
+function makeArray(seed) {
+  let s = seed;
+  const picked = new Set();
+  while (picked.size < N) {
+    s = (s * 1103515245 + 12345) % 2147483648;
+    picked.add(1 + (s % 98));
+  }
+  return [...picked].sort((x, y) => x - y);
+}
+
+const root = UNFOLD.stage;
+const readout = document.querySelector("[data-readout]");
+const $ = (s) => root.querySelector(s);
+const all = (s) => [...root.querySelectorAll(s)];
+const X0 = 72, CW = 28;
+const cellEl = all(".el-cell"), rowEl = all(".el-row"), linkEl = all(".el-link");
+const codeEl = $("#el-code"), midp = $("#el-midp"), cutl = $("#el-cutl");
+const plotEl = $("#el-plot");
+const field = $("#el-t"), slider = $("#el-n"), nout = $("#el-nout");
+let arr = A0.slice(), t = T0, seed = 0;
+let steps, ranges, step = 0, crossing = false, treeN = 99, nLog = 9;
+const cxOf = (i) => X0 + i * CW + CW / 2;
+const fmtN = (n) => n.toLocaleString("en-US");
+const minus = (s) => String(s).replace("-", "\u2212");
+function recompute() {
+  steps = search(arr, t);
+  ranges = sceneRanges(steps);
+}
+function say(x, s) {
+  const h = "step " + s + " \u00b7 ";
+  if (x.kind === "init") return h + "lo = 0, hi = 15: 16 cells may hold t = " + t;
+  if (x.kind === "probe") return h + "mid = \u230a(" + x.lo + " + " + x.hi + ")/2\u230b = " + x.mid + ", compare a[" + x.mid + "] = " + x.v + " with " + t;
+  if (x.kind === "cut") return h + x.v + " " + x.rel + " " + t + ", so " + (x.rel === "<" ? "lo = " + x.mid + " + 1 = " + x.lo : "hi = " + x.mid + " \u2212 1 = " + x.hi) + ": " + Math.max(0, x.hi - x.lo + 1) + " left";
+  if (x.kind === "found") return h + "a[" + x.mid + "] = " + t + ": return " + x.mid + " after " + x.probes + " probes";
+  return h + "lo = " + x.lo + " > hi = " + x.hi + ": return \u22121 after " + x.probes + " probes";
+}
+function show(s) {
+  step = Math.max(0, Math.min(steps.length - 1, s));
+  const x = steps[step];
+  const tree = UNFOLD.scene() === 4;
+  const last = steps[steps.length - 1];
+  const path = steps.filter((y) => y.kind === "probe").map((y) => y.mid);
+  const lit = path.slice(0, treeN);
+  const at = answer(steps);
+  cellEl.forEach((el, i) => {
+    el.querySelector(".el-v").textContent = arr[i];
+    const out = !tree && (i < x.lo || i > x.hi);
+    const cut = !tree && x.kind === "cut" && out && i >= x.from[0] && i <= x.from[1];
+    el.toggleAttribute("data-out", out && !cut);
+    el.toggleAttribute("data-cut", cut);
+    el.toggleAttribute("data-mid", !tree && x.kind === "probe" && i === x.mid);
+    el.toggleAttribute("data-found", tree ? i === at && lit.length === path.length : x.kind === "found" && i === x.mid);
+    const k = lit.indexOf(i);
+    el.toggleAttribute("data-path", tree && k >= 0);
+    if (k >= 0) el.querySelector(".el-ord text").textContent = k + 1;
+  });
+  linkEl.forEach((el) => {
+    const i = Number(el.dataset.i);
+    el.toggleAttribute("data-path", tree && lit.includes(i) && lit.includes(PARENT[i]));
+  });
+  // The probe pointer: the comparison at a probe, the result at the end.
+  midp.toggleAttribute("data-on", ["probe", "found", "empty"].includes(x.kind));
+  midp.toggleAttribute("data-end", x.kind !== "probe");
+  if (x.kind === "probe" || x.kind === "found") {
+    midp.style.transform = "translate(" + cxOf(x.mid) + "px,0)";
+    midp.querySelector("text").textContent = x.kind === "found" ? "found " + t : x.v + " " + x.rel + " " + t;
+  }
+  if (x.kind === "empty") {
+    midp.style.transform = "translate(" + (X0 + x.lo * CW) + "px,0)";
+    midp.querySelector("text").textContent = "no " + t;
+  }
+  cutl.toggleAttribute("data-on", x.kind === "cut");
+  if (x.kind === "cut") {
+    const [a, b] = x.rel === "<" ? [x.from[0], x.mid] : [x.mid, x.from[1]];
+    cutl.style.transform = "translate(" + (X0 + ((a + b + 1) / 2) * CW) + "px,0)";
+    cutl.querySelector("text").textContent = "all " + x.rel + " " + t;
+    const half = ((b - a + 1) * CW) / 2 - 3;
+    cutl.querySelector(".el-cutline").setAttribute("d", "M" + -half + " 44H" + half);
+  }
+  const L = X0 + x.lo * CW, R = X0 + (x.hi + 1) * CW;
+  $("#el-br").setAttribute("d", "M" + L + " 104V109H" + Math.max(L, R) + "V104");
+  // lo left of the bracket, hi right of it. An empty range (lo = hi + 1) swaps them, so they never overlap.
+  const lo = $("#el-lo"), hi = $("#el-hi"), empty = x.lo > x.hi;
+  lo.setAttribute("x", empty ? L + 7 : L - 4);
+  lo.setAttribute("text-anchor", empty ? "start" : "end");
+  hi.setAttribute("x", empty ? L - 7 : R + 4);
+  hi.setAttribute("text-anchor", empty ? "end" : "start");
+  const rows = ladder(steps, step);
+  rowEl.forEach((el, k) => {
+    const r = rows[k];
+    el.toggleAttribute("data-on", !!r);
+    if (!r) return;
+    el.toggleAttribute("data-now", k === rows.length - 1);
+    el.toggleAttribute("data-zero", r.size === 0);
+    el.toggleAttribute("data-mid", r.mid >= 0);
+    el.querySelector(".el-rc").textContent = r.size;
+    const bar = el.querySelector(".el-rbar");
+    bar.setAttribute("x", X0 + r.lo * CW);
+    bar.setAttribute("width", r.size * CW);
+    el.querySelector(".el-rzero").setAttribute("d", "M" + (X0 + r.lo * CW) + " -2V16");
+    if (r.mid >= 0) el.querySelector(".el-rdot").setAttribute("cx", cxOf(r.mid));
+  });
+  all(".el-slot").forEach((el, k) => el.toggleAttribute("data-on", k < x.probes));
+  $("#el-budt").textContent = x.probes + " of at most " + maxProbes(arr.length);
+  mark(codeEl, tree ? -1 : x.line, ".u-line");
+  $("#el-tchip text").textContent = "t = " + t;
+  const end = x.kind === "found" || x.kind === "empty";
+  $("#el-res").textContent = "search(a, " + t + ") \u2192 " + (end ? minus(answer(steps)) : "\u2026");
+  $(".el-res").toggleAttribute("data-done", x.kind === "found");
+  UNFOLD.timeAt(step, steps.length);
+  let text = say(x, step);
+  if (tree) text = "t = " + t + ": probes " + lit.join(" \u2192 ") + (at >= 0 ? ", found at " + at : ", not in the array") + ", " + path.length + " of at most 5";
+  if (UNFOLD.scene() === 5) text = scaleText();
+  if (readout.textContent !== text) readout.textContent = text;
+}
+function scaleText() {
+  const n = Math.max(1, Math.round(10 ** nLog));
+  const p = maxProbes(n);
+  return "n = " + fmtN(n) + ": \u230alog\u2082 n\u230b + 1 = " + (p - 1) + " + 1 = " + p + " probes at most";
+}
+function renderScale() {
+  const n = Math.max(1, Math.round(10 ** nLog));
+  const p = maxProbes(n);
+  const [px, py] = plotAt(plotEl, Math.log10(n), p);
+  $("#el-pt").style.transform = "translate(" + px + "px," + py + "px)";
+  $("#el-pt text").textContent = p + (p === 1 ? " probe" : " probes");
+  $("#el-yn").textContent = fmtN(n);
+  $("#el-yp").textContent = p;
+  $("#el-yl").textContent = fmtN(n);
+  nout.textContent = fmtN(n);
+  setLive({ n: fmtN(n), fl: p - 1, p });
+  if (UNFOLD.scene() === 5) readout.textContent = scaleText();
+}
+function stepTo(s) {
+  show(s);
+  const [a, b] = ranges[UNFOLD.scene()];
+  if (step < a || step > b) {
+    crossing = true;
+    UNFOLD.go(ranges.findIndex((r) => step >= r[0] && step <= r[1]));
+    crossing = false;
+    show(step);
+  }
+}
+root.addEventListener("unfold:scene", (e) => {
+  const sc = e.detail.scene;
+  if (sc === 4) treeN = 0;
+  if (sc === 5) renderScale();
+  if (!crossing) show(ranges[sc][0]);
+});
+recompute();
+for (let sc = 0; sc < 4; sc++)
+  UNFOLD.beat(sc, 950, (k) => { const [a, b] = ranges[sc]; show(k < 0 ? b : Math.min(a + k, b)); }, 500, () => ranges[sc][1] - ranges[sc][0] + 1);
+UNFOLD.beat(4, 750, (k) => { treeN = k < 0 ? 99 : k + 1; show(steps.length - 1); }, 1100, () => steps.filter((y) => y.kind === "probe").length);
+UNFOLD.beat(5, 70, (k) => { nLog = k < 0 ? 9 : Math.min(9, k * 0.25); slider.value = String(nLog); renderScale(); }, 600, 37);
+UNFOLD.onTime(stepTo);
+// The verb: search for the reader's target. The page reruns the model's own search().
+function redo() {
+  UNFOLD.pause();
+  recompute();
+  const sc = UNFOLD.scene();
+  UNFOLD.go(sc === 4 ? 4 : 3);
+}
+function setTarget(v) {
+  t = Math.round(Math.max(T_MIN, Math.min(T_MAX, v)));
+  field.value = t;
+  redo();
+}
+root.addEventListener("click", (e) => {
+  const c = e.target.closest(".el-cell");
+  if (c) setTarget(arr[Number(c.dataset.i)]);
+});
+root.addEventListener("keydown", (e) => {
+  const by = { ArrowUp: 1, ArrowDown: -1 }[e.key];
+  if (by === undefined) return;
+  e.preventDefault();
+  setTarget(t + by);
+});
+field.addEventListener("input", () => {
+  const v = Number(field.value);
+  if (field.value === "" || !Number.isFinite(v)) return;
+  UNFOLD.pause();
+  t = Math.round(Math.max(T_MIN, Math.min(T_MAX, v)));
+  redo();
+});
+field.addEventListener("change", () => (field.value = t));
+$("#el-new").addEventListener("click", () => {
+  seed = (seed % 300) + 1;
+  arr = makeArray(seed);
+  redo();
+});
+$("#el-reset").addEventListener("click", () => {
+  arr = A0.slice();
+  t = T0;
+  field.value = t;
+  nLog = 9;
+  slider.value = "9";
+  renderScale();
+  redo();
+});
+slider.addEventListener("input", () => {
+  UNFOLD.pause();
+  nLog = Number(slider.value);
+  renderScale();
+});
+renderScale();
+show(0);
+</script></body></html>

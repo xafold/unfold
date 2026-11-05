@@ -1,0 +1,91 @@
+{
+ "date": "2026-10-16",
+ "kernel": "Linux 7.1.5-76070105-generic",
+ "segments": [
+  {
+   "from": "client",
+   "flags": [
+    "SYN"
+   ],
+   "seq": 3613854406,
+   "ack": null,
+   "len": 0
+  },
+  {
+   "from": "server",
+   "flags": [
+    "SYN",
+    "ACK"
+   ],
+   "seq": 103912856,
+   "ack": 3613854407,
+   "len": 0
+  },
+  {
+   "from": "client",
+   "flags": [
+    "ACK"
+   ],
+   "seq": 3613854407,
+   "ack": 103912857,
+   "len": 0
+  },
+  {
+   "from": "client",
+   "flags": [
+    "PSH",
+    "ACK"
+   ],
+   "seq": 3613854407,
+   "ack": 103912857,
+   "len": 5
+  },
+  {
+   "from": "server",
+   "flags": [
+    "ACK"
+   ],
+   "seq": 103912857,
+   "ack": 3613854412,
+   "len": 0
+  },
+  {
+   "from": "client",
+   "flags": [
+    "FIN",
+    "ACK"
+   ],
+   "seq": 3613854412,
+   "ack": 103912857,
+   "len": 0
+  },
+  {
+   "from": "server",
+   "flags": [
+    "ACK"
+   ],
+   "seq": 103912857,
+   "ack": 3613854413,
+   "len": 0
+  },
+  {
+   "from": "server",
+   "flags": [
+    "FIN",
+    "ACK"
+   ],
+   "seq": 103912857,
+   "ack": 3613854413,
+   "len": 0
+  },
+  {
+   "from": "client",
+   "flags": [
+    "ACK"
+   ],
+   "seq": 3613854413,
+   "ack": 103912858,
+   "len": 0
+  }
+ ]
+}

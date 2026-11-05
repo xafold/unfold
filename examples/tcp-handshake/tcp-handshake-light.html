@@ -1,0 +1,916 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TCP handshake and teardown</title><style>
+.iso{
+  --anatomy-page:#0b0b0b;--anatomy-card:#131313;--anatomy-text:#a3a3a3;--anatomy-strong:#e6e6e6;--anatomy-muted:#6e6e6e;
+  --anatomy-paper:#131313;--anatomy-face:#1b1b1b;--anatomy-top:#1c1c1c;
+  --anatomy-shade-0:#0f0f0f;--anatomy-shade-1:#121212;--anatomy-shade-2:#151515;--anatomy-shade-3:#181818;
+  --anatomy-lit-top:#262626;--anatomy-lit-shade:#1d1d1d;
+  --anatomy-hi:#d4d4d4;--anatomy-mid:#6a6a6a;--anatomy-lo:#3e3e3e;--anatomy-faint:#2a2a2a;--anatomy-lit:#ffffff;
+  --anatomy-halo:#050505;--anatomy-halo-opacity:.9;--anatomy-dot:#e6e6e6;
+  --anatomy-red:#ff6b6b;--anatomy-green:#6be0a0;--anatomy-blue:#6b9bff;
+  --anatomy-weight:.6px;--anatomy-ease:cubic-bezier(.32,.72,0,1);
+  --anatomy-mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --anatomy-lift:inset 0 1px 0 0 #ffffff0a,inset 0 0 0 1px #ffffff06,0 0 0 1px #00000026,0 1px 1px -.5px #00000014,0 3px 3px -1.5px #00000014,0 6px 6px -3px #00000014,0 12px 12px -6px #00000014;
+}
+.iso[data-theme="light"]{
+  --anatomy-page:#f2f2ef;--anatomy-card:#fbfbfa;--anatomy-text:#57575a;--anatomy-strong:#18181a;--anatomy-muted:#8c8c90;
+  --anatomy-paper:#fbfbfa;--anatomy-face:#ffffff;--anatomy-top:#ffffff;
+  --anatomy-shade-0:#dcdcd9;--anatomy-shade-1:#e5e5e2;--anatomy-shade-2:#ededea;--anatomy-shade-3:#f4f4f1;
+  --anatomy-lit-top:#ffffff;--anatomy-lit-shade:#eeeeeb;
+  --anatomy-hi:#26262a;--anatomy-mid:#8a8a8f;--anatomy-lo:#b4b4b8;--anatomy-faint:#d4d4d6;--anatomy-lit:#000000;
+  --anatomy-halo:#8a8a80;--anatomy-halo-opacity:.32;--anatomy-dot:#3a3a3e;
+  --anatomy-red:#e5484d;--anatomy-green:#30a46c;--anatomy-blue:#3e63dd;
+  --anatomy-lift:inset 0 1px 0 0 #ffffff,0 0 0 1px #0000000f,0 1px 1px -.5px #0000000a,0 3px 3px -1.5px #0000000a,0 6px 6px -3px #0000000a,0 12px 12px -6px #0000000a;
+}
+.iso-svg{display:block;width:100%;height:auto;overflow:visible}
+.iso-svg path,.iso-svg circle{vector-effect:non-scaling-stroke}
+.iso-fill{fill:var(--anatomy-paper);stroke:none}
+.iso-solid[data-lit]>.iso-fill{fill:var(--anatomy-face)}
+.iso-shade,.iso-top{stroke:none}
+.iso-shade[data-shade="0"]{fill:var(--anatomy-shade-0)}
+.iso-shade[data-shade="1"]{fill:var(--anatomy-shade-1)}
+.iso-shade[data-shade="2"]{fill:var(--anatomy-shade-2)}
+.iso-shade[data-shade="3"]{fill:var(--anatomy-shade-3)}
+.iso-top{fill:var(--anatomy-top)}
+.iso-solid[data-lit]>.iso-top{fill:var(--anatomy-lit-top)}
+.iso-solid[data-lit]>.iso-shade{fill:var(--anatomy-lit-shade)}
+.iso-solid[data-seamless]>.iso-shade,.iso-solid[data-seamless]>.iso-top{stroke-width:.4;stroke-linejoin:round}
+.iso-solid[data-seamless]>.iso-shade[data-shade="0"]{stroke:var(--anatomy-shade-0)}
+.iso-solid[data-seamless]>.iso-shade[data-shade="1"]{stroke:var(--anatomy-shade-1)}
+.iso-solid[data-seamless]>.iso-shade[data-shade="2"]{stroke:var(--anatomy-shade-2)}
+.iso-solid[data-seamless]>.iso-shade[data-shade="3"]{stroke:var(--anatomy-shade-3)}
+.iso-solid[data-seamless]>.iso-top{stroke:var(--anatomy-top)}
+.iso-solid[data-seamless][data-lit]>.iso-top{stroke:var(--anatomy-lit-top)}
+.iso-solid[data-seamless][data-lit]>.iso-shade{stroke:var(--anatomy-lit-shade)}
+.iso-solid[data-lit]>.iso-edge{stroke:var(--anatomy-lit)}
+.iso-halo{fill:var(--anatomy-halo);stroke:none;filter:blur(9px);opacity:var(--anatomy-halo-opacity);transform:translateY(3px)}
+.iso-line{fill:none;stroke:var(--anatomy-lo);stroke-width:var(--anatomy-weight);stroke-linecap:round;stroke-linejoin:round}
+.iso-line[data-tone="hi"]{stroke:var(--anatomy-hi)}
+.iso-line[data-tone="mid"]{stroke:var(--anatomy-mid)}
+.iso-line[data-tone="lo"]{stroke:var(--anatomy-lo)}
+.iso-line[data-tone="faint"]{stroke:var(--anatomy-faint)}
+.iso-line[data-tone="lit"]{stroke:var(--anatomy-lit)}
+.iso-line[data-tone="red"]{stroke:var(--anatomy-red)}
+.iso-line[data-tone="green"]{stroke:var(--anatomy-green)}
+.iso-line[data-tone="blue"]{stroke:var(--anatomy-blue)}
+.iso-line[data-dotted]{stroke-dasharray:.01 3.5;stroke-width:1}
+.iso-line[data-dashed]{stroke-dasharray:3 3}
+.iso-line[data-flow]{stroke-dasharray:2 6}
+.iso-wire-end{fill:var(--anatomy-paper);stroke:var(--anatomy-lo);stroke-width:var(--anatomy-weight)}
+.iso-wire[data-tone="hi"] .iso-wire-end{stroke:var(--anatomy-hi)}
+.iso-wire[data-tone="mid"] .iso-wire-end{stroke:var(--anatomy-mid)}
+.iso-wire[data-tone="faint"] .iso-wire-end{stroke:var(--anatomy-faint)}
+.iso-wire[data-tone="lit"] .iso-wire-end{stroke:var(--anatomy-lit)}
+.iso-dots circle{fill:var(--anatomy-dot);stroke:none;opacity:.32}
+.iso-dots[data-tone="hi"] circle{opacity:.85}
+.iso-dots[data-tone="mid"] circle{opacity:.45}
+.iso-dots[data-tone="lo"] circle{opacity:.22}
+.iso-dots[data-tone="faint"] circle{opacity:.12}
+.iso-face-text{fill:var(--anatomy-mid);font-family:var(--anatomy-mono);letter-spacing:.04em}
+.iso-face-text[data-tone="hi"]{fill:var(--anatomy-hi)}
+.iso-face-text[data-tone="lo"]{fill:var(--anatomy-lo)}
+.iso-face-text[data-tone="faint"]{fill:var(--anatomy-faint)}
+.tb-body{fill:var(--anatomy-shade-2);stroke:none}
+.tb-shine{fill:var(--anatomy-top);stroke:none}
+.tb-shade{fill:var(--anatomy-shade-0);stroke:none}
+.tb-ring{fill:none;stroke:var(--anatomy-lo);stroke-width:.45;stroke-linecap:butt;stroke-linejoin:round}
+.tb-ring[data-tone="mid"]{stroke:var(--anatomy-mid)}
+.tb-ring[data-tone="faint"]{stroke:var(--anatomy-faint)}
+.tb-ring[data-tone="hi"]{stroke:var(--anatomy-hi)}
+@keyframes iso-flow{to{stroke-dashoffset:-32}}
+@keyframes iso-pulse{0%,100%{opacity:.18}12%{opacity:1}40%{opacity:.18}}
+.iso-line[data-flow]{animation:iso-flow 1600ms linear infinite}
+.iso-dots circle[data-pulse]{animation:iso-pulse 1600ms steps(1,end) infinite;animation-delay:var(--pulse-at,0ms)}
+.iso-figure{margin:32px 0 36px}
+.iso-plate{position:relative;padding:52px 24px;border-radius:0;background:var(--anatomy-card);box-shadow:0 0 0 1px var(--anatomy-mid);--anatomy-paper:var(--anatomy-card)}
+.iso-plate-corners{position:absolute;inset:18px 20px;pointer-events:none}
+.iso-plate-corner{position:absolute;color:var(--anatomy-muted);font-family:var(--anatomy-mono);font-size:10.5px;line-height:1;letter-spacing:.04em;white-space:nowrap}
+.iso-plate-corner[data-corner="fig"]{top:0;left:0;color:var(--anatomy-text)}
+.iso-plate-corner[data-corner="title"]{top:0;right:0;text-transform:uppercase;letter-spacing:.1em}
+.iso-plate-corner[data-corner="hint"]{bottom:0;left:0;text-transform:uppercase;letter-spacing:.1em}
+.iso-plate-corner[data-corner="readout"]{right:0;bottom:0;color:var(--anatomy-text);font-variant-numeric:tabular-nums}
+.iso-plate .iso-svg{margin:0 auto}
+.iso-legend{display:grid;gap:8px;margin-top:12px;color:var(--anatomy-muted);font-size:13px;line-height:1.55}
+.iso-keys{display:flex;flex-wrap:wrap;gap:6px 18px}
+.iso-key{display:inline-flex;align-items:center;gap:7px}
+.iso-swatch{width:16px;height:10px;flex:none;overflow:visible}
+.iso-swatch path{fill:none;stroke:var(--anatomy-hi);stroke-width:1;vector-effect:non-scaling-stroke;stroke-linejoin:round;stroke-linecap:round}
+.iso-swatch[data-mark="raised"] path,.iso-swatch[data-mark="flat"] path{stroke:var(--anatomy-mid)}
+.iso-swatch[data-mark="lit"] path{stroke:var(--anatomy-lit)}
+.iso-swatch[data-mark="dim"] path{stroke:var(--anatomy-lo)}
+.iso-swatch[data-mark="dotted"] path{stroke-dasharray:.01 3;stroke-width:1.4}
+.iso-swatch[data-mark="dashed"] path{stroke-dasharray:3 2.5}
+.iso-swatch[data-mark="red"] path{stroke:var(--anatomy-red)}
+.iso-swatch[data-mark="green"] path{stroke:var(--anatomy-green)}
+.iso-swatch[data-mark="blue"] path{stroke:var(--anatomy-blue)}
+.iso-swatch-crease{stroke:var(--anatomy-lo)!important}
+@media (max-width:560px){.iso-plate{padding:48px 12px 70px}.iso-plate-corner[data-corner="hint"]{bottom:18px}}
+@media (prefers-reduced-motion:reduce){.iso-line[data-flow],.iso-dots circle[data-pulse]{animation:none}}
+
+*{box-sizing:border-box}
+html{color-scheme:dark}
+body[data-theme="light"]{color-scheme:light}
+body{margin:0;background:var(--anatomy-page);color:var(--anatomy-text);font:14px/1.6 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+.iso-page{width:min(900px,100% - 32px);margin:64px auto 96px}
+</style></head><body class="iso" data-theme="light"><main class="iso-page"><style>
+.iso{--unfold-blue:#58c4dd;--unfold-yellow:#f4d345;--unfold-red:#fc6255;--unfold-green:#83c167;--unfold-teal:#5cd0b3;--unfold-purple:#b48ad1;--unfold-gold:#f0ac5f;--unfold-on-hot:#0b0b0b;--unfold-serif:"Latin Modern Math","STIX Two Math","Cambria Math",math,serif}
+.iso[data-theme="light"]{--unfold-blue:#1f78a4;--unfold-yellow:#a67c00;--unfold-red:#cf3b2e;--unfold-green:#3e8a2a;--unfold-teal:#16866b;--unfold-purple:#7a4fa3;--unfold-gold:#b8661a;--unfold-on-hot:#ffffff}
+[data-hue="blue"]{--hue:var(--unfold-blue)}[data-hue="yellow"]{--hue:var(--unfold-yellow)}[data-hue="red"]{--hue:var(--unfold-red)}[data-hue="green"]{--hue:var(--unfold-green)}[data-hue="teal"]{--hue:var(--unfold-teal)}[data-hue="purple"]{--hue:var(--unfold-purple)}[data-hue="gold"]{--hue:var(--unfold-gold)}[data-hue="ink"]{--hue:var(--anatomy-hi)}
+.u-key{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 16px;margin-top:10px;color:var(--anatomy-muted);font-size:12px}
+.u-key>span{display:inline-flex;align-items:center;gap:6px}
+.u-key i{width:10px;height:10px;border-radius:2px;background:var(--hue)}
+.u-key i.u-hollow{background:none;box-shadow:inset 0 0 0 1.2px var(--anatomy-mid)}
+.u-key i.u-solid{background:var(--anatomy-mid)}
+.u-stage{position:relative;outline:none;container-type:inline-size;--u-fade:.5s;--u-fade-at:.22s}
+.u-stage:focus-visible{outline:1px solid var(--anatomy-faint);outline-offset:8px}
+.u-stage .iso-svg{overflow:visible}
+.u-eq,.u-say,.u-cc{display:grid;align-items:center}
+.u-eq>.u-at,.u-say>.u-at,.u-cc>.u-at{grid-area:1/1;opacity:0;visibility:hidden;transition:opacity .2s var(--anatomy-ease),visibility 0s .2s;margin:0}
+.u-eq{min-height:44px;margin-bottom:8px;overflow-x:auto;overflow-y:hidden}
+.u-eq math{font-family:var(--unfold-serif);font-size:20px;color:var(--anatomy-strong)}
+.u-eq [data-hue]{color:var(--hue)}
+.u-say{min-height:48px;margin-top:6px;color:var(--anatomy-text);font-size:14px;line-height:1.55;text-align:center}
+.u-cc{margin-top:6px;color:var(--anatomy-text);font-size:14px;line-height:1.55;text-align:center}
+.u-stage[data-voice] .u-cc{display:none}
+:is(.u-say,.u-cc)>.u-at{max-width:62ch;justify-self:center}
+:is(.u-say,.u-cc) b{color:var(--anatomy-strong);font-weight:500}
+:is(.u-say,.u-cc) [data-hue]{color:var(--hue)}
+.u-steps{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin-top:14px}
+.u-steps button{display:inline-flex;align-items:center;gap:6px;padding:5px 10px 5px 6px;border:0;border-radius:999px;background:transparent;color:var(--anatomy-muted);font:11px/1 var(--anatomy-mono);letter-spacing:.04em;cursor:pointer;box-shadow:0 0 0 1px var(--anatomy-faint);transition:color .2s,box-shadow .2s}
+.u-steps button span{display:inline-grid;place-items:center;width:16px;height:16px;border-radius:50%;background:var(--anatomy-faint);color:var(--anatomy-text);font-size:10px}
+.u-steps button:hover{color:var(--anatomy-text)}
+.u-steps button[aria-current]{color:var(--anatomy-strong);box-shadow:0 0 0 1px var(--anatomy-mid)}
+.u-steps button[aria-current] span{background:var(--anatomy-strong);color:var(--anatomy-card)}
+.u-steps :is(.u-play,.u-voice){margin-right:6px}.u-steps :is(.u-play,.u-voice)[aria-pressed="true"]{color:var(--anatomy-strong);box-shadow:0 0 0 1px var(--anatomy-mid)}
+.u-move{transition:transform .9s var(--anatomy-ease),opacity var(--u-fade) var(--anatomy-ease) var(--u-fade-at)}
+.u-grid text,.u-chip text,.u-bars text,.u-arrow text{dominant-baseline:central;text-anchor:middle}
+.u-cell{transform:translate(var(--x),var(--y));transition:transform .9s var(--anatomy-ease) calc(var(--i) * 18ms),opacity .35s}
+.u-cell-bg{fill:var(--hue);fill-opacity:var(--a);stroke:none;transition:fill-opacity .35s,stroke-width .3s}
+.u-cell[data-neg]>.u-cell-bg,.u-cell-bg[data-neg]{fill-opacity:calc(var(--a) * .18);stroke:var(--hue);stroke-opacity:var(--a);stroke-width:1.2}
+.u-cell[data-masked]>.u-cell-bg,.u-cell-bg[data-masked]{fill:none;stroke:var(--anatomy-faint);stroke-width:.8;stroke-dasharray:2 2}
+.u-num{font:500 10px var(--anatomy-mono);font-variant-numeric:tabular-nums;fill:var(--anatomy-strong)}
+.u-cell[data-hot] .u-num{fill:var(--unfold-on-hot)}
+.u-cell[data-masked] .u-num{fill:var(--anatomy-lo)}
+.u-name{font:italic 600 17px var(--unfold-serif);fill:var(--hue);dominant-baseline:auto!important;text-anchor:start!important}
+.u-dims{font:400 10px var(--anatomy-mono);font-style:normal;fill:var(--anatomy-muted)}
+.u-T,.u-dims-T{display:none}
+.u-mark{fill:none;stroke:var(--anatomy-strong);stroke-width:1.2;opacity:0;transition:opacity .3s}
+.u-mark[data-on]{opacity:.9}
+.u-chip rect{fill:var(--anatomy-card);stroke:var(--anatomy-mid);stroke-width:.8;transition:stroke .25s,fill .25s}
+.u-chip text{font:500 11px var(--anatomy-mono);fill:var(--anatomy-text);transition:fill .25s}
+.u-chip[data-hue] rect{stroke:var(--hue)}
+.u-chip[data-hue] text{fill:var(--hue)}
+.u-cell[data-later],.u-mark[data-later]{opacity:0!important;transition:opacity .3s}
+.u-plot-axis{stroke:var(--anatomy-mid);stroke-width:.9;fill:none}
+.u-plot-grid{stroke:var(--anatomy-faint);stroke-width:.6;fill:none}
+.u-tick-label{font:10px var(--anatomy-mono);fill:var(--anatomy-muted)}
+.u-plot-name{font:italic 600 15px var(--unfold-serif);fill:var(--hue,var(--anatomy-text))}
+.u-curve{fill:none;stroke:var(--hue,var(--anatomy-hi));stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.u-chip[data-on] rect{fill:var(--anatomy-strong);stroke:var(--anatomy-strong)}
+.u-chip[data-on] text{fill:var(--anatomy-card)}
+.u-chip[data-i]{cursor:pointer}
+.u-arrow{--w:1.1;color:var(--anatomy-mid)}
+.u-arrow[data-hue]{color:var(--hue)}
+.u-arrow-line{fill:none;stroke:currentColor;stroke-width:var(--w);stroke-linecap:round;transition:stroke-width .4s,opacity .4s}
+.u-arrow-head{fill:currentColor}
+.u-bar-fill{fill:var(--hue);transform-box:fill-box;transform-origin:50% 100%;transform:scaleY(var(--v));transition:transform .6s var(--anatomy-ease)}
+.u-bar-value{font:500 10px var(--anatomy-mono);fill:var(--anatomy-strong);transition:y .6s var(--anatomy-ease)}
+.u-bar-label{font:11px var(--anatomy-mono);fill:var(--anatomy-muted)}
+.u-axis{stroke:var(--anatomy-mid);stroke-width:.8;fill:none}
+.u-link{fill:none;stroke:var(--hue,var(--anatomy-mid));stroke-width:1.1;stroke-linecap:round;transition:d .9s var(--anatomy-ease),opacity .5s var(--anatomy-ease),stroke .3s}
+.u-link[data-off]{opacity:0}
+.u-eq>.u-at{text-align:center}
+.u-eq .u-rule{font:500 14px/1.5 var(--anatomy-mono);color:var(--anatomy-strong);letter-spacing:.01em}
+.u-lane-bg{fill:var(--anatomy-faint);fill-opacity:.18;stroke:var(--anatomy-faint);stroke-width:.6}
+.u-lane-name{font:11px var(--anatomy-mono);fill:var(--hue,var(--anatomy-muted));text-anchor:end;dominant-baseline:central}
+.u-tick{stroke:var(--anatomy-faint);stroke-width:.6}
+.u-lanes .u-tick-label{text-anchor:middle;dominant-baseline:central}
+.u-now{stroke:var(--anatomy-strong);stroke-width:1.2;transition:transform .5s var(--anatomy-ease)}
+.u-span-bar{fill:var(--hue,var(--anatomy-mid));fill-opacity:.9;transform-box:fill-box;transform-origin:0 50%;transform:scaleX(var(--v,1));transition:transform .5s var(--anatomy-ease)}
+.u-span-label{opacity:0;transition:opacity .3s}
+.u-span[data-labeled] .u-span-label{opacity:1}
+.u-span-label text{font:500 10px var(--anatomy-mono);fill:var(--unfold-on-hot);dominant-baseline:central}
+.u-face .u-cell-bg{stroke-width:.5}
+.u-cell-bg{transform-box:fill-box;transform-origin:50% 50%}
+.u-cell[data-hl]>.u-cell-bg{stroke:var(--anatomy-strong);stroke-opacity:1;stroke-width:1.6;animation:u-ping .5s var(--anatomy-ease)}
+.u-pulse{fill:var(--hue,var(--anatomy-strong));filter:drop-shadow(0 0 3px var(--hue,var(--anatomy-strong)))}
+.u-rise{transform-box:fill-box}
+@keyframes u-pop{from{opacity:0;transform:scale(.4)}}
+@keyframes u-fade{from{opacity:0}}
+@keyframes u-rise{from{opacity:0;transform:translateY(-14px)}}
+@keyframes u-grow{from{transform:scaleY(0)}}
+@keyframes u-draw{from{stroke-dasharray:1;stroke-dashoffset:1}to{stroke-dasharray:1;stroke-dashoffset:0}}
+@keyframes u-ping{from{stroke-width:4;stroke-opacity:0}}
+.u-floor-text{font-family:var(--unfold-serif);font-style:italic;font-weight:600;fill:var(--hue,var(--anatomy-text))}
+.u-floor-label{font-family:var(--anatomy-mono);fill:var(--anatomy-muted)}
+.u-guide{fill:none;stroke:var(--anatomy-lo);stroke-width:.8;stroke-dasharray:2 3}
+.u-controls{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px 18px;margin-top:10px}
+.u-controls button{border:0;border-radius:999px;background:transparent;color:var(--anatomy-muted);font:11px/1 var(--anatomy-mono);letter-spacing:.04em;padding:6px 10px;cursor:pointer;box-shadow:0 0 0 1px var(--anatomy-faint);transition:color .2s,box-shadow .2s}
+.u-controls button:hover{color:var(--anatomy-text)}
+.u-controls button[aria-pressed="true"]{color:var(--anatomy-strong);box-shadow:0 0 0 1px var(--anatomy-mid)}
+.u-time{display:flex;align-items:center;gap:8px;flex:1 1 260px;max-width:440px;transition:opacity .4s}
+.u-time button{width:28px;height:28px;padding:0;font-size:15px}
+.u-time input{flex:1;min-width:80px;accent-color:var(--anatomy-hi)}
+.u-ctl{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px 12px;transition:opacity .4s}
+.u-controls [data-scenes]{transition:opacity .4s}.u-controls [data-idle]{opacity:.4}
+.u-sub{font-size:72%}
+.u-line rect{fill:var(--hue,var(--anatomy-hi));fill-opacity:0;transition:fill-opacity .25s}
+.u-line[data-on] rect{fill-opacity:.18}
+.u-line-num{font:10px var(--anatomy-mono);fill:var(--anatomy-lo);text-anchor:end;dominant-baseline:central}
+.u-line-text{font:11.5px var(--anatomy-mono);fill:var(--anatomy-text);dominant-baseline:central;white-space:pre}
+.u-line[data-on] .u-line-text{fill:var(--anatomy-strong)}
+.u-controls label{display:inline-flex;align-items:center;gap:6px;color:var(--anatomy-muted);font:11px var(--anatomy-mono)}
+.u-controls :is(input[type=number],input[type=text]){width:calc(5ch + 28px);padding:4px 6px;border:0;border-radius:6px;background:transparent;color:var(--anatomy-text);font:12px var(--anatomy-mono);font-variant-numeric:tabular-nums;box-shadow:0 0 0 1px var(--anatomy-faint)}
+.u-controls input[type=range]{accent-color:var(--anatomy-hi)}
+.u-controls select{max-width:100%;padding:4px 22px 4px 8px;border:0;border-radius:6px;background:var(--anatomy-card);color:var(--anatomy-text);font:11px var(--anatomy-mono);box-shadow:0 0 0 1px var(--anatomy-faint);cursor:pointer}
+.iso-plate-corner[data-corner="readout"]{max-width:62%;white-space:normal;text-align:right;line-height:1.4}
+.u-time output{font:11px var(--anatomy-mono);color:var(--anatomy-muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.u-more{margin-top:48px}
+.u-more>summary{cursor:pointer;color:var(--anatomy-muted);font:500 12px var(--anatomy-mono);letter-spacing:.04em}
+.u-more>summary:hover,.u-more[open]>summary{color:var(--anatomy-strong)}
+.u-notes{color:var(--anatomy-text);font-size:14px;line-height:1.65}
+.u-notes h2{margin:36px 0 10px;font:500 13px var(--anatomy-mono);letter-spacing:.04em;color:var(--anatomy-strong)}
+.u-notes p,.u-notes ul{margin:0 0 12px;max-width:72ch}
+.u-notes li{margin-bottom:6px}
+.u-notes b{color:var(--anatomy-strong);font-weight:500}
+.u-notes code{font:12.5px var(--anatomy-mono);color:var(--anatomy-strong)}
+.u-notes table{width:100%;border-collapse:collapse;font-size:13px;line-height:1.5}
+.u-notes th,.u-notes td{padding:7px 10px 7px 0;border-bottom:1px solid var(--anatomy-faint);text-align:left;vertical-align:top}
+.u-notes th{color:var(--anatomy-muted);font:500 11.5px var(--anatomy-mono);letter-spacing:.03em}
+.u-notes svg{display:block;width:100%;max-width:640px;height:auto;margin:6px 0 14px;overflow:visible}
+.u-notes td:first-child{color:var(--anatomy-strong);white-space:nowrap}
+@media (max-width:560px){.u-notes thead{display:none}.u-notes tr{display:block;padding:8px 0;border-bottom:1px solid var(--anatomy-faint)}.u-notes td{display:block;padding:2px 0;border:0}.u-notes td[data-th]:not(:first-child)::before{content:attr(data-th) ": ";color:var(--anatomy-muted)}}
+@container (max-width:520px){:not([data-keep])>.u-cell .u-num,:not([data-keep])>.u-bar .u-bar-value{display:none}.u-eq math{font-size:14px}.u-steps button{font-size:0;gap:0;padding:4px}.u-controls{gap:8px;flex-direction:column;align-items:stretch}.u-ctl{gap:6px 8px}.u-time{flex:none;max-width:none}.u-controls label{gap:4px}}
+@media (max-width:560px){.iso-plate-corner[data-corner="readout"]{left:0;max-width:none;white-space:normal;text-align:right;line-height:1.4}.iso-plate-corner[data-corner="hint"]{display:none}}
+@media (prefers-reduced-motion:reduce){.u-stage *{transition:none!important;animation:none!important}.u-pulse{display:none}}
+</style><figure class="iso-figure"><div class="iso-plate"><div class="iso-plate-corners" aria-hidden="true"><span class="iso-plate-corner" data-corner="fig">Fig 1</span><span class="iso-plate-corner" data-corner="title">TCP open and close</span><span class="iso-plate-corner" data-corner="hint">← → scene · ↑ ↓ step</span><span class="iso-plate-corner" data-corner="readout" data-readout></span></div><style>.u-stage[data-scene="0"] .u-at[data-at="0"]{opacity:1;visibility:visible;transition:opacity .4s var(--anatomy-ease) .2s,visibility 0s .2s}
+.u-stage[data-scene="0"] .u-grid[data-t~="0"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="0"] .u-grid[data-t~="0"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="0"] .u-grid[data-t~="0"] .u-dims:not(.u-dims-T),.u-stage[data-scene="0"] .u-grid[data-t~="0"] .u-mark{display:none}
+.u-stage[data-scene="1"] .u-at[data-at="1"]{opacity:1;visibility:visible;transition:opacity .4s var(--anatomy-ease) .2s,visibility 0s .2s}
+.u-stage[data-scene="1"] .u-grid[data-t~="1"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="1"] .u-grid[data-t~="1"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="1"] .u-grid[data-t~="1"] .u-dims:not(.u-dims-T),.u-stage[data-scene="1"] .u-grid[data-t~="1"] .u-mark{display:none}
+.u-stage[data-scene="2"] .u-at[data-at="2"]{opacity:1;visibility:visible;transition:opacity .4s var(--anatomy-ease) .2s,visibility 0s .2s}
+.u-stage[data-scene="2"] .u-grid[data-t~="2"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="2"] .u-grid[data-t~="2"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="2"] .u-grid[data-t~="2"] .u-dims:not(.u-dims-T),.u-stage[data-scene="2"] .u-grid[data-t~="2"] .u-mark{display:none}
+.u-stage[data-scene="3"] .u-at[data-at="3"]{opacity:1;visibility:visible;transition:opacity .4s var(--anatomy-ease) .2s,visibility 0s .2s}
+.u-stage[data-scene="3"] .u-grid[data-t~="3"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="3"] .u-grid[data-t~="3"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="3"] .u-grid[data-t~="3"] .u-dims:not(.u-dims-T),.u-stage[data-scene="3"] .u-grid[data-t~="3"] .u-mark{display:none}
+.u-stage[data-scene="4"] .u-at[data-at="4"]{opacity:1;visibility:visible;transition:opacity .4s var(--anatomy-ease) .2s,visibility 0s .2s}
+.u-stage[data-scene="4"] .u-grid[data-t~="4"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="4"] .u-grid[data-t~="4"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="4"] .u-grid[data-t~="4"] .u-dims:not(.u-dims-T),.u-stage[data-scene="4"] .u-grid[data-t~="4"] .u-mark{display:none}
+.u-stage[data-scene="5"] .u-at[data-at="5"]{opacity:1;visibility:visible;transition:opacity .4s var(--anatomy-ease) .2s,visibility 0s .2s}
+.u-stage[data-scene="5"] .u-grid[data-t~="5"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="5"] .u-grid[data-t~="5"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="5"] .u-grid[data-t~="5"] .u-dims:not(.u-dims-T),.u-stage[data-scene="5"] .u-grid[data-t~="5"] .u-mark{display:none}
+.u-stage[data-scene="6"] .u-at[data-at="6"]{opacity:1;visibility:visible;transition:opacity .4s var(--anatomy-ease) .2s,visibility 0s .2s}
+.u-stage[data-scene="6"] .u-grid[data-t~="6"] .u-cell{transform:translate(var(--tx),var(--ty))}
+.u-stage[data-scene="6"] .u-grid[data-t~="6"] :is(.u-T,.u-dims-T){display:inline}
+.u-stage[data-scene="6"] .u-grid[data-t~="6"] .u-dims:not(.u-dims-T),.u-stage[data-scene="6"] .u-grid[data-t~="6"] .u-mark{display:none}.el-right{transform:translate(420px,36px)}
+.u-stage[data-narrow] .el-right{transform:translate(0,560px)}
+.u-stage[data-narrow] .el-code{display:none}
+.el-life{stroke:var(--anatomy-mid);stroke-width:1}
+.el-head rect{fill:var(--anatomy-card);stroke:var(--anatomy-strong)}
+.el-head text{fill:var(--anatomy-strong);font-size:11.5px}
+.el-seg{cursor:pointer;opacity:0;transition:opacity .35s var(--anatomy-ease)}
+.el-seg[data-show]{opacity:.42}
+.el-seg[data-now],.u-stage[data-scene="0"] .el-seg[data-show]{opacity:1}
+.el-hit{stroke:transparent;stroke-width:16}
+.el-seg[data-now] .u-arrow-line{animation:u-draw .6s var(--anatomy-ease) backwards}
+.el-seg[data-now] .u-arrow-head{animation:u-fade .25s .5s backwards}
+.el-seg[data-now] .el-lab{animation:u-fade .4s .3s backwards}
+.el-lab rect{fill:var(--anatomy-card);stroke:var(--anatomy-faint);stroke-width:.6}
+.el-lab text{font:500 10px var(--anatomy-mono);fill:var(--anatomy-strong);text-anchor:middle;dominant-baseline:central;white-space:pre}
+.el-ladder tspan[data-hue],.el-right [data-hue]>text.el-fval{fill:var(--hue)}
+.el-state{opacity:0;transition:opacity .35s var(--anatomy-ease)}
+.el-state[data-show]{opacity:.5}
+.el-state[data-on]{opacity:1}
+.el-state .u-chip text{font-size:10.5px}
+.el-state[data-on] .u-chip rect{fill:var(--anatomy-strong);stroke:var(--anatomy-strong)}
+.el-state[data-on] .u-chip text{fill:var(--anatomy-card)}
+.el-dot{fill:var(--anatomy-strong)}
+.el-timer{opacity:0;transition:opacity .35s}
+.el-timer[data-show]{opacity:1}
+.el-timer path{stroke:var(--anatomy-hi);stroke-width:1.4;stroke-dasharray:3 3;fill:none}
+.el-timer text{font:10.5px var(--anatomy-mono);fill:var(--anatomy-muted);dominant-baseline:central;text-anchor:end}
+.el-label{font:10.5px var(--anatomy-mono);fill:var(--anatomy-muted);letter-spacing:.06em}
+.el-dir{font:10.5px var(--anatomy-mono);fill:var(--anatomy-strong);text-anchor:end}
+.el-field rect,.el-flag rect{fill:none;stroke:var(--anatomy-faint);stroke-width:.8}
+.el-field[data-hue] rect{stroke:var(--hue);stroke-opacity:.6}
+.el-fname{font:10px var(--anatomy-mono);fill:var(--hue,var(--anatomy-muted));text-anchor:middle;dominant-baseline:central}
+.el-fval{font:500 12px var(--anatomy-mono);fill:var(--anatomy-strong);text-anchor:middle;dominant-baseline:central}
+.el-flag text{font:9px var(--anatomy-mono);fill:var(--anatomy-lo);text-anchor:middle;dominant-baseline:central}
+.el-flag rect{transition:fill .3s,stroke .3s}
+.el-flag[data-on] rect{fill:var(--hue,var(--anatomy-hi));fill-opacity:.22;stroke:var(--hue,var(--anatomy-hi))}
+.el-flag[data-on] text{fill:var(--hue,var(--anatomy-strong));font-weight:600}
+.el-cell{cursor:pointer}
+.el-cell[data-off]{display:none}
+.el-cell rect{fill:var(--hue,none);fill-opacity:0;stroke:var(--anatomy-faint);stroke-width:.8;stroke-dasharray:2 2;transition:fill-opacity .4s,stroke .4s}
+.el-cell[data-sent] rect{stroke:var(--hue);stroke-dasharray:none;stroke-width:1.2}
+.el-cell[data-acked] rect{fill-opacity:.38}
+.el-cn{font:9.5px var(--anatomy-mono);fill:var(--anatomy-muted);text-anchor:middle;dominant-baseline:central}
+.el-cw{font:500 12px var(--anatomy-mono);fill:var(--anatomy-lo);text-anchor:middle;dominant-baseline:central;white-space:pre;transition:fill .4s}
+.el-cell[data-sent] .el-cw{fill:var(--hue)}
+.el-cell[data-acked] .el-cw{fill:var(--anatomy-strong)}
+.el-cell[data-acked] .el-cn{fill:var(--anatomy-text)}
+.el-ptr{transition:transform .5s var(--anatomy-ease),opacity .3s}
+.el-ptr path{fill:var(--hue)}
+.el-ptr text{font:500 10px var(--anatomy-mono);fill:var(--hue);dominant-baseline:central}
+.el-ptr[data-flip] text{text-anchor:end}
+.el-ptr[data-flip] .el-ptl{transform:translateX(-20px)}
+.el-legend text{font:10px var(--anatomy-mono);fill:var(--anatomy-muted);dominant-baseline:central}
+.el-code .u-line-text{font-size:11px}
+.u-notes b[data-hue]{color:var(--hue)}
+.el-sent{fill:none;stroke:var(--anatomy-hi);stroke-width:1.2}
+.el-acked{fill:var(--anatomy-hi);fill-opacity:.38;stroke:var(--anatomy-hi);stroke-width:1.2}
+.u-controls input.el-isn{width:calc(10ch + 28px)}
+.u-controls input.el-data{width:calc(5ch + 28px)}
+.el-in-isn{color:var(--hue)}</style><div class="u-stage" tabindex="0" role="group" aria-roledescription="explainer" aria-label="TCP handshake and teardown explainer. Left and right arrows change the scene. Up and down arrows step through the segments. The fields set each side's ISN and the data the client sends." data-scene="0" data-count="7" data-dwell="8000" data-narrow-box="0 0 400 886"><div class="u-eq" aria-live="polite"><div class="u-at" data-at="0"><math display="block"><mi data-hue="green">ack</mi><mo>=</mo><mi data-hue="blue">seq</mi><mo>+</mo><mi data-hue="purple">len</mi><mo>+</mo><mi data-hue="yellow">SYN</mi><mo>+</mo><mi data-hue="red">FIN</mi></math></div><div class="u-at" data-at="1"><math display="block"><mi data-hue="blue">seq</mi><mo>=</mo><msub><mi data-hue="blue">ISN</mi><mi>client</mi></msub><mo>=</mo><mn data-hue="blue" data-live="isnC" data-places="0">1000</mn></math></div><div class="u-at" data-at="2"><math display="block"><mi data-hue="green">ack</mi><mo>=</mo><mn data-hue="blue" data-live="a2seq" data-places="0">1000</mn><mo>+</mo><mn data-hue="purple" data-live="a2len" data-places="0">0</mn><mo>+</mo><mn data-hue="yellow" data-live="a2syn" data-places="0">1</mn><mo>+</mo><mn data-hue="red" data-live="a2fin" data-places="0">0</mn><mo>=</mo><mn data-hue="green" data-live="a2ack" data-places="0">1001</mn><mtext data-live="a2mod"></mtext></math></div><div class="u-at" data-at="3"><math display="block"><mi data-hue="green">ack</mi><mo>=</mo><mn data-hue="blue" data-live="a3seq" data-places="0">5000</mn><mo>+</mo><mn data-hue="purple" data-live="a3len" data-places="0">0</mn><mo>+</mo><mn data-hue="yellow" data-live="a3syn" data-places="0">1</mn><mo>+</mo><mn data-hue="red" data-live="a3fin" data-places="0">0</mn><mo>=</mo><mn data-hue="green" data-live="a3ack" data-places="0">5001</mn><mtext data-live="a3mod"></mtext></math></div><div class="u-at" data-at="4"><math display="block"><mi data-hue="green">ack</mi><mo>=</mo><mn data-hue="blue" data-live="a5seq" data-places="0">1001</mn><mo>+</mo><mn data-hue="purple" data-live="a5len" data-places="0">5</mn><mo>+</mo><mn data-hue="yellow" data-live="a5syn" data-places="0">0</mn><mo>+</mo><mn data-hue="red" data-live="a5fin" data-places="0">0</mn><mo>=</mo><mn data-hue="green" data-live="a5ack" data-places="0">1006</mn><mtext data-live="a5mod"></mtext></math></div><div class="u-at" data-at="5"><math display="block"><mi data-hue="green">ack</mi><mo>=</mo><mn data-hue="blue" data-live="a7seq" data-places="0">1006</mn><mo>+</mo><mn data-hue="purple" data-live="a7len" data-places="0">0</mn><mo>+</mo><mn data-hue="yellow" data-live="a7syn" data-places="0">0</mn><mo>+</mo><mn data-hue="red" data-live="a7fin" data-places="0">1</mn><mo>=</mo><mn data-hue="green" data-live="a7ack" data-places="0">1007</mn><mtext data-live="a7mod"></mtext></math></div><div class="u-at" data-at="6"><math display="block"><mi data-hue="green">ack</mi><mo>=</mo><mn data-hue="blue" data-live="a9seq" data-places="0">5001</mn><mo>+</mo><mn data-hue="purple" data-live="a9len" data-places="0">0</mn><mo>+</mo><mn data-hue="yellow" data-live="a9syn" data-places="0">0</mn><mo>+</mo><mn data-hue="red" data-live="a9fin" data-places="0">1</mn><mo>=</mo><mn data-hue="green" data-live="a9ack" data-places="0">5002</mn><mtext data-live="a9mod"></mtext></math></div></div><svg xmlns="http://www.w3.org/2000/svg" class="iso-svg" viewBox="0 0 820 566" role="img" aria-label="TCP connection between a client and a server: the three-way handshake, 1 to 5 bytes of data, and the four-segment teardown, with the sequence and ack number of every segment and the state of each side."><g class="el-ladder"><path class="el-life" d="M96 22V544"/><path class="el-life" d="M304 22V544"/><g class="u-chip el-head" transform="translate(64 4)"><rect width="64" height="18" rx="4"/><text x="32" y="9">client</text></g><g class="u-chip el-head" transform="translate(272 4)"><rect width="64" height="18" rx="4"/><text x="32" y="9">server</text></g><g class="el-timer"><path d="M92 452V510" /><text x="84" y="481">2·MSL wait</text></g><g class="el-seg" id="seg-1" data-t="1"><path class="el-hit" d="M96 64L304 92"/><g class="u-arrow" data-hue="yellow" style="--w:1.4"><path class="u-arrow-line" pathLength="1" d="M96 64Q199.5 78 297.1 91.2"/><path class="u-arrow-head" d="M303 92L296.6 94.5L297.5 87.9Z"/></g><g class="el-lab" data-cy="78"><rect x="150" y="70" width="100" height="16" rx="3"/><text x="200" y="78"></text></g></g><g class="el-seg" id="seg-2" data-t="2"><path class="el-hit" d="M304 114L96 142"/><g class="u-arrow" data-hue="yellow" style="--w:1.4"><path class="u-arrow-line" pathLength="1" d="M304 114Q200.5 128 102.9 141.2"/><path class="u-arrow-head" d="M97 142L102.5 137.9L103.4 144.5Z"/></g><g class="el-lab" data-cy="128"><rect x="150" y="120" width="100" height="16" rx="3"/><text x="200" y="128"></text></g></g><g class="el-seg" id="seg-3" data-t="3"><path class="el-hit" d="M96 164L304 192"/><g class="u-arrow" data-hue="green" style="--w:1.4"><path class="u-arrow-line" pathLength="1" d="M96 164Q199.5 178 297.1 191.2"/><path class="u-arrow-head" d="M303 192L296.6 194.5L297.5 187.9Z"/></g><g class="el-lab" data-cy="178"><rect x="150" y="170" width="100" height="16" rx="3"/><text x="200" y="178"></text></g></g><g class="el-seg" id="seg-4" data-t="4"><path class="el-hit" d="M96 214L304 242"/><g class="u-arrow" data-hue="purple" style="--w:1.4"><path class="u-arrow-line" pathLength="1" d="M96 214Q199.5 228 297.1 241.2"/><path class="u-arrow-head" d="M303 242L296.6 244.5L297.5 237.9Z"/></g><g class="el-lab" data-cy="228"><rect x="150" y="220" width="100" height="16" rx="3"/><text x="200" y="228"></text></g></g><g class="el-seg" id="seg-5" data-t="5"><path class="el-hit" d="M304 264L96 292"/><g class="u-arrow" data-hue="green" style="--w:1.4"><path class="u-arrow-line" pathLength="1" d="M304 264Q200.5 278 102.9 291.2"/><path class="u-arrow-head" d="M97 292L102.5 287.9L103.4 294.5Z"/></g><g class="el-lab" data-cy="278"><rect x="150" y="270" width="100" height="16" rx="3"/><text x="200" y="278"></text></g></g><g class="el-seg" id="seg-6" data-t="6"><path class="el-hit" d="M96 314L304 342"/><g class="u-arrow" data-hue="red" style="--w:1.4"><path class="u-arrow-line" pathLength="1" d="M96 314Q199.5 328 297.1 341.2"/><path class="u-arrow-head" d="M303 342L296.6 344.5L297.5 337.9Z"/></g><g class="el-lab" data-cy="328"><rect x="150" y="320" width="100" height="16" rx="3"/><text x="200" y="328"></text></g></g><g class="el-seg" id="seg-7" data-t="7"><path class="el-hit" d="M304 364L96 392"/><g class="u-arrow" data-hue="green" style="--w:1.4"><path class="u-arrow-line" pathLength="1" d="M304 364Q200.5 378 102.9 391.2"/><path class="u-arrow-head" d="M97 392L102.5 387.9L103.4 394.5Z"/></g><g class="el-lab" data-cy="378"><rect x="150" y="370" width="100" height="16" rx="3"/><text x="200" y="378"></text></g></g><g class="el-seg" id="seg-8" data-t="8"><path class="el-hit" d="M304 414L96 442"/><g class="u-arrow" data-hue="red" style="--w:1.4"><path class="u-arrow-line" pathLength="1" d="M304 414Q200.5 428 102.9 441.2"/><path class="u-arrow-head" d="M97 442L102.5 437.9L103.4 444.5Z"/></g><g class="el-lab" data-cy="428"><rect x="150" y="420" width="100" height="16" rx="3"/><text x="200" y="428"></text></g></g><g class="el-seg" id="seg-9" data-t="9"><path class="el-hit" d="M96 464L304 492"/><g class="u-arrow" data-hue="green" style="--w:1.4"><path class="u-arrow-line" pathLength="1" d="M96 464Q199.5 478 297.1 491.2"/><path class="u-arrow-head" d="M303 492L296.6 494.5L297.5 487.9Z"/></g><g class="el-lab" data-cy="478"><rect x="150" y="470" width="100" height="16" rx="3"/><text x="200" y="478"></text></g></g><g class="el-state" id="st-0" data-side="client" data-t="0"><circle class="el-dot" cx="96" cy="36" r="2.6"/><g class="u-chip " transform="translate(36.400000000000006 28)"><rect width="51.599999999999994" height="16" rx="3"/><text x="25.799999999999997" y="8">CLOSED</text></g></g><g class="el-state" id="st-1" data-side="server" data-t="0"><circle class="el-dot" cx="304" cy="36" r="2.6"/><g class="u-chip " transform="translate(312 28)"><rect width="51.599999999999994" height="16" rx="3"/><text x="25.799999999999997" y="8">LISTEN</text></g></g><g class="el-state" id="st-2" data-side="client" data-t="1"><circle class="el-dot" cx="96" cy="64" r="2.6"/><g class="u-chip " transform="translate(23.200000000000003 56)"><rect width="64.8" height="16" rx="3"/><text x="32.4" y="8">SYN-SENT</text></g></g><g class="el-state" id="st-3" data-side="server" data-t="1"><circle class="el-dot" cx="304" cy="92" r="2.6"/><g class="u-chip " transform="translate(312 84)"><rect width="91.19999999999999" height="16" rx="3"/><text x="45.599999999999994" y="8">SYN-RECEIVED</text></g></g><g class="el-state" id="st-4" data-side="client" data-t="2"><circle class="el-dot" cx="96" cy="142" r="2.6"/><g class="u-chip " transform="translate(3.4000000000000057 134)"><rect width="84.6" height="16" rx="3"/><text x="42.3" y="8">ESTABLISHED</text></g></g><g class="el-state" id="st-5" data-side="server" data-t="3"><circle class="el-dot" cx="304" cy="192" r="2.6"/><g class="u-chip " transform="translate(312 184)"><rect width="84.6" height="16" rx="3"/><text x="42.3" y="8">ESTABLISHED</text></g></g><g class="el-state" id="st-6" data-side="client" data-t="6"><circle class="el-dot" cx="96" cy="314" r="2.6"/><g class="u-chip " transform="translate(10 306)"><rect width="78" height="16" rx="3"/><text x="39" y="8">FIN-WAIT-1</text></g></g><g class="el-state" id="st-7" data-side="server" data-t="6"><circle class="el-dot" cx="304" cy="342" r="2.6"/><g class="u-chip " transform="translate(312 334)"><rect width="78" height="16" rx="3"/><text x="39" y="8">CLOSE-WAIT</text></g></g><g class="el-state" id="st-8" data-side="client" data-t="7"><circle class="el-dot" cx="96" cy="392" r="2.6"/><g class="u-chip " transform="translate(10 384)"><rect width="78" height="16" rx="3"/><text x="39" y="8">FIN-WAIT-2</text></g></g><g class="el-state" id="st-9" data-side="server" data-t="8"><circle class="el-dot" cx="304" cy="414" r="2.6"/><g class="u-chip " transform="translate(312 406)"><rect width="64.8" height="16" rx="3"/><text x="32.4" y="8">LAST-ACK</text></g></g><g class="el-state" id="st-10" data-side="client" data-t="8"><circle class="el-dot" cx="96" cy="442" r="2.6"/><g class="u-chip " transform="translate(16.599999999999994 434)"><rect width="71.4" height="16" rx="3"/><text x="35.7" y="8">TIME-WAIT</text></g></g><g class="el-state" id="st-11" data-side="server" data-t="9"><circle class="el-dot" cx="304" cy="492" r="2.6"/><g class="u-chip " transform="translate(312 484)"><rect width="51.599999999999994" height="16" rx="3"/><text x="25.799999999999997" y="8">CLOSED</text></g></g><g class="el-state" id="st-12" data-side="client" data-t="10"><circle class="el-dot" cx="96" cy="520" r="2.6"/><g class="u-chip " transform="translate(36.400000000000006 512)"><rect width="51.599999999999994" height="16" rx="3"/><text x="25.799999999999997" y="8">CLOSED</text></g></g></g><g class="el-right"><text class="el-label" x="0" y="10">current segment</text><text class="el-dir" id="dir" x="400" y="10">—</text><g class="el-field" id="f-seq" data-hue="blue"><rect x="0" y="22" width="88" height="40" rx="3"/><text class="el-fname" x="44" y="33">seq</text><text class="el-fval" x="44" y="50">—</text></g><g class="el-field" id="f-ack" data-hue="green"><rect x="94" y="22" width="88" height="40" rx="3"/><text class="el-fname" x="138" y="33">ack</text><text class="el-fval" x="138" y="50">—</text></g><g class="el-flag" id="flag-URG"><rect x="188" y="22" width="21" height="40" rx="3"/><text x="198.5" y="42">URG</text></g><g class="el-flag" id="flag-ACK" data-hue="green"><rect x="212" y="22" width="21" height="40" rx="3"/><text x="222.5" y="42">ACK</text></g><g class="el-flag" id="flag-PSH"><rect x="236" y="22" width="21" height="40" rx="3"/><text x="246.5" y="42">PSH</text></g><g class="el-flag" id="flag-RST"><rect x="260" y="22" width="21" height="40" rx="3"/><text x="270.5" y="42">RST</text></g><g class="el-flag" id="flag-SYN" data-hue="yellow"><rect x="284" y="22" width="21" height="40" rx="3"/><text x="294.5" y="42">SYN</text></g><g class="el-flag" id="flag-FIN" data-hue="red"><rect x="308" y="22" width="21" height="40" rx="3"/><text x="318.5" y="42">FIN</text></g><g class="el-field" id="f-data" data-hue="purple"><rect x="336" y="22" width="64" height="40" rx="3"/><text class="el-fname" x="368" y="33">data</text><text class="el-fval" x="368" y="50">—</text></g><g class="el-strip" id="strip-client"><text class="el-label" x="0" y="84">client → server · sequence numbers</text><g class="el-cell" data-k="0"><rect x="0" y="112" width="46" height="36" rx="3"/><text class="el-cn" x="23" y="123"></text><text class="el-cw" x="23" y="138"></text></g><g class="el-cell" data-k="1"><rect x="50" y="112" width="46" height="36" rx="3"/><text class="el-cn" x="73" y="123"></text><text class="el-cw" x="73" y="138"></text></g><g class="el-cell" data-k="2"><rect x="100" y="112" width="46" height="36" rx="3"/><text class="el-cn" x="123" y="123"></text><text class="el-cw" x="123" y="138"></text></g><g class="el-cell" data-k="3"><rect x="150" y="112" width="46" height="36" rx="3"/><text class="el-cn" x="173" y="123"></text><text class="el-cw" x="173" y="138"></text></g><g class="el-cell" data-k="4"><rect x="200" y="112" width="46" height="36" rx="3"/><text class="el-cn" x="223" y="123"></text><text class="el-cw" x="223" y="138"></text></g><g class="el-cell" data-k="5"><rect x="250" y="112" width="46" height="36" rx="3"/><text class="el-cn" x="273" y="123"></text><text class="el-cw" x="273" y="138"></text></g><g class="el-cell" data-k="6"><rect x="300" y="112" width="46" height="36" rx="3"/><text class="el-cn" x="323" y="123"></text><text class="el-cw" x="323" y="138"></text></g><g class="el-cell" data-k="7"><rect x="350" y="112" width="46" height="36" rx="3"/><text class="el-cn" x="373" y="123"></text><text class="el-cw" x="373" y="138"></text></g><g class="el-ptr" id="snd-client" data-hue="blue" style="transform:translateX(0px);opacity:0"><path d="M23 110l-5 -7h10z"/><g class="el-ptl"><text x="33" y="106">SND.NXT (client)</text></g></g><g class="el-ptr" id="rcv-client" data-hue="green" style="transform:translateX(0px);opacity:0"><path d="M23 150l-5 7h10z"/><g class="el-ptl"><text x="33" y="154">RCV.NXT (server)</text></g></g></g><g class="el-strip" id="strip-server"><text class="el-label" x="0" y="200">server → client · sequence numbers</text><g class="el-cell" data-k="0"><rect x="0" y="228" width="46" height="36" rx="3"/><text class="el-cn" x="23" y="239"></text><text class="el-cw" x="23" y="254"></text></g><g class="el-cell" data-k="1"><rect x="50" y="228" width="46" height="36" rx="3"/><text class="el-cn" x="73" y="239"></text><text class="el-cw" x="73" y="254"></text></g><g class="el-cell" data-k="2"><rect x="100" y="228" width="46" height="36" rx="3"/><text class="el-cn" x="123" y="239"></text><text class="el-cw" x="123" y="254"></text></g><g class="el-ptr" id="snd-server" data-hue="blue" style="transform:translateX(0px);opacity:0"><path d="M23 226l-5 -7h10z"/><g class="el-ptl"><text x="33" y="222">SND.NXT (server)</text></g></g><g class="el-ptr" id="rcv-server" data-hue="green" style="transform:translateX(0px);opacity:0"><path d="M23 266l-5 7h10z"/><g class="el-ptl"><text x="33" y="270">RCV.NXT (client)</text></g></g></g><g class="el-legend"><rect class="el-sent" x="0" y="314" width="12" height="10" rx="2"/><text x="18" y="319">outline: sent</text><rect class="el-acked" x="120" y="314" width="12" height="10" rx="2"/><text x="138" y="319">filled: acknowledged</text></g><g class="el-code"><text class="el-label" x="0" y="340">receive rule · for segment s</text><text class="el-dir" id="code-who" x="400" y="340"></text><g class="u-code" id="code" transform="translate(0 352)"><g class="u-line" data-i="0" transform="translate(0 0)"><rect width="400" height="15" rx="3"/><text class="u-line-num" x="16" y="7.5">1</text><text class="u-line-text" x="26" y="7.5">if SYN: RCV.NXT = s.seq</text></g><g class="u-line" data-i="1" transform="translate(0 15)"><rect width="400" height="15" rx="3"/><text class="u-line-num" x="16" y="7.5">2</text><text class="u-line-text" x="26" y="7.5">drop s unless s.seq = RCV.NXT</text></g><g class="u-line" data-i="2" transform="translate(0 30)"><rect width="400" height="15" rx="3"/><text class="u-line-num" x="16" y="7.5">3</text><text class="u-line-text" x="26" y="7.5">RCV.NXT += len + SYN + FIN</text></g><g class="u-line" data-i="3" transform="translate(0 45)"><rect width="400" height="15" rx="3"/><text class="u-line-num" x="16" y="7.5">4</text><text class="u-line-text" x="26" y="7.5">if ACK: SND.UNA = s.ack</text></g><g class="u-line" data-i="4" transform="translate(0 60)"><rect width="400" height="15" rx="3"/><text class="u-line-num" x="16" y="7.5">5</text><text class="u-line-text" x="26" y="7.5">LISTEN + SYN       → SYN-RECEIVED, send SYN,ACK</text></g><g class="u-line" data-i="5" transform="translate(0 75)"><rect width="400" height="15" rx="3"/><text class="u-line-num" x="16" y="7.5">6</text><text class="u-line-text" x="26" y="7.5">SYN-SENT + SYN     → ESTABLISHED, send ACK</text></g><g class="u-line" data-i="6" transform="translate(0 90)"><rect width="400" height="15" rx="3"/><text class="u-line-num" x="16" y="7.5">7</text><text class="u-line-text" x="26" y="7.5">SYN-RECEIVED + ACK → ESTABLISHED</text></g><g class="u-line" data-i="7" transform="translate(0 105)"><rect width="400" height="15" rx="3"/><text class="u-line-num" x="16" y="7.5">8</text><text class="u-line-text" x="26" y="7.5">ESTABLISHED + data → send ACK</text></g><g class="u-line" data-i="8" transform="translate(0 120)"><rect width="400" height="15" rx="3"/><text class="u-line-num" x="16" y="7.5">9</text><text class="u-line-text" x="26" y="7.5">ESTABLISHED + FIN  → CLOSE-WAIT, send ACK</text></g><g class="u-line" data-i="9" transform="translate(0 135)"><rect width="400" height="15" rx="3"/><text class="u-line-num" x="16" y="7.5">10</text><text class="u-line-text" x="26" y="7.5">FIN-WAIT-1 + ACK   → FIN-WAIT-2</text></g><g class="u-line" data-i="10" transform="translate(0 150)"><rect width="400" height="15" rx="3"/><text class="u-line-num" x="16" y="7.5">11</text><text class="u-line-text" x="26" y="7.5">FIN-WAIT-2 + FIN   → TIME-WAIT, send ACK</text></g><g class="u-line" data-i="11" transform="translate(0 165)"><rect width="400" height="15" rx="3"/><text class="u-line-num" x="16" y="7.5">12</text><text class="u-line-text" x="26" y="7.5">LAST-ACK + ACK     → CLOSED</text></g></g></g></g></svg><div class="u-controls"><div class="u-ctl"><label>client ISN <input type="number" class="el-isn" data-side="client" min="0" max="4294967295" step="1" value="1000" aria-label="client initial sequence number"></label><label>server ISN <input type="number" class="el-isn" data-side="server" min="0" max="4294967295" step="1" value="5000" aria-label="server initial sequence number"></label><label>data <input type="text" class="el-data" maxlength="5" value="hello" aria-label="payload, 1 to 5 ASCII characters"></label><button type="button" data-preset="hand">1000 / 5000</button><button type="button" data-preset="linux">Linux ISNs</button><button type="button" data-preset="wrap">near 2³²</button></div><div class="u-time" data-label="step"><button type="button" data-step="-1" aria-label="Previous step">‹</button><input type="range" min="0" max="10" value="0" aria-label="step"><button type="button" data-step="1" aria-label="Next step">›</button><output>step 0 / 10</output></div></div><div class="u-cc"><p class="u-at" data-at="0">Three segments open the connection and four segments close it. An <b data-hue="green">ack</b> names the next <b data-hue="blue">sequence number</b> that the receiver expects.</p><p class="u-at" data-at="1">The client picks its initial sequence number (ISN), <span data-live="isnC" data-places="0">1000</span>, and sends <b data-hue="yellow">SYN</b>. SYN uses one number, so the next number is <span data-live="isnC1" data-places="0">1001</span>.</p><p class="u-at" data-at="2">The server sends its own <b data-hue="yellow">SYN</b> with ISN <span data-live="isnS" data-places="0">5000</span>. Its <b data-hue="green">ack <span data-live="ack2" data-places="0">1001</span></b> names the next number it expects from the client.</p><p class="u-at" data-at="3">The client acknowledges the server's SYN with <b data-hue="green">ack <span data-live="ack3" data-places="0">5001</span></b>. A pure ACK carries seq <span data-live="seq3" data-places="0">1001</span> but uses no number, so the data also starts at <span data-live="seq3" data-places="0">1001</span>.</p><p class="u-at" data-at="4">The client sends <b data-hue="purple"><span data-live="bytes" data-places="0">5 bytes</span></b>, numbers <span data-live="d0" data-places="0">1001</span> to <span data-live="d1" data-places="0">1005</span>. Each byte uses one number, so the server acknowledges <span data-live="ack5" data-places="0">1006</span>.</p><p class="u-at" data-at="5">The client sends <b data-hue="red">FIN</b>, which also uses one number. The server acknowledges <span data-live="ack7" data-places="0">1007</span> and can still send data in CLOSE-WAIT.</p><p class="u-at" data-at="6">The server sends its own <b data-hue="red">FIN</b>, and the client acknowledges <span data-live="ack9" data-places="0">5002</span>. The client waits 2·MSL in TIME-WAIT, so it can resend a lost last ACK.</p></div><nav class="u-steps" aria-label="Scenes"><button type="button" class="u-play" aria-pressed="false"><span>▶</span>Play</button><button type="button" class="u-voice" aria-pressed="true" hidden><span>♪</span>Voice</button><button type="button" data-go="0" aria-current="step"><span>1</span>Overview</button><button type="button" data-go="1"><span>2</span>SYN</button><button type="button" data-go="2"><span>3</span>SYN-ACK</button><button type="button" data-go="3"><span>4</span>ACK</button><button type="button" data-go="4"><span>5</span>Data</button><button type="button" data-go="5"><span>6</span>Client FIN</button><button type="button" data-go="6"><span>7</span>Server FIN</button></nav><div class="u-key"><span data-hue="blue"><i></i>seq · SND.NXT</span><span data-hue="green"><i></i>ack · RCV.NXT</span><span data-hue="yellow"><i></i>SYN (opens)</span><span data-hue="red"><i></i>FIN (closes)</span><span data-hue="purple"><i></i>data bytes</span></div></div></div><figcaption class="iso-legend"><span class="iso-caption">One TCP connection: a three-way handshake, 1 to 5 bytes from the client, then a close that the client starts. Type any 32-bit ISN or payload, and every number follows TCP's rules. With Linux's ISNs, the figure matches all 9 segments of a real loopback capture.</span></figcaption></figure><details class="u-more"><summary>Reference: what differs, what is left out, terms</summary><section class="u-notes"><h2>What uses a sequence number</h2><p>An ack is one more than the last number it covers. That is why the ack after a SYN or a FIN is seq + 1.</p><table><thead><tr><th>part of a segment</th><th>numbers it uses</th><th>in this figure</th></tr></thead><tbody><tr><td data-th="part of a segment"><b data-hue="yellow">SYN</b></td><td data-th="numbers it uses">1</td><td data-th="in this figure"><span data-live="isnC" data-places="0">1000</span> and <span data-live="isnS" data-places="0">5000</span></td></tr><tr><td data-th="part of a segment"><b data-hue="purple">data byte</b></td><td data-th="numbers it uses">1 each</td><td data-th="in this figure"><span data-live="d0" data-places="0">1001</span> to <span data-live="d1" data-places="0">1005</span> (<span data-live="dataq" data-places="0">"hello"</span>)</td></tr><tr><td data-th="part of a segment"><b data-hue="red">FIN</b></td><td data-th="numbers it uses">1</td><td data-th="in this figure"><span data-live="fin1" data-places="0">1006</span> and <span data-live="fin2" data-places="0">5001</span></td></tr><tr><td data-th="part of a segment"><b data-hue="green">pure ACK</b></td><td data-th="numbers it uses">0</td><td data-th="in this figure">segments 3, 5, 7 and 9</td></tr></tbody></table><h2>Checked against Linux</h2><p>On 2026-10-16 we ran the same exchange on Linux 7.1.5-76070105-generic loopback, in a private network namespace, and read each segment with a raw socket. With the two random ISNs that Linux picked, the simulator gives the same 9 segments. The “Linux ISNs” button shows that run in the figure.</p><table><thead><tr><th>#</th><th>segment</th><th>Linux seq / ack</th><th>simulator seq / ack</th></tr></thead><tbody><tr><td data-th="#">1</td><td data-th="segment">client SYN</td><td data-th="Linux seq / ack">3613854406 / —</td><td data-th="simulator seq / ack">3613854406 / —</td></tr><tr><td data-th="#">2</td><td data-th="segment">server SYN,ACK</td><td data-th="Linux seq / ack">103912856 / 3613854407</td><td data-th="simulator seq / ack">103912856 / 3613854407</td></tr><tr><td data-th="#">3</td><td data-th="segment">client ACK</td><td data-th="Linux seq / ack">3613854407 / 103912857</td><td data-th="simulator seq / ack">3613854407 / 103912857</td></tr><tr><td data-th="#">4</td><td data-th="segment">client PSH,ACK len=5</td><td data-th="Linux seq / ack">3613854407 / 103912857</td><td data-th="simulator seq / ack">3613854407 / 103912857</td></tr><tr><td data-th="#">5</td><td data-th="segment">server ACK</td><td data-th="Linux seq / ack">103912857 / 3613854412</td><td data-th="simulator seq / ack">103912857 / 3613854412</td></tr><tr><td data-th="#">6</td><td data-th="segment">client FIN,ACK</td><td data-th="Linux seq / ack">3613854412 / 103912857</td><td data-th="simulator seq / ack">3613854412 / 103912857</td></tr><tr><td data-th="#">7</td><td data-th="segment">server ACK</td><td data-th="Linux seq / ack">103912857 / 3613854413</td><td data-th="simulator seq / ack">103912857 / 3613854413</td></tr><tr><td data-th="#">8</td><td data-th="segment">server FIN,ACK</td><td data-th="Linux seq / ack">103912857 / 3613854413</td><td data-th="simulator seq / ack">103912857 / 3613854413</td></tr><tr><td data-th="#">9</td><td data-th="segment">client ACK</td><td data-th="Linux seq / ack">3613854413 / 103912858</td><td data-th="simulator seq / ack">3613854413 / 103912858</td></tr></tbody></table><h2>States in this figure</h2><table><thead><tr><th>state</th><th>side</th><th>meaning</th></tr></thead><tbody><tr><td data-th="state">LISTEN</td><td data-th="side">server</td><td data-th="meaning">waits for a SYN</td></tr><tr><td data-th="state">SYN-SENT</td><td data-th="side">client</td><td data-th="meaning">sent SYN, waits for SYN-ACK</td></tr><tr><td data-th="state">SYN-RECEIVED</td><td data-th="side">server</td><td data-th="meaning">got SYN, sent SYN-ACK, waits for ACK</td></tr><tr><td data-th="state">ESTABLISHED</td><td data-th="side">both</td><td data-th="meaning">open: data can flow both ways</td></tr><tr><td data-th="state">FIN-WAIT-1</td><td data-th="side">client</td><td data-th="meaning">sent FIN, waits for its ACK</td></tr><tr><td data-th="state">FIN-WAIT-2</td><td data-th="side">client</td><td data-th="meaning">FIN acknowledged, waits for the server's FIN</td></tr><tr><td data-th="state">CLOSE-WAIT</td><td data-th="side">server</td><td data-th="meaning">got FIN, can still send until it closes</td></tr><tr><td data-th="state">LAST-ACK</td><td data-th="side">server</td><td data-th="meaning">sent FIN, waits for the last ACK</td></tr><tr><td data-th="state">TIME-WAIT</td><td data-th="side">client</td><td data-th="meaning">waits 2·MSL in case the last ACK is lost</td></tr><tr><td data-th="state">CLOSED</td><td data-th="side">both</td><td data-th="meaning">no connection</td></tr></tbody></table><h2>Terms</h2><table><thead><tr><th>term</th><th>meaning</th></tr></thead><tbody><tr><td data-th="term">segment</td><td data-th="meaning">one TCP packet: header plus optional data</td></tr><tr><td data-th="term">ISN</td><td data-th="meaning">initial sequence number, picked by each side at SYN</td></tr><tr><td data-th="term"><b data-hue="blue">seq</b></td><td data-th="meaning">number of the first byte (or SYN, FIN) in a segment</td></tr><tr><td data-th="term"><b data-hue="green">ack</b></td><td data-th="meaning">next number the sender of the ack expects</td></tr><tr><td data-th="term"><b data-hue="blue">SND.NXT</b></td><td data-th="meaning">next sequence number this side will send</td></tr><tr><td data-th="term">SND.UNA</td><td data-th="meaning">oldest number this side sent that is not acknowledged</td></tr><tr><td data-th="term"><b data-hue="green">RCV.NXT</b></td><td data-th="meaning">next sequence number this side expects to receive</td></tr><tr><td data-th="term">MSL</td><td data-th="meaning">maximum segment lifetime: how long a segment can live</td></tr><tr><td data-th="term">half-close</td><td data-th="meaning">one direction closed, the other still open</td></tr></tbody></table><h2>What the figure leaves out</h2><table><thead><tr><th>topic</th><th>what really happens</th></tr></thead><tbody><tr><td data-th="topic">random ISN</td><td data-th="what really happens">Linux hashes the addresses with a secret and adds a clock (RFC 6528).</td></tr><tr><td data-th="topic">relative numbers</td><td data-th="what really happens">Wireshark shows seq − ISN by default, so each SYN shows as 0.</td></tr><tr><td data-th="topic">wraparound</td><td data-th="what really happens">Sequence numbers are 32-bit and wrap modulo 2³². The “near 2³²” button shows it.</td></tr><tr><td data-th="topic">three-segment close</td><td data-th="what really happens">A server that closes at once sends one FIN,ACK that also acknowledges the client's FIN.</td></tr><tr><td data-th="topic">delayed ACK</td><td data-th="what really happens">A receiver may wait 40 to 200 ms (Linux) to combine ACKs.</td></tr><tr><td data-th="topic">window and options</td><td data-th="what really happens">Every segment also carries a window size. SYNs carry MSS, window scale, SACK and timestamps.</td></tr><tr><td data-th="topic">loss and RST</td><td data-th="what really happens">Lost segments are sent again after a timeout. RST aborts a connection without FIN.</td></tr><tr><td data-th="topic">TIME-WAIT length</td><td data-th="what really happens">Linux waits a fixed 60 s, not a measured 2·MSL.</td></tr><tr><td data-th="topic">more data</td><td data-th="what really happens">The figure draws at most 5 bytes. Real segments carry up to one MSS, often 1460 bytes.</td></tr></tbody></table></section></details></main><script type="module">function fmt(value, places = 1) {
+  if (value === -Infinity) return "−∞";
+  const text = value.toFixed(places);
+  return Number(text) === 0 ? (0).toFixed(places) : text.replace("-", "−");
+}
+function mark(root, i, selector = ".u-mark") {
+  root.querySelectorAll(`${selector}[data-r],${selector}[data-i]`).forEach((el) => el.toggleAttribute("data-on", Number(el.dataset.r ?? el.dataset.i) === i));
+}
+function setLive(values, root = document) {
+  for (const [name, v] of Object.entries(values))
+    root.querySelectorAll(`[data-live="${name}"]`).forEach((el) => (el.textContent = typeof v === "number" ? fmt(v, Number(el.dataset.places ?? (Number.isInteger(v) ? 0 : 1))) : v));
+}
+function runtime() {
+  const stage = document.querySelector(".u-stage");
+  const count = Number(stage.dataset.count);
+  const dwell = Number(stage.dataset.dwell);
+  const still = matchMedia("(prefers-reduced-motion: reduce)");
+  let scene = 0;
+  let visible = false;
+  let playing = false;
+  let held = false;
+  let next = 0;
+  const beats = [];
+  const total = (b) => (typeof b.count === "function" ? b.count() : b.count);
+  // Voice: a scene's narration plays when the scene opens, from its recorded clip (data-audio) or else the browser's
+  // own voice, which reads the current text, live numbers included. Voice off shows the narration as text.
+  // The tour waits until the narration ends. A replay of the same scene (go(scene())) does not restart it.
+  const cc = stage.querySelector(".u-cc");
+  const voiceBtn = stage.querySelector(".u-voice");
+  const synth = window.speechSynthesis;
+  const clips = !!cc?.querySelector("[data-audio]");
+  let voiceOn = !!cc && (clips || !!synth);
+  let speaking = false;
+  let spoken = -1;
+  let talk = 0;
+  let clip = null;
+  let audio = null;
+  const recorded = [...(cc?.children ?? [])].map((p) => p.textContent.trim());
+  // ponytail: name heuristic. Neural and online voices (Edge "Natural", Chrome "Google", Apple "Premium") sound human.
+  const bestVoice = () => {
+    const en = synth.getVoices().filter((v) => v.lang.startsWith("en"));
+    return en.find((v) => /natural|neural|online/i.test(v.name)) ?? en.find((v) => /google|premium|enhanced|siri/i.test(v.name)) ?? en.find((v) => v.default) ?? en[0] ?? null;
+  };
+  // Beats: while the voice says line k of the script, the stage has data-speaking and data-cue="<cue of line k>".
+  // The build's CSS lights what that line talks about. When the narration ends, both go and the full scene shows.
+  let timers = [];
+  const quiet = () => {
+    timers.forEach(clearTimeout);
+    timers = [];
+    stage.removeAttribute("data-speaking");
+    delete stage.dataset.cue;
+  };
+  const followBeats = (p, total) => {
+    const cues = p.dataset.cues?.split("|");
+    if (!cues) return;
+    let times = p.dataset.beats?.split(" ").map(Number);
+    if (!times) {
+      // No times from the build (the browser's voice): spread the beats by text length.
+      const chars = p.dataset.chars.split(" ").map(Number);
+      const sum = chars.reduce((a, b) => a + b, 0);
+      times = chars.map((_, k) => (total * chars.slice(0, k).reduce((a, b) => a + b, 0)) / sum);
+    }
+    stage.toggleAttribute("data-speaking", true);
+    times.forEach((t, k) => timers.push(setTimeout(() => (stage.dataset.cue = cues[k]), t * 1000)));
+  };
+  const hush = () => {
+    talk++;
+    speaking = false;
+    spoken = -1;
+    clip?.stop();
+    clip = null;
+    synth?.cancel();
+    quiet();
+  };
+  const speak = () => {
+    if (!voiceOn || spoken === scene) return;
+    // Browsers play no sound before the reader's first click. Wait for it: Play and the scene buttons start the voice.
+    if (navigator.userActivation && !navigator.userActivation.hasBeenActive) return;
+    hush();
+    spoken = scene;
+    const p = cc.querySelector(`[data-at="${scene}"]`);
+    const text = p?.textContent.trim();
+    if (!text) return;
+    const token = talk;
+    const end = () => {
+      if (token !== talk || !speaking) return;
+      speaking = false;
+      quiet();
+      next = performance.now() + 900;
+    };
+    speaking = true;
+    // The clip was recorded from the build's text. After an input changes a live number, the browser reads the new text.
+    // Web Audio decodes the clip from the page itself, so a sandbox that blocks data: media URLs (a file preview,
+    // an Artifact) still plays it.
+    if (p.dataset.audio && text === recorded[scene] && window.AudioContext) {
+      audio ??= new AudioContext();
+      audio.resume();
+      const bytes = Uint8Array.from(atob(p.dataset.audio.split(",")[1]), (c) => c.charCodeAt(0));
+      audio.decodeAudioData(bytes.buffer).then((buffer) => {
+        if (token !== talk) return;
+        clip = audio.createBufferSource();
+        clip.buffer = buffer;
+        clip.connect(audio.destination);
+        clip.onended = end;
+        clip.start();
+        followBeats(p, buffer.duration);
+      }, end);
+    } else if (synth) {
+      const u = new SpeechSynthesisUtterance(text);
+      u.voice = bestVoice();
+      u.rate = 0.95;
+      u.onend = u.onerror = end;
+      synth.speak(u);
+      // ponytail: a browser voice may never report its end, so the tour stops waiting after 0.6 s a word.
+      setTimeout(end, 3000 + text.split(/\s+/).length * 600);
+      followBeats(p, text.length / 14);
+    } else end();
+  };
+  const setVoice = (on) => {
+    voiceOn = on;
+    stage.toggleAttribute("data-voice", on);
+    voiceBtn?.setAttribute("aria-pressed", String(on));
+    on ? speak() : hush();
+  };
+  if (voiceBtn && voiceOn) voiceBtn.hidden = false;
+  stage.toggleAttribute("data-voice", voiceOn);
+  voiceBtn?.addEventListener("click", () => setVoice(!voiceOn));
+  const go = (i, by = "user") => {
+    scene = Math.max(0, Math.min(count - 1, i));
+    stage.dataset.scene = String(scene);
+    stage.querySelectorAll("[data-go]").forEach((b) => (Number(b.dataset.go) === scene ? b.setAttribute("aria-current", "step") : b.removeAttribute("aria-current")));
+    stage.querySelectorAll("[data-ds]").forEach((el) => {
+      const d = JSON.parse(el.dataset.ds)[scene];
+      el.toggleAttribute("data-off", !d);
+      if (!d) return;
+      if (CSS.supports("d", 'path("M0 0")')) el.style.d = `path("${d}")`;
+      else el.setAttribute("d", d);
+    });
+    scope();
+    fit();
+    stage.dispatchEvent(new CustomEvent("unfold:scene", { detail: { scene, by } }));
+    if (by === "user") setPlaying(false);
+    held = false;
+    next = performance.now() + dwell;
+    if (scene !== spoken) speak();
+    for (const b of beats) {
+      b.n = 0;
+      b.at = performance.now() + b.wait - b.ms;
+      if (still.matches && b.scene === scene) b.fn(-1);
+    }
+    setBusy();
+  };
+  // data-busy is on the stage while a counted sweep of this scene still runs. The tour and shoot.mjs wait for it.
+  // A sweep is done one `ms` after its last call, so the last step has time to move. The tour then holds that
+  // last step for `hold` ms before the next scene, so the reader sees the result.
+  const hold = 1800;
+  const setBusy = (now = performance.now()) => {
+    const busy = !held && !still.matches && beats.some((b) => b.scene === scene && total(b) && (b.n < total(b) || now - b.at < b.ms));
+    if (busy === stage.hasAttribute("data-busy")) return;
+    stage.toggleAttribute("data-busy", busy);
+    if (!busy) next = Math.max(next, now + hold);
+  };
+  // The tour runs only after the reader presses Play, and stops at the last scene or at any input.
+  const playBtn = stage.querySelector(".u-play");
+  const setPlaying = (on) => {
+    playing = on;
+    playBtn.setAttribute("aria-pressed", String(on));
+    playBtn.firstChild.textContent = on ? "❚❚" : "▶";
+    playBtn.lastChild.textContent = on ? "Pause" : "Play";
+  };
+  playBtn.addEventListener("click", () => {
+    if (playing) {
+      hush();
+      return setPlaying(false);
+    }
+    if (scene === count - 1) go(0, "tour");
+    next = performance.now() + dwell;
+    setPlaying(true);
+    // A clip that the browser blocked before this click plays now.
+    if (!speaking) (spoken = -1), speak();
+  });
+  const tour = (now) => {
+    if (playing && visible && now > next && !speaking && !stage.hasAttribute("data-busy")) scene === count - 1 ? setPlaying(false) : go(scene + 1, "tour");
+    for (const b of beats) {
+      if (b.scene === scene && visible && !held && !still.matches && now - b.at >= b.ms && !(total(b) && b.n >= total(b))) {
+        b.at = now;
+        b.fn(b.n++);
+      }
+    }
+    setBusy(now);
+    requestAnimationFrame(tour);
+  };
+  stage.querySelector(".u-steps").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-go]");
+    if (b) go(Number(b.dataset.go));
+  });
+  stage.addEventListener("keydown", (e) => {
+    const to = { ArrowRight: scene + 1, ArrowLeft: scene - 1, Home: 0, End: count - 1 }[e.key];
+    if (to === undefined) return;
+    e.preventDefault();
+    go(to);
+  });
+  // Time by hand: the step control and the "," and "." keys call the page's onTime(t). Its keys stay inside it.
+  const timer = stage.querySelector(".u-time");
+  let onTime = () => {};
+  const range = timer?.querySelector("input");
+  // onTime first: it may call go(), which releases the sweeps. pause() after it holds them again.
+  const byHand = (t) => {
+    onTime(Math.max(0, Math.min(Number(range.max), t)));
+    pause();
+  };
+  if (timer) {
+    range.addEventListener("input", () => byHand(Number(range.value)));
+    timer.addEventListener("click", (e) => {
+      const b = e.target.closest("[data-step]");
+      if (b) byHand(Number(range.value) + Number(b.dataset.step));
+    });
+    stage.addEventListener("keydown", (e) => {
+      const by = { ",": -1, ".": 1 }[e.key];
+      if (by === undefined) return;
+      e.preventDefault();
+      byHand(Number(range.value) + by);
+    });
+  }
+  // Keys typed in a control (a scrubber, a number field) stay in it: no scene or focus change.
+  stage.querySelectorAll(".u-controls :is(input,select,textarea)").forEach((el) => el.addEventListener("keydown", (e) => e.stopPropagation()));
+  // A scene-scoped control (stageHtml controlScenes, or any element in the controls with data-scenes) is dimmed
+  // in the other scenes, and an input there moves to the first scene that uses it.
+  const ownersOf = (el) => el.dataset.scenes.trim().split(/\s+/).map(Number);
+  function scope() {
+    stage.querySelectorAll(".u-controls [data-scenes]").forEach((el) => el.toggleAttribute("data-idle", !ownersOf(el).includes(scene)));
+  }
+  const toOwner = (e) => {
+    const el = e.target.closest(".u-controls [data-scenes]");
+    if (el && !ownersOf(el).includes(scene)) go(ownersOf(el)[0]);
+  };
+  // Capture phase: the move runs before the page's own handler, so a preset applied on scene entry
+  // does not overwrite what the reader just set.
+  const panel = stage.querySelector(".u-controls");
+  panel?.addEventListener("input", toOwner, true);
+  panel?.addEventListener("click", (e) => e.target.closest("button") && toOwner(e), true);
+  // timeAt(t, steps): show step t. Pass steps when the run's length changed (a live input made a longer trace).
+  const timeAt = (t, steps) => {
+    if (!timer) return;
+    if (steps) range.max = String(steps - 1);
+    range.value = String(t);
+    timer.querySelector("output").textContent = `${timer.dataset.label} ${t} / ${range.max}`;
+  };
+  // Narrow layout: below 560 px the drawing takes its second viewBox and the stage gets data-narrow.
+  // With one narrow height per scene (data-narrow-h), the viewBox follows the scene.
+  const svg = stage.querySelector("svg");
+  const wide = svg?.getAttribute("viewBox");
+  const heights = stage.dataset.narrowH?.split(" ");
+  function fit() {
+    if (!stage.dataset.narrowBox) return;
+    const box = stage.dataset.narrowBox.split(" ");
+    if (heights) box[3] = heights[scene] ?? box[3];
+    svg.setAttribute("viewBox", stage.hasAttribute("data-narrow") ? box.join(" ") : wide);
+  }
+  if (stage.dataset.narrowBox)
+    new ResizeObserver(([entry]) => {
+      const on = entry.contentRect.width < 560;
+      if (on === stage.hasAttribute("data-narrow")) return;
+      stage.toggleAttribute("data-narrow", on);
+      fit();
+      stage.dispatchEvent(new CustomEvent("unfold:layout", { detail: { narrow: on } }));
+    }).observe(stage);
+  scope();
+  new IntersectionObserver((entries) => (visible = entries[entries.length - 1].isIntersecting), { rootMargin: "120px 0px" }).observe(stage);
+  next = performance.now() + dwell;
+  requestAnimationFrame(tour);
+  // beat(scene, ms, fn, wait, count): call fn(0), fn(1), … every ms while that scene shows, starting `wait` ms after it opens.
+  // With count, it stops after fn(count - 1) and the stage loses data-busy. Without it, the sweep never ends (a loop).
+  // count may be a function, read on every frame, for a run whose length a live input changes.
+  // Under reduced motion fn(-1) is called once instead: show the resting state.
+  const beat = (sceneIndex, ms, fn, wait = 1000, count = 0) => {
+    // No setBusy() here: the next frame runs it, so a count function may read data the page sets up after this call.
+    beats.push({ scene: sceneIndex, ms, fn, wait, count, n: 0, at: performance.now() + wait - ms });
+    // The scene open at load had no go() after this beat existed: show its resting state too, after the page script ran.
+    requestAnimationFrame(() => still.matches && scene === sceneIndex && fn(-1));
+  };
+  // pause(): the user took control. The tour stops, and the sweeps hold until the scene changes.
+  const pause = () => {
+    setPlaying(false);
+    held = true;
+    setBusy();
+  };
+  return { stage, go, beat, pause, scene: () => scene, onTime: (fn) => (onTime = fn), timeAt, narrow: () => stage.hasAttribute("data-narrow") };
+}
+const UNFOLD = runtime();
+
+const MOD = 4294967296;
+const MAX_DATA = 5;
+const PRESETS = {"hand":{"client":1000,"server":5000,"data":"hello"},"linux":{"client":3613854406,"server":103912856,"data":"hello"},"wrap":{"client":4294967293,"server":4294967295,"data":"hello"}};
+function uses(seg) {
+  return seg.len + (seg.flags.includes("SYN") ? 1 : 0) + (seg.flags.includes("FIN") ? 1 : 0);
+}
+function run(isn, data) {
+  const side = (name) => ({ name, state: "CLOSED", iss: isn[name], sndUna: null, sndNxt: null, rcvNxt: null });
+  const ep = { client: side("client"), server: side("server") };
+  const other = (e) => (e.name === "client" ? ep.server : ep.client);
+  ep.server.state = "LISTEN";
+  const steps = [];
+  const changes = []; // { side, state, t, at: "send" | "recv" | "timer" }
+  const setState = (e, state, t, at) => {
+    e.state = state;
+    changes.push({ side: e.name, state, t, at });
+  };
+  // rule: the line of the receive rule (the figure's code panel) that the receiver runs for this segment.
+  const snap = (t, seg, rule) =>
+    steps.push({ t, seg, rule, ...Object.fromEntries(Object.values(ep).map((e) => [e.name, { state: e.state, sndUna: e.sndUna, sndNxt: e.sndNxt, rcvNxt: e.rcvNxt }])) });
+  changes.push({ side: "client", state: "CLOSED", t: 0, at: "start" }, { side: "server", state: "LISTEN", t: 0, at: "start" });
+  snap(0, null, -1);
+
+  const send = (e, flags, bytes = "") => {
+    if (flags.includes("SYN")) e.sndUna = e.sndNxt = e.iss;
+    const seg = { from: e.name, flags, seq: e.sndNxt, ack: flags.includes("ACK") ? e.rcvNxt : null, len: bytes.length, data: bytes };
+    e.sndNxt = (e.sndNxt + uses(seg)) % MOD;
+    return seg;
+  };
+  // What the receiver does with one segment: update its counters and state, and maybe answer.
+  // The answer is returned as a function, so it goes on the wire (and moves SND.NXT) in the next step.
+  // The line numbers match the receive rule in the figure's code panel (0-based).
+  const receive = (e, seg, t) => {
+    if (seg.flags.includes("SYN")) e.rcvNxt = seg.seq;
+    if (seg.seq !== e.rcvNxt) throw new Error(`${e.name}: out of order seq ${seg.seq}, expected ${e.rcvNxt}`);
+    e.rcvNxt = (e.rcvNxt + uses(seg)) % MOD;
+    if (seg.ack !== null) {
+      if (seg.ack !== e.sndNxt) throw new Error(`${e.name}: ack ${seg.ack} is not SND.NXT ${e.sndNxt}`);
+      e.sndUna = seg.ack;
+    }
+    const f = seg.flags;
+    if (e.state === "LISTEN" && f.includes("SYN")) return setState(e, "SYN-RECEIVED", t, "recv"), [4, () => send(e, ["SYN", "ACK"])];
+    if (e.state === "SYN-SENT" && f.includes("SYN")) return setState(e, "ESTABLISHED", t, "recv"), [5, () => send(e, ["ACK"])];
+    if (e.state === "SYN-RECEIVED") return setState(e, "ESTABLISHED", t, "recv"), [6, null];
+    if (e.state === "ESTABLISHED" && f.includes("FIN")) return setState(e, "CLOSE-WAIT", t, "recv"), [8, () => send(e, ["ACK"])];
+    if (e.state === "ESTABLISHED" && seg.len) return [7, () => send(e, ["ACK"])];
+    if (e.state === "FIN-WAIT-1") return setState(e, "FIN-WAIT-2", t, "recv"), [9, null];
+    if (e.state === "FIN-WAIT-2" && f.includes("FIN")) return setState(e, "TIME-WAIT", t, "recv"), [10, () => send(e, ["ACK"])];
+    if (e.state === "LAST-ACK") return setState(e, "CLOSED", t, "recv"), [11, null];
+    return [3, null]; // a pure ACK: only the SND.UNA line changes anything
+  };
+  // What the applications do, in order, each when the wire is quiet.
+  const apps = [
+    (t) => (setState(ep.client, "SYN-SENT", t, "send"), send(ep.client, ["SYN"])), // connect()
+    () => send(ep.client, ["PSH", "ACK"], data), // send(data)
+    (t) => (setState(ep.client, "FIN-WAIT-1", t, "send"), send(ep.client, ["FIN", "ACK"])), // client close()
+    (t) => (setState(ep.server, "LAST-ACK", t, "send"), send(ep.server, ["FIN", "ACK"])), // server close()
+  ];
+  let wire = null;
+  while (wire || apps.length) {
+    const t = steps.length;
+    const seg = wire ? wire() : apps.shift()(t);
+    const [rule, answer] = receive(other(ep[seg.from]), seg, t);
+    wire = answer;
+    snap(t, seg, rule);
+  }
+  // TIME-WAIT ends after 2 MSL; nothing goes on the wire.
+  setState(ep.client, "CLOSED", steps.length, "timer");
+  snap(steps.length, null, -1);
+  return { steps, changes };
+}
+function space(from, segments) {
+  const cells = [];
+  for (const seg of segments.filter((s) => s.from === from)) {
+    if (seg.flags.includes("SYN")) cells.push({ n: seg.seq, what: "SYN" });
+    [...seg.data].forEach((ch, k) => cells.push({ n: (seg.seq + k) % MOD, what: ch }));
+    if (seg.flags.includes("FIN")) cells.push({ n: (seg.seq + seg.len) % MOD, what: "FIN" });
+  }
+  return cells;
+}
+function ackSum(seg) {
+  return { seq: seg.seq, len: seg.len, syn: seg.flags.includes("SYN") ? 1 : 0, fin: seg.flags.includes("FIN") ? 1 : 0, ack: (seg.seq + uses(seg)) % MOD };
+}
+function answers(t, steps) {
+  const from = steps[t].seg.from;
+  for (let k = t - 1; k > 0; k--) if (steps[k].seg && steps[k].seg.from !== from) return steps[k];
+  return null;
+}
+
+function liveValues(steps, data) {
+  const seg = (t) => steps[t].seg;
+  const v = { isnC: seg(1).seq, isnS: seg(2).seq, isnC1: seg(3).seq, ack2: seg(2).ack, ack3: seg(3).ack, seq3: seg(3).seq };
+  v.d0 = seg(4).seq;
+  v.d1 = (seg(4).seq + data.length - 1) % MOD;
+  v.bytes = data.length === 1 ? "1 byte" : data.length + " bytes";
+  v.dataq = '"' + data + '"';
+  v.fin1 = seg(6).seq;
+  v.fin2 = seg(8).seq;
+  for (const t of [2, 3, 5, 7, 9]) {
+    const a = ackSum(answers(t, steps).seg);
+    for (const k of ["seq", "len", "syn", "fin", "ack"]) v["a" + t + k] = a[k];
+    v["a" + t + "mod"] = a.seq + a.len + a.syn + a.fin >= MOD ? " (mod 2³²)" : "";
+  }
+  v.ack5 = seg(5).ack;
+  v.ack7 = seg(7).ack;
+  v.ack9 = seg(9).ack;
+  return v;
+}
+const ON = {"client":[0,2,4,4,4,4,6,8,10,10,12],"server":[1,3,3,5,5,5,7,7,9,11,11]};
+const RANGES = [[0,10],[0,1],[2,2],[3,3],[4,5],[6,7],[8,10]];
+const FLAG_HUE = {"SYN":"yellow","FIN":"red","ACK":"green","PSH":"","RST":"","URG":""};
+const LAST = 10;
+const CELL = 50;
+const root = UNFOLD.stage;
+const out = document.querySelector("[data-readout]");
+const $ = (q) => root.querySelector(q);
+const off = (n, base) => (n - base + MOD) % MOD;
+let input = { ...PRESETS.hand };
+let R = run(input, input.data);
+let step = LAST;
+let crossing = false;
+
+function readout(s) {
+  if (!s.seg) return s.t === 0 ? "step 0 · client CLOSED · server LISTEN" : "step " + s.t + " · 2·MSL timer ends · client CLOSED";
+  const head = "step " + s.t + " · " + s.seg.from + " " + s.seg.flags.join(",");
+  if (s.seg.ack === null) return head + " · seq = ISN = " + s.seg.seq + " · no ack yet";
+  const src = answers(s.t, R.steps);
+  const a = ackSum(src.seg);
+  const wrap = a.seq + a.len + a.syn + a.fin >= MOD ? " mod 2³²" : "";
+  return head + " · ack = " + a.seq + " + " + a.len + " + " + a.syn + " + " + a.fin + " = " + a.ack + wrap + " (step " + src.t + ")";
+}
+// One line while it fits between the lifelines, else flags and seq on top, ack and len below.
+function drawLabel(g, seg) {
+  const flags = seg.flags.map((f, k) => (k ? "," : "") + '<tspan data-hue="' + FLAG_HUE[f] + '">' + f + "</tspan>").join("");
+  const seq = '<tspan data-hue="blue"> seq=' + seg.seq + "</tspan>";
+  const rest = (seg.ack !== null ? '<tspan data-hue="green">ack=' + seg.ack + "</tspan>" : "") + (seg.len ? '<tspan data-hue="purple"> len=' + seg.len + "</tspan>" : "");
+  const top = seg.flags.join(",").length + 5 + String(seg.seq).length;
+  const low = (seg.ack !== null ? 4 + String(seg.ack).length : 0) + (seg.len ? 5 + String(seg.len).length : 0);
+  const one = (top + (low ? low + 1 : 0)) * 6.02 + 10 <= 200;
+  const lab = g.querySelector(".el-lab");
+  const cy = Number(lab.dataset.cy);
+  const text = lab.querySelector("text");
+  const rect = lab.querySelector("rect");
+  const w = (one ? top + (low ? low + 1 : 0) : Math.max(top, low)) * 6.02 + 10;
+  text.innerHTML = one || !low ? flags + seq + (low ? " " + rest : "") : '<tspan x="200" dy="-6">' + flags + seq + '</tspan><tspan x="200" dy="12">' + rest + "</tspan>";
+  text.setAttribute("y", String(cy));
+  const h = one || !low ? 16 : 28;
+  rect.setAttribute("x", String(200 - w / 2));
+  rect.setAttribute("width", String(w));
+  rect.setAttribute("y", String(cy - h / 2));
+  rect.setAttribute("height", String(h));
+}
+// After a new input: every number in the ladder, the strips, the sentences, the equation and the notes.
+function redraw() {
+  R = run(input, input.data);
+  R.steps.forEach((s) => s.seg && drawLabel($("#seg-" + s.t), s.seg));
+  const segments = R.steps.filter((s) => s.seg).map((s) => s.seg);
+  for (const from of ["client", "server"]) {
+    const cells = space(from, segments);
+    const sentAt = R.steps.filter((s) => s.seg && s.seg.from === from && (s.seg.len || s.seg.flags.includes("SYN") || s.seg.flags.includes("FIN")));
+    const owner = [];
+    sentAt.forEach((s) => owner.push(...Array(s.seg.len + (s.seg.flags.includes("SYN") ? 1 : 0) + (s.seg.flags.includes("FIN") ? 1 : 0)).fill(s.t)));
+    const all = [...cells, { n: (cells.at(-1).n + 1) % MOD, what: "" }];
+    root.querySelectorAll("#strip-" + from + " .el-cell").forEach((c, k) => {
+      const cell = all[k];
+      c.toggleAttribute("data-off", !cell);
+      if (!cell) return;
+      const what = cell.what;
+      if (what) c.dataset.hue = what === "SYN" ? "yellow" : what === "FIN" ? "red" : "purple";
+      else c.removeAttribute("data-hue");
+      c.toggleAttribute("data-ghost", !what);
+      c.dataset.n = String(cell.n);
+      c.dataset.t = String(owner[k] ?? "");
+      const cn = c.querySelector(".el-cn");
+      cn.textContent = String(cell.n);
+      cn.style.fontSize = Math.min(9.5, 44 / (String(cell.n).length * 0.6)).toFixed(2) + "px";
+      c.querySelector(".el-cw").textContent = what;
+    });
+  }
+  setLive(liveValues(R.steps, input.data));
+  show(step);
+}
+function show(t) {
+  step = Math.max(0, Math.min(LAST, t));
+  const s = R.steps[step];
+  root.querySelectorAll(".el-seg").forEach((g) => {
+    const k = Number(g.dataset.t);
+    g.toggleAttribute("data-show", k <= step);
+    if (k !== step) g.removeAttribute("data-now");
+    else if (!g.hasAttribute("data-now")) g.setAttribute("data-now", "");
+  });
+  root.querySelectorAll(".el-state").forEach((g) => {
+    const k = Number(g.id.slice(3));
+    g.toggleAttribute("data-show", Number(g.dataset.t) <= step);
+    g.toggleAttribute("data-on", ON[g.dataset.side][step] === k);
+  });
+  $(".el-timer").toggleAttribute("data-show", step === LAST);
+  for (const from of ["client", "server"]) {
+    const to = from === "client" ? "server" : "client";
+    const v = s[from];
+    const base = input[from];
+    root.querySelectorAll("#strip-" + from + " .el-cell").forEach((c) => {
+      const k = off(Number(c.dataset.n), base);
+      const real = !c.hasAttribute("data-ghost");
+      c.toggleAttribute("data-sent", real && v.sndNxt !== null && k < off(v.sndNxt, base));
+      c.toggleAttribute("data-acked", real && v.sndUna !== null && k < off(v.sndUna, base));
+    });
+    const place = (el, n) => {
+      el.style.opacity = n === null ? 0 : 1;
+      if (n === null) return;
+      const k = off(n, base);
+      el.style.transform = "translateX(" + k * CELL + "px)";
+      el.toggleAttribute("data-flip", k >= 4);
+    };
+    place($("#snd-" + from), v.sndNxt);
+    place($("#rcv-" + from), s[to].rcvNxt);
+  }
+  const g = s.seg;
+  $("#dir").textContent = g ? g.from + " → " + (g.from === "client" ? "server" : "client") : "no segment";
+  $("#f-seq .el-fval").textContent = g ? g.seq : "—";
+  $("#f-ack .el-fval").textContent = g && g.ack !== null ? g.ack : "—";
+  $("#f-data .el-fval").textContent = g && g.data ? '"' + g.data + '"' : "—";
+  root.querySelectorAll(".el-flag").forEach((f) => f.toggleAttribute("data-on", !!g && g.flags.includes(f.id.slice(5))));
+  const code = $("#code");
+  mark(code, s.rule, ".u-line");
+  if (g) code.dataset.hue = g.flags.includes("SYN") ? "yellow" : g.flags.includes("FIN") ? "red" : g.len ? "purple" : "green";
+  $("#code-who").textContent = g ? (g.from === "client" ? "server" : "client") + " runs line " + (s.rule + 1) : "";
+  UNFOLD.timeAt(step);
+  const text = readout(s);
+  if (out.textContent !== text) out.textContent = text;
+}
+// Stepping by hand can cross into another scene; the scene follows the step.
+function stepTo(t) {
+  show(t);
+  const sc = UNFOLD.scene();
+  const [a, b] = RANGES[sc];
+  if (sc > 0 && (step < a || step > b)) {
+    crossing = true;
+    UNFOLD.go(RANGES.findIndex((r, i) => i > 0 && step >= r[0] && step <= r[1]));
+    crossing = false;
+  }
+  UNFOLD.pause();
+}
+root.addEventListener("unfold:scene", (e) => {
+  if (!crossing) show(e.detail.scene === 0 ? LAST : RANGES[e.detail.scene][0]);
+});
+RANGES.forEach(([a, b], sc) => sc > 0 && a < b && UNFOLD.beat(sc, 1300, (n) => show(n < 0 ? b : Math.min(a + n, b)), 1300, b - a + 1));
+UNFOLD.onTime(stepTo);
+root.addEventListener("keydown", (e) => {
+  const to = { ArrowUp: step - 1, ArrowDown: step + 1 }[e.key];
+  if (to === undefined) return;
+  e.preventDefault();
+  stepTo(to);
+});
+root.addEventListener("click", (e) => {
+  const hit = e.target.closest(".el-seg, .el-cell[data-t]:not([data-t=''])");
+  if (hit) stepTo(Number(hit.dataset.t));
+});
+
+// Inputs: any 32-bit ISN, 1 to MAX_DATA printable ASCII bytes. A bad value is skipped until it is fixed.
+const isnIn = [...root.querySelectorAll(".el-isn")];
+const dataIn = $(".el-data");
+const ascii = (s) => [...s].filter((ch) => ch >= " " && ch <= "~").join("").slice(0, MAX_DATA);
+function readInputs() {
+  const next = { ...input };
+  for (const el of isnIn) {
+    const v = Number(el.value);
+    if (el.value.trim() === "" || !Number.isInteger(v) || v < 0 || v >= MOD) return null;
+    next[el.dataset.side] = v;
+  }
+  next.data = ascii(dataIn.value);
+  return next.data ? next : null;
+}
+function writeInputs() {
+  isnIn.forEach((el) => (el.value = String(input[el.dataset.side])));
+  dataIn.value = input.data;
+}
+root.querySelector(".u-ctl").addEventListener("input", () => {
+  UNFOLD.pause();
+  const next = readInputs();
+  if (!next) return;
+  input = next;
+  redraw();
+});
+root.querySelector(".u-ctl").addEventListener("change", writeInputs);
+root.querySelectorAll("[data-preset]").forEach((b) =>
+  b.addEventListener("click", () => {
+    UNFOLD.pause();
+    input = { ...PRESETS[b.dataset.preset] };
+    writeInputs();
+    redraw();
+  }),
+);
+redraw();
+</script></body></html>
