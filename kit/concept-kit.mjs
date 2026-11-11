@@ -533,6 +533,18 @@ function runtime() {
       fit();
       stage.dispatchEvent(new CustomEvent("unfold:layout", { detail: { narrow: on } }));
     }).observe(stage);
+  // Fill: on a data-fill page the drawing grows until the card fills the window height.
+  // --u-chrome is the height of everything on the first screen except the drawing.
+  const plate = stage.closest(".iso-page[data-fill] .iso-plate");
+  if (plate && svg) {
+    let chrome = 0;
+    new ResizeObserver(() =>
+      requestAnimationFrame(() => {
+        const now = Math.ceil(plate.getBoundingClientRect().bottom + scrollY - svg.getBoundingClientRect().height) + 16;
+        if (now !== chrome) stage.style.setProperty("--u-chrome", (chrome = now) + "px");
+      }),
+    ).observe(plate);
+  }
   scope();
   new IntersectionObserver((entries) => (visible = entries[entries.length - 1].isIntersecting), { rootMargin: "120px 0px" }).observe(stage);
   next = performance.now() + dwell;
@@ -915,16 +927,16 @@ ${HUES.map((h) => `[data-hue="${h}"]{--hue:var(--unfold-${h})}`).join("")}[data-
 .u-eq,.u-say,.u-cc{display:grid;align-items:center}
 .u-eq>.u-at,.u-say>.u-at,.u-cc>.u-at{grid-area:1/1;opacity:0;visibility:hidden;transition:opacity .2s var(--u-ease),visibility 0s .2s;margin:0}
 .u-eq{min-height:44px;margin-bottom:8px;overflow-x:auto;overflow-y:hidden}
-.u-eq math{font-family:var(--unfold-serif);font-size:20px;color:var(--u-strong)}
+.u-eq math{font-family:var(--unfold-serif);font-size:clamp(20px,1.9cqw,32px);color:var(--u-strong)}
 .u-eq [data-hue]{color:var(--hue)}
-.u-say{min-height:48px;margin-top:6px;color:var(--u-text);font-size:14px;line-height:1.55;text-align:center}
-.u-cc{margin-top:6px;color:var(--u-text);font-size:14px;line-height:1.55;text-align:center}
+.u-say{min-height:48px;margin-top:6px;color:var(--u-text);font-size:clamp(14px,1.25cqw,19px);line-height:1.55;text-align:center}
+.u-cc{margin-top:6px;color:var(--u-text);font-size:clamp(14px,1.25cqw,19px);line-height:1.55;text-align:center}
 .u-stage[data-voice] .u-cc{display:none}
 :is(.u-say,.u-cc)>.u-at{max-width:62ch;justify-self:center}
 :is(.u-say,.u-cc) b{color:var(--u-strong);font-weight:500}
 :is(.u-say,.u-cc) [data-hue]{color:var(--hue)}
 .u-steps{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin-top:14px}
-.u-steps button{display:inline-flex;align-items:center;gap:6px;padding:5px 10px 5px 6px;border:0;border-radius:999px;background:transparent;color:var(--u-muted);font:11px/1 var(--u-mono);letter-spacing:.04em;cursor:pointer;box-shadow:0 0 0 1px var(--u-faint);transition:color .2s,box-shadow .2s}
+.u-steps button{display:inline-flex;align-items:center;gap:6px;padding:5px 10px 5px 6px;border:0;border-radius:999px;background:transparent;color:var(--u-muted);font:clamp(11px,.85cqw,14px)/1 var(--u-mono);letter-spacing:.04em;cursor:pointer;box-shadow:0 0 0 1px var(--u-faint);transition:color .2s,box-shadow .2s}
 .u-steps button span{display:inline-grid;place-items:center;width:16px;height:16px;border-radius:50%;background:var(--u-faint);color:var(--u-text);font-size:10px}
 .u-steps button:hover{color:var(--u-text)}
 .u-steps button[aria-current]{color:var(--u-strong);box-shadow:0 0 0 1px var(--u-mid)}
@@ -1030,6 +1042,12 @@ ${HUES.map((h) => `[data-hue="${h}"]{--hue:var(--unfold-${h})}`).join("")}[data-
 @media (max-width:560px){.u-notes thead{display:none}.u-notes tr{display:block;padding:8px 0;border-bottom:1px solid var(--u-faint)}.u-notes td{display:block;padding:2px 0;border:0}.u-notes td[data-th]:not(:first-child)::before{content:attr(data-th) ": ";color:var(--u-muted)}}
 @container (max-width:520px){:not([data-keep])>.u-cell .u-num,:not([data-keep])>.u-bar .u-bar-value{display:none}.u-eq math{font-size:14px}.u-steps button{font-size:0;gap:0;padding:4px}.u-controls{gap:8px;flex-direction:column;align-items:stretch}.u-ctl{gap:6px 8px}.u-time{flex:none;max-width:none}.u-controls label{gap:4px}}
 @media (max-width:560px){.iso-plate-corner[data-corner="readout"]{left:0;max-width:none;white-space:normal;text-align:right;line-height:1.4}.iso-plate-corner[data-corner="hint"]{display:none}}
+.iso-page[data-fill]{width:calc(100% - var(--u-gutter,32px));margin:16px auto 24px;padding-block:0}
+.iso-page[data-fill]>.iso-figure:first-of-type{margin-top:0}
+.iso-page[data-fill] .u-stage>svg{max-height:max(360px,calc(100dvh - var(--u-chrome,330px)))}
+.iso-page[data-fill] .u-stage[data-narrow]>svg{max-height:none}
+@media (max-height:520px){.iso-page[data-fill] .u-stage>svg{max-height:none}}
+@media (max-width:560px){.iso-page[data-fill]{width:calc(100% - var(--u-gutter,12px));margin:6px auto 16px}.iso-page[data-fill] .iso-plate{padding-inline:8px}.iso-page[data-fill] .iso-plate-corners{inset-inline:10px}}
 @media (prefers-reduced-motion:reduce){.u-stage *{transition:none!important;animation:none!important}.u-pulse{display:none}}
 `;
 
@@ -1124,7 +1142,10 @@ export const notesHtml = (sections, { summary = "Reference: what differs, what i
 
 // The anatomy card and page, with the unfold styles and runtime added.
 // theme: "dark", "light", or "auto" (follows the reader's system setting: light for most readers of a blog or docs).
-export function pageHtml({ title, theme = "dark", body, script = "", width = 900 }) {
+// width: "fill" (the default) gives the card the whole window: it is as wide as the window, and the drawing grows
+// until the card is as tall as the window. On a phone the drawing takes the full width and the page scrolls.
+// A number is a fixed widest size in px, for a figure that sits in a column of text.
+export function pageHtml({ title, theme = "dark", body, script = "", width = "fill" }) {
   const auto = theme === "auto" ? `@media (prefers-color-scheme:light){html{color-scheme:light}.iso[data-theme="auto"]{${lightTokens(iso.ISO_CSS + UNFOLD_CSS)}}}` : "";
   return iso.pageHtml({ title, theme, width, body: `<style>${UNFOLD_CSS}${auto}</style>${body}`, script: runtimeScript(script) + script });
 }
@@ -1132,9 +1153,10 @@ const lightTokens = (css) => [...css.matchAll(/(?:body|\.iso)\[data-theme="light
 
 // The same page as a claude.ai Artifact fragment: no document skeleton, and the theme follows the viewer
 // (dark first; light under prefers-color-scheme or an explicit data-theme on the root).
-export function artifactHtml({ title, body, script = "", width = 900 }) {
+export function artifactHtml({ title, body, script = "", width = "fill" }) {
   const light = (css) =>
     css.replace(/(?:body|\.iso)\[data-theme="light"\]\{([^}]*)\}/g, (_, rules) => `@media (prefers-color-scheme:light){:root:not([data-theme="dark"]) .iso{${rules}}}:root[data-theme="light"] .iso{${rules}}`);
+  const fill = width === "fill";
   const page = `
 :root{--page:#0b0b0b;color-scheme:dark}
 @media (prefers-color-scheme:light){:root:not([data-theme="dark"]){--page:#f2f2ef;color-scheme:light}}
@@ -1142,9 +1164,9 @@ export function artifactHtml({ title, body, script = "", width = 900 }) {
 *{box-sizing:border-box}
 body{background:var(--page);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 .iso{background:var(--u-page);color:var(--u-text);font:14px/1.6 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
-.iso-page{width:min(${width}px,100%);margin:0 auto;padding-block:40px 64px}`;
+.iso-page{width:min(${fill ? "100%" : width + "px"},100%);margin:0 auto;padding-block:40px 64px;--u-gutter:0px}`;
   const js = (runtimeScript(script) + script).replace(/<\/(script)/gi, "<\\/$1");
-  return `<title>${esc(title)}</title><meta name="claude:viewport-fit-sides" content="cover"><style>${light(iso.ISO_CSS + UNFOLD_CSS)}${page}</style><div class="iso"><main class="iso-page">${body}</main></div><script type="module">${js}</script>`;
+  return `<title>${esc(title)}</title><meta name="claude:viewport-fit-sides" content="cover"><style>${light(iso.ISO_CSS + UNFOLD_CSS)}${page}</style><div class="iso"><main class="iso-page"${fill ? " data-fill" : ""}>${body}</main></div><script type="module">${js}</script>`;
 }
 
 // node kit/concept-kit.mjs --check: cleanEnds on synthetic clips (a tone stands for speech).

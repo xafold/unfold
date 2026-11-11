@@ -28,7 +28,7 @@ The examples use only the functions below. The file has more (cylinders, ticks, 
 |---|---|
 | `figureSvg({ width, height, label, body, className })` | The `<svg>` of the drawing. `label` is its accessible name. |
 | `plateHtml({ fig, title, hint, readout, keys, caption, body })` | The card: `Fig n` top left, title top right, hint bottom left, live readout (`[data-readout]`) bottom right. |
-| `pageHtml({ title, theme, body, script, width })` | A full page with the base CSS. Use `concept-kit.mjs`'s `pageHtml`, which adds the unfold CSS and runtime. |
+| `pageHtml({ title, theme, body, script, width })` | A full page with the base CSS. `width` is the widest size in px, or `"fill"` for the whole window. Use `concept-kit.mjs`'s `pageHtml`, which adds the unfold CSS and runtime and fills the window by default. |
 | `ISO_CSS` | The base CSS. |
 
 ## Tokens

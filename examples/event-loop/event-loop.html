@@ -110,8 +110,8 @@
 html{color-scheme:dark}
 body[data-theme="light"]{color-scheme:light}
 body{margin:0;background:var(--u-page);color:var(--u-text);font:14px/1.6 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
-.iso-page{width:min(900px,100% - 32px);margin:64px auto 96px}
-</style></head><body class="iso" data-theme="dark"><main class="iso-page"><style>
+.iso-page{width:min(100%,100% - 32px);margin:64px auto 96px}
+</style></head><body class="iso" data-theme="dark"><main class="iso-page" data-fill><style>
 .iso{--unfold-blue:#58c4dd;--unfold-yellow:#f4d345;--unfold-red:#fc6255;--unfold-green:#83c167;--unfold-teal:#5cd0b3;--unfold-purple:#b48ad1;--unfold-gold:#f0ac5f;--unfold-on-hot:#0b0b0b;--unfold-serif:"Latin Modern Math","STIX Two Math","Cambria Math",math,serif}
 .iso[data-theme="light"]{--unfold-blue:#1f78a4;--unfold-yellow:#a67c00;--unfold-red:#cf3b2e;--unfold-green:#3e8a2a;--unfold-teal:#16866b;--unfold-purple:#7a4fa3;--unfold-gold:#b8661a;--unfold-on-hot:#ffffff}
 [data-hue="blue"]{--hue:var(--unfold-blue)}[data-hue="yellow"]{--hue:var(--unfold-yellow)}[data-hue="red"]{--hue:var(--unfold-red)}[data-hue="green"]{--hue:var(--unfold-green)}[data-hue="teal"]{--hue:var(--unfold-teal)}[data-hue="purple"]{--hue:var(--unfold-purple)}[data-hue="gold"]{--hue:var(--unfold-gold)}[data-hue="ink"]{--hue:var(--u-hi)}
@@ -126,16 +126,16 @@ body{margin:0;background:var(--u-page);color:var(--u-text);font:14px/1.6 ui-sans
 .u-eq,.u-say,.u-cc{display:grid;align-items:center}
 .u-eq>.u-at,.u-say>.u-at,.u-cc>.u-at{grid-area:1/1;opacity:0;visibility:hidden;transition:opacity .2s var(--u-ease),visibility 0s .2s;margin:0}
 .u-eq{min-height:44px;margin-bottom:8px;overflow-x:auto;overflow-y:hidden}
-.u-eq math{font-family:var(--unfold-serif);font-size:20px;color:var(--u-strong)}
+.u-eq math{font-family:var(--unfold-serif);font-size:clamp(20px,1.9cqw,32px);color:var(--u-strong)}
 .u-eq [data-hue]{color:var(--hue)}
-.u-say{min-height:48px;margin-top:6px;color:var(--u-text);font-size:14px;line-height:1.55;text-align:center}
-.u-cc{margin-top:6px;color:var(--u-text);font-size:14px;line-height:1.55;text-align:center}
+.u-say{min-height:48px;margin-top:6px;color:var(--u-text);font-size:clamp(14px,1.25cqw,19px);line-height:1.55;text-align:center}
+.u-cc{margin-top:6px;color:var(--u-text);font-size:clamp(14px,1.25cqw,19px);line-height:1.55;text-align:center}
 .u-stage[data-voice] .u-cc{display:none}
 :is(.u-say,.u-cc)>.u-at{max-width:62ch;justify-self:center}
 :is(.u-say,.u-cc) b{color:var(--u-strong);font-weight:500}
 :is(.u-say,.u-cc) [data-hue]{color:var(--hue)}
 .u-steps{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin-top:14px}
-.u-steps button{display:inline-flex;align-items:center;gap:6px;padding:5px 10px 5px 6px;border:0;border-radius:999px;background:transparent;color:var(--u-muted);font:11px/1 var(--u-mono);letter-spacing:.04em;cursor:pointer;box-shadow:0 0 0 1px var(--u-faint);transition:color .2s,box-shadow .2s}
+.u-steps button{display:inline-flex;align-items:center;gap:6px;padding:5px 10px 5px 6px;border:0;border-radius:999px;background:transparent;color:var(--u-muted);font:clamp(11px,.85cqw,14px)/1 var(--u-mono);letter-spacing:.04em;cursor:pointer;box-shadow:0 0 0 1px var(--u-faint);transition:color .2s,box-shadow .2s}
 .u-steps button span{display:inline-grid;place-items:center;width:16px;height:16px;border-radius:50%;background:var(--u-faint);color:var(--u-text);font-size:10px}
 .u-steps button:hover{color:var(--u-text)}
 .u-steps button[aria-current]{color:var(--u-strong);box-shadow:0 0 0 1px var(--u-mid)}
@@ -241,6 +241,12 @@ body{margin:0;background:var(--u-page);color:var(--u-text);font:14px/1.6 ui-sans
 @media (max-width:560px){.u-notes thead{display:none}.u-notes tr{display:block;padding:8px 0;border-bottom:1px solid var(--u-faint)}.u-notes td{display:block;padding:2px 0;border:0}.u-notes td[data-th]:not(:first-child)::before{content:attr(data-th) ": ";color:var(--u-muted)}}
 @container (max-width:520px){:not([data-keep])>.u-cell .u-num,:not([data-keep])>.u-bar .u-bar-value{display:none}.u-eq math{font-size:14px}.u-steps button{font-size:0;gap:0;padding:4px}.u-controls{gap:8px;flex-direction:column;align-items:stretch}.u-ctl{gap:6px 8px}.u-time{flex:none;max-width:none}.u-controls label{gap:4px}}
 @media (max-width:560px){.iso-plate-corner[data-corner="readout"]{left:0;max-width:none;white-space:normal;text-align:right;line-height:1.4}.iso-plate-corner[data-corner="hint"]{display:none}}
+.iso-page[data-fill]{width:calc(100% - var(--u-gutter,32px));margin:16px auto 24px;padding-block:0}
+.iso-page[data-fill]>.iso-figure:first-of-type{margin-top:0}
+.iso-page[data-fill] .u-stage>svg{max-height:max(360px,calc(100dvh - var(--u-chrome,330px)))}
+.iso-page[data-fill] .u-stage[data-narrow]>svg{max-height:none}
+@media (max-height:520px){.iso-page[data-fill] .u-stage>svg{max-height:none}}
+@media (max-width:560px){.iso-page[data-fill]{width:calc(100% - var(--u-gutter,12px));margin:6px auto 16px}.iso-page[data-fill] .iso-plate{padding-inline:8px}.iso-page[data-fill] .iso-plate-corners{inset-inline:10px}}
 @media (prefers-reduced-motion:reduce){.u-stage *{transition:none!important;animation:none!important}.u-pulse{display:none}}
 </style><figure class="iso-figure"><div class="iso-plate"><div class="iso-plate-corners" aria-hidden="true"><span class="iso-plate-corner" data-corner="fig">Fig 3</span><span class="iso-plate-corner" data-corner="title">The event loop</span><span class="iso-plate-corner" data-corner="hint">← → chapter · ↑ ↓ step</span><span class="iso-plate-corner" data-corner="readout" data-readout>step 11 · all queues empty · output A D C B</span></div><style>.u-stage[data-scene="0"] .u-at[data-at="0"]{opacity:1;visibility:visible;transition:opacity .4s var(--u-ease) .2s,visibility 0s .2s}
 .u-stage[data-scene="0"] .u-grid[data-t~="0"] .u-cell{transform:translate(var(--tx),var(--ty))}
@@ -545,6 +551,18 @@ function runtime() {
       fit();
       stage.dispatchEvent(new CustomEvent("unfold:layout", { detail: { narrow: on } }));
     }).observe(stage);
+  // Fill: on a data-fill page the drawing grows until the card fills the window height.
+  // --u-chrome is the height of everything on the first screen except the drawing.
+  const plate = stage.closest(".iso-page[data-fill] .iso-plate");
+  if (plate && svg) {
+    let chrome = 0;
+    new ResizeObserver(() =>
+      requestAnimationFrame(() => {
+        const now = Math.ceil(plate.getBoundingClientRect().bottom + scrollY - svg.getBoundingClientRect().height) + 16;
+        if (now !== chrome) stage.style.setProperty("--u-chrome", (chrome = now) + "px");
+      }),
+    ).observe(plate);
+  }
   scope();
   new IntersectionObserver((entries) => (visible = entries[entries.length - 1].isIntersecting), { rootMargin: "120px 0px" }).observe(stage);
   next = performance.now() + dwell;

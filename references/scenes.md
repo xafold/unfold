@@ -54,6 +54,8 @@ Chained products reuse it: X on the left feeds W_Q, W_K and W_V above Q, K and V
 
 ## 5. The runtime
 
+`pageHtml` fills the window by default (`width: "fill"`). The card is as wide as the window. The drawing grows until the card is as tall as the window, and it keeps the shape of its view box, so draw in the same view box units as before. The equation, the sentence and the scene buttons grow with the card. Three cases have no height limit, and the drawing then takes the full width and the page scrolls: the narrow layout, a window under 520 px high, and a fixed `width` in px.
+
 `pageHtml` adds the runtime before your script. It defines:
 
 - `UNFOLD.stage`: the `.u-stage` element.
