@@ -556,15 +556,16 @@ export function plateHtml({ fig, title, hint, readout = "", keys = [], caption, 
         : "";
     return `<figure class="iso-figure"><div class="iso-plate"><div class="iso-plate-corners" aria-hidden="true">${corner("fig", fig)}${title ? corner("title", title) : ""}${hint ? corner("hint", hint) : ""}${corner("readout", readout, " data-readout")}</div>${body}</div>${legend}</figure>`;
 }
+// width: the page's widest size in px, or "fill" for the whole window (the main element then carries data-fill).
 export function pageHtml({ title, theme = "dark", body, script = "", width = 650 }) {
-    return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${escape(title)}</title><style>${ISO_CSS}${PAGE_CSS.replace("__WIDTH__", String(width))}</style></head><body class="iso" data-theme="${theme}"><main class="iso-page">${body}</main>${script ? `<script type="module">${script.replace(/<\/(script)/gi, "<\\/$1")}</script>` : ""}</body></html>`;
+    return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${escape(title)}</title><style>${ISO_CSS}${PAGE_CSS.replace("__WIDTH__", width === "fill" ? "100%" : `${width}px`)}</style></head><body class="iso" data-theme="${theme}"><main class="iso-page"${width === "fill" ? " data-fill" : ""}>${body}</main>${script ? `<script type="module">${script.replace(/<\/(script)/gi, "<\\/$1")}</script>` : ""}</body></html>`;
 }
 const PAGE_CSS = `
 *{box-sizing:border-box}
 html{color-scheme:dark}
 body[data-theme="light"]{color-scheme:light}
 body{margin:0;background:var(--u-page);color:var(--u-text);font:14px/1.6 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
-.iso-page{width:min(__WIDTH__px,100% - 32px);margin:64px auto 96px}
+.iso-page{width:min(__WIDTH__,100% - 32px);margin:64px auto 96px}
 `;
 export const ISO_CSS = `
 .iso{

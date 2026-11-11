@@ -103,6 +103,7 @@ To check that a change still generalizes, start a fresh general-purpose agent wi
 
 ## Known limits
 
+- The pages fill the window (`pageHtml({ width: "fill" })`, the default since 2026-11-11). A wide drawing with no narrow layout cannot fill a phone held upright: it takes the full width and leaves the rest of the screen empty. The controls under the drawing, the card's corner text and the caption do not grow with the window.
 - At 390 px, text that a figure draws itself is very small. Cell numbers and bar values hide by themselves (unless `keep: true`). `function-call`, `dijkstra`, `backprop`, `tcp-handshake` and `regex-nfa` use the kit's narrow layout (`stageHtml({ narrow })`). `attention-head`, `btree-insert` and `event-loop` do not have one yet. In `tcp-handshake`, the 10-digit numbers in the sequence strips are about 6 px at 390 px.
 - `regex-nfa` takes the reader's input string, but not their own pattern: the graph layout is placed by hand for `a(b|c)*d`.
 - `dijkstra` and `backprop` both draw a node-link graph by hand. By the kit rule, a shared helper is now due, but the shared part is not found yet.
